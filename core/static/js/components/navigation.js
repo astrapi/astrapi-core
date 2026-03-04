@@ -1,16 +1,34 @@
-// Mobile sidebar management for HTMX navigation
+// Mobile sidebar management
 
-window.htmxCloseMobileSidebar = function() {
-    if (window.innerWidth < 1024) {
-        const sidebar = document.getElementById('sidebar');
-        if (sidebar) sidebar.classList.remove('mobile-open');
-        if (document.body) document.body.classList.remove('mobile-sidebar-open');
-    }
+function toggleSidebar() {
+  var sidebar = document.getElementById('sidebar');
+  var overlay = document.getElementById('sidebar-overlay');
+  var isOpen  = sidebar.classList.contains('mobile-open');
+  if (isOpen) {
+    closeSidebar();
+  } else {
+    sidebar.classList.add('mobile-open');
+    overlay.classList.add('visible');
+    document.body.style.overflow = 'hidden';
+  }
 }
 
-// Auto-close mobile sidebar after HTMX navigation
+function closeSidebar() {
+  var sidebar = document.getElementById('sidebar');
+  var overlay = document.getElementById('sidebar-overlay');
+  sidebar.classList.remove('mobile-open');
+  overlay.classList.remove('visible');
+  document.body.style.overflow = '';
+}
+
+// Nav-Klick auf Mobile → Sidebar schließen
 document.addEventListener('htmx:afterSwap', function(e) {
-    if (e.target && e.target.id === 'main-content') {
-        htmxCloseMobileSidebar();
-    }
+  if (e.target && e.target.id === 'main-content' && window.innerWidth < 769) {
+    closeSidebar();
+  }
+});
+
+// Escape → Sidebar schließen
+document.addEventListener('keydown', function(e) {
+  if (e.key === 'Escape') closeSidebar();
 });

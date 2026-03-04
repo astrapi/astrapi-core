@@ -14,3 +14,15 @@ Format: [Semantic Versioning](https://semver.org/)
 - Dark/Light Mode Toggle
 - Zwei Beispielseiten: Übersicht (Karten) + Einstellungen (Formular)
 - Core/App-Trennung für einfache Updates
+
+## [0.2.0] – 2026-02-27
+
+### Fixed
+- `url_for('static', ...)` Fehler durch Flask-Subklasse mit `send_static_file()`-Override behoben
+- Spuriösen `{core`-Ordner (Shell-Brace-Expansion-Artefakt) entfernt
+
+### Added
+- GitLab CI/CD Pipeline (`.gitlab-ci.yml`)
+- Automatische Release-ZIPs bei `v*`-Tags via GitLab Generic Packages
+- `INSTALL.md` mit Update-Anleitung für Folgeprojekte
+- GitHub Actions entfernt (→ GitLab)

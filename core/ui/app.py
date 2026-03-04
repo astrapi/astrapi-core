@@ -8,7 +8,7 @@ from .page_factory import register_pages
 CORE_ROOT = Path(__file__).resolve().parents[1]
 
 
-def create(app_root: Path, config: dict | None = None) -> Flask:
+def create(app_root: Path, config: dict | None = None, extra_init=None) -> Flask:
     """Erstellt die Flask-App.
 
     Args:
@@ -70,6 +70,9 @@ def create(app_root: Path, config: dict | None = None) -> Flask:
         spec.loader.exec_module(mod)
         app_cfg = {k: v for k, v in vars(mod).items() if not k.startswith("_")}
 
+    # ── Light-Mode ────────────────────────────────────────────────────────────
+    light_mode: bool = app_cfg.get("LIGHT_MODE", False)
+
     # ── Context Processor ─────────────────────────────────────────────────────
     @app.context_processor
     def inject_globals():
@@ -78,10 +81,13 @@ def create(app_root: Path, config: dict | None = None) -> Flask:
             "app_version":  app_cfg.get("APP_VERSION", "0.1.0"),
             "app_logo_svg": app_cfg.get("APP_LOGO_SVG", None),
             "app_lang":     app_cfg.get("APP_LANG",    "de"),
+            "light_mode":   light_mode,
         }
 
     # ── Navigation ────────────────────────────────────────────────────────────
-    nav_yaml = app_root / "templates" / "navigation" / "items.yaml"
+    # Im Light-Mode: items.light.yaml (nur Repos/Browser/Stats)
+    nav_name = "items.light.yaml" if light_mode else "items.yaml"
+    nav_yaml = app_root / "templates" / "navigation" / nav_name
     if not nav_yaml.exists():
         raise FileNotFoundError(f"Nav-Config nicht gefunden: {nav_yaml}")
 
@@ -94,7 +100,12 @@ def create(app_root: Path, config: dict | None = None) -> Flask:
     # ── Routen ────────────────────────────────────────────────────────────────
     register_pages(app, nav_items)
 
-    default_item = next((it for it in nav_items if it["default"]), nav_items[0])
+    # ── App-spezifische Erweiterungen ────────────────────────────────────────
+    if extra_init:
+        extra_init(app)
+
+    default_item = next((it for it in nav_items if not it.get("separator") and it.get("default")), 
+                        next(it for it in nav_items if not it.get("separator")))
 
     @app.get("/")
     def root():
