@@ -1,39 +1,8 @@
-# Python
 __pycache__/
 *.py[cod]
-*.pyo
-*.pyd
-.Python
 *.egg-info/
-dist/
-build/
-*.egg
-
-# Virtual Environments
+.env
 .venv/
 venv/
-env/
-ENV/
-
-# IDE
-.idea/
-.vscode/
-*.swp
-*.swo
-.DS_Store
-
-# Flask / App
-instance/
-*.log
-.env
-.env.*
-!.env.example
-
-# Testing
-.pytest_cache/
-.coverage
-htmlcov/
-
-# CI Artifacts
-staging/
-AstrapiFlaskUi-*.zip
+dist/
+*.zip

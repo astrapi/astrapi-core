@@ -1,1 +1,16 @@
+{#
+  core/templates/partials/tab_wrapper.html
+  ─────────────────────────────────────────────────────────────────────────────
+  Wrapper für alle Tab-Inhalte (HTMX-Ziel).
+
+  Wird von make_tab() in page_factory.py gerendert.
+  Variablen:
+    active_tab    – key des aktiven Nav-Items
+    title         – Seitenüberschrift (aus Navigation)
+    list_partial  – Pfad zum Listen-Partial (z. B. partials/lists/overview.html)
+    module        – gleich wie active_tab (für Kompatibilität mit list_wrapper.html)
+    container_id  – HTMX-Container-ID (z. B. "tab-overview")
+    loading_id    – ID des Lade-Indikators
+  ─────────────────────────────────────────────────────────────────────────────
+#}
 {% include list_partial %}

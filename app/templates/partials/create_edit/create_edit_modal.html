@@ -1,0 +1,108 @@
+{#
+  app/templates/partials/create_edit/create_edit_modal.html
+  Universelles Erstellen/Bearbeiten-Modal.
+  Variablen: schema, values, item, module, submit_url, container_id, loading_id
+
+  Schema-Format (aus schemas.yaml):
+    fields:
+      - key: name
+        label: Name
+        type: text | select | textarea | password | list
+        required: true
+        options: []   (nur bei type: select)
+        placeholder: ""
+#}
+<div class="ds-modal-backdrop"
+     x-data
+     x-on:keydown.escape.window="$el.remove()"
+     x-on:click.self="$el.remove()">
+
+  <div class="ds-modal">
+
+    <div class="ds-modal-title">
+      {% if item %}
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/>
+          <path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/>
+        </svg>
+        {{ module | title }} bearbeiten
+      {% else %}
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>
+        </svg>
+        Neuer {{ module | title }}-Eintrag
+      {% endif %}
+    </div>
+
+    <form
+      hx-{{ 'post' if not item else 'put' }}="{{ submit_url }}"
+      hx-target="#{{ container_id }}"
+      hx-swap="innerHTML"
+      x-on:htmx:after-request="$el.closest('.ds-modal-backdrop').remove()"
+      style="display:flex; flex-direction:column; gap:14px;"
+    >
+
+      {% if schema and schema.fields %}
+        {% for field in schema.fields %}
+        <div class="form-group">
+          <label class="form-label">
+            {{ field.label }}
+            {% if field.required %}<span class="required-mark">*</span>{% endif %}
+          </label>
+
+          {% if field.type == 'select' %}
+            <select class="form-select" name="{{ field.key }}" {{ 'required' if field.required }}>
+              {% for opt in field.options %}
+              <option value="{{ opt }}" {{ 'selected' if values and values.get(field.key) == opt }}>{{ opt }}</option>
+              {% endfor %}
+            </select>
+
+          {% elif field.type == 'textarea' %}
+            <textarea class="form-input" name="{{ field.key }}" rows="3"
+              placeholder="{{ field.placeholder or '' }}"
+              {{ 'required' if field.required }}>{{ (values or {}).get(field.key, '') }}</textarea>
+
+          {% elif field.type == 'password' %}
+            <input class="form-input" type="password" name="{{ field.key }}"
+              placeholder="{{ field.placeholder or '••••••••' }}"
+              {{ 'required' if field.required }}
+              value="{{ (values or {}).get(field.key, '') }}">
+
+          {% else %}
+            <input class="form-input" type="{{ field.type or 'text' }}" name="{{ field.key }}"
+              placeholder="{{ field.placeholder or '' }}"
+              {{ 'required' if field.required }}
+              value="{{ (values or {}).get(field.key, '') }}">
+          {% endif %}
+        </div>
+        {% endfor %}
+
+      {% else %}
+        {# Fallback: kein Schema definiert #}
+        <div class="form-group">
+          <label class="form-label">Name <span class="required-mark">*</span></label>
+          <input class="form-input" type="text" name="name" required
+            value="{{ (values or {}).get('name', '') }}"
+            placeholder="Bezeichnung des Eintrags">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Beschreibung</label>
+          <input class="form-input" type="text" name="description"
+            value="{{ (values or {}).get('description', '') }}"
+            placeholder="Kurze Beschreibung (optional)">
+        </div>
+      {% endif %}
+
+      <div style="display:flex; gap:10px; justify-content:flex-end; margin-top:8px; padding-top:14px; border-top:1px solid var(--border-s);">
+        <button type="button" class="btn btn-ghost"
+                x-on:click="$el.closest('.ds-modal-backdrop').remove()">
+          Abbrechen
+        </button>
+        <button type="submit" class="btn btn-primary">
+          {{ 'Speichern' if item else 'Erstellen' }}
+        </button>
+      </div>
+
+    </form>
+  </div>
+</div>
