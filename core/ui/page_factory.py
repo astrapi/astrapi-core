@@ -6,7 +6,7 @@ def make_page(resource_key: str, initial_url: str, nav_items: list[dict]) -> cal
 
     Der HTMX-load-Trigger lädt danach das Tab-Partial via initial_url.
     """
-    label = next((it["label"] for it in nav_items if it["key"] == resource_key), None)
+    label = next((it["label"] for it in nav_items if not it.get("separator") and it["key"] == resource_key), None)
     title = label or resource_key.replace("_", " ").title()
 
     def page():
@@ -26,7 +26,7 @@ def make_tab(resource_key: str, nav_items: list[dict]) -> callable:
 
     Das Partial wird unter app/templates/partials/lists/<key>.html erwartet.
     """
-    label = next((it["label"] for it in nav_items if it["key"] == resource_key), None)
+    label = next((it["label"] for it in nav_items if not it.get("separator") and it["key"] == resource_key), None)
     title = label or resource_key.replace("_", " ").title()
     list_partial = f"partials/lists/{resource_key}.html"
 
@@ -45,6 +45,8 @@ def make_tab(resource_key: str, nav_items: list[dict]) -> callable:
 def register_pages(app: Flask, nav_items: list[dict]) -> None:
     """Registriert automatisch Page- und Tab-Route für jeden Nav-Eintrag."""
     for item in nav_items:
+        if item.get("separator"):
+            continue  # Trennlinien überspringen
         key = item["key"]
         url = item["url"]  # z. B. /api/ui/overview/tab
 

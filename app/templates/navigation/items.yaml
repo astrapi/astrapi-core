@@ -11,6 +11,9 @@
 #   1. Eintrag hier ergänzen
 #   2. Partial anlegen: app/templates/partials/lists/<key>.html
 
+- separator: true
+  group: Jobs
+
 - key: overview
   label: Übersicht
   url: /api/ui/overview/tab
