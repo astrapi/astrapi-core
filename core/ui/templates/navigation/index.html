@@ -102,9 +102,8 @@
   </div>
 
   <!-- Navigation -->
-  
+  <hr class="sb-divider">
   <nav class="nav-items">
-    <hr class="sb-divider">
     {% for item in nav_items %}
       {% if item.separator %}
         <div class="nav-separator {{ 'nav-separator-first' if loop.first else '' }}">

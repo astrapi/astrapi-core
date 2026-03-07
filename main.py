@@ -30,7 +30,7 @@ def create_app() -> FastAPI:
     api = create_api()
     ui  = create_ui(app_root=APP_ROOT)
 
-    core_static = PROJECT_ROOT / "core" / "static"
+    core_static = PROJECT_ROOT / "core" / "ui" / "static"
     api.mount("/static", StaticFiles(directory=str(core_static)), name="static")
     api.mount("/", WSGIMiddleware(ui))
 

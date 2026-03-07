@@ -146,7 +146,7 @@ input,select,textarea { font-family:var(--font); }
 }
 .nav-items {
   display:flex; flex-direction:column;
-  padding:4px 8px 8px; gap:1px; flex:1;
+  padding:0 8px 8px; gap:1px; flex:1;
 }
 .nav-item {
   display:flex; align-items:center; gap:10px;
@@ -206,7 +206,8 @@ input,select,textarea { font-family:var(--font); }
 }
 
 .sb-footer { padding:6px 8px 14px; flex-shrink:0; }
-.sb-divider { border:none; border-top:1px solid var(--text-3); margin:0 4px 8px; }
+.sb-divider { border:none; border-top:1px solid var(--text-3); margin:0 12px 8px; }
+#sidebar > .sb-divider { margin-left:20px; margin-right:20px; }
 .sb-footer-bottom {
   display:flex; align-items:center; justify-content:space-between; padding:2px 4px 0;
 }

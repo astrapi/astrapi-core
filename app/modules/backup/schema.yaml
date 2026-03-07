@@ -1,0 +1,36 @@
+id_field:
+  name: name
+  label: Bezeichnung
+  placeholder: "z.B. DMS Backup"
+  max: 100
+
+fields:
+  - name: source
+    label: Quelle
+    type: text
+    placeholder: "/storage/data/dms"
+    max: 200
+    column: 1
+    row: 1
+
+  - name: destination
+    label: Ziel
+    type: text
+    placeholder: "backup01:/repos/dms"
+    max: 200
+    column: 1
+    row: 2
+
+  - name: schedule
+    label: Zeitplan
+    type: text
+    placeholder: "0 3 * * *"
+    max: 50
+    column: 1
+    row: 3
+
+  - name: enabled
+    label: Aktiv
+    type: boolean
+    column: 2
+    row: 1

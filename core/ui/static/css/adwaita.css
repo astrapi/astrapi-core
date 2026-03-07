@@ -69,8 +69,6 @@ html, body {
 .sb-logo {
   height: 47px;
   padding: 0 14px;
-  border-bottom: 1px solid var(--adw-border);
-  margin-bottom: 4px;
 }
 
 .sb-logo-text {

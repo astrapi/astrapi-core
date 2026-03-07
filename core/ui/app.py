@@ -25,7 +25,7 @@ from .settings_registry import (
 )
 from .storage import init as storage_init
 
-CORE_ROOT = Path(__file__).resolve().parents[1]
+CORE_ROOT = Path(__file__).resolve().parent
 
 
 def _load_module_file(name: str, path: Path):
@@ -71,12 +71,26 @@ def create(
 
     # ── App-Konfiguration laden ───────────────────────────────────────────────
     app_cfg: dict = {}
-    for cfg_name in ("settings.py", "config.py"):
-        cfg_path = app_root / cfg_name
-        if cfg_path.exists():
-            mod     = _load_module_file("app_settings", cfg_path)
-            app_cfg = {k: v for k, v in vars(mod).items() if not k.startswith("_")}
-            break
+    cfg_yaml = app_root / "config.yaml"
+    if cfg_yaml.exists():
+        import yaml as _yaml
+        with open(cfg_yaml, encoding="utf-8") as _f:
+            _raw = _yaml.safe_load(_f) or {}
+        _app = _raw.get("app", {})
+        app_cfg = {
+            "APP_NAME":    _app.get("name",       "myapp"),
+            "APP_VERSION": _app.get("version",    "0.1.0"),
+            "APP_LANG":    _app.get("lang",        "de"),
+            "LIGHT_MODE":  bool(_app.get("light_mode", False)),
+            "APP_LOGO_SVG": _app.get("logo_svg",  None),
+        }
+    else:
+        for cfg_name in ("settings.py", "config.py"):
+            cfg_path = app_root / cfg_name
+            if cfg_path.exists():
+                mod     = _load_module_file("app_settings", cfg_path)
+                app_cfg = {k: v for k, v in vars(mod).items() if not k.startswith("_")}
+                break
 
     light_mode: bool = app_cfg.get("LIGHT_MODE", False)
 

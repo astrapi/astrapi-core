@@ -16,7 +16,8 @@ import importlib.util
 import warnings
 from pathlib import Path
 
-CORE_ROOT = Path(__file__).resolve().parents[1]
+CORE_ROOT    = Path(__file__).resolve().parent           # core/ui/  (templates, static)
+CORE_MOD_DIR = Path(__file__).resolve().parents[1] / "modules"  # core/modules/
 
 
 # ── Laden ─────────────────────────────────────────────────────────────────────
@@ -59,7 +60,7 @@ def load_modules(app_root: Path) -> list:
     app/ überschreibt core/ bei gleichem Key.
     Reihenfolge: core zuerst, dann app-exklusive.
     """
-    core_mods = _load_from_dir(CORE_ROOT / "modules", "core.modules")
+    core_mods = _load_from_dir(CORE_MOD_DIR, "core.modules")
     app_mods  = _load_from_dir(app_root  / "modules", "app.modules")
 
     merged  = {**core_mods, **app_mods}
@@ -111,15 +112,15 @@ def register_fastapi_modules(fastapi_app, modules: list) -> None:
 
 # ── Navigation ────────────────────────────────────────────────────────────────
 
-def _yaml_to_nav_items(yaml_path: Path, modules: dict) -> list[dict]:
-    """Liest eine items.yaml → Nav-Einträge. Gibt leere Liste zurück wenn Datei fehlt."""
+def _yaml_to_nav_items(yaml_path: "Path | None", modules: dict, raw: list = None) -> list[dict]:
+    """Liest Nav-Einträge aus einer items.yaml oder direkt aus einer Liste."""
     import yaml
 
-    if not yaml_path.exists():
-        return []
-
-    with open(yaml_path, encoding="utf-8") as f:
-        raw = yaml.safe_load(f) or []
+    if raw is None:
+        if yaml_path is None or not yaml_path.exists():
+            return []
+        with open(yaml_path, encoding="utf-8") as f:
+            raw = yaml.safe_load(f) or []
 
     items: list[dict] = []
     current_group: str = ""
@@ -170,17 +171,26 @@ def build_nav_items(modules: list, app_root: Path) -> list[dict]:
     """
     mod_map = {m.key: m for m in modules}
 
-    app_yaml  = app_root / "templates" / "navigation" / "items.yaml"
-    core_yaml = CORE_ROOT / "templates" / "navigation" / "items.yaml"
+    # Navigation: config.yaml hat Vorrang vor dem alten items.yaml-Pfad
+    config_yaml = app_root / "config.yaml"
+    app_yaml    = app_root / "templates" / "navigation" / "items.yaml"
+    core_yaml   = CORE_ROOT / "templates" / "navigation" / "items.yaml"
 
-    app_items  = _yaml_to_nav_items(app_yaml,  mod_map)
+    if config_yaml.exists():
+        import yaml as _yaml
+        with open(config_yaml, encoding="utf-8") as _f:
+            _raw = _yaml.safe_load(_f) or {}
+        app_items = _yaml_to_nav_items(None, mod_map, _raw.get("navigation", []))
+    else:
+        app_items = _yaml_to_nav_items(app_yaml, mod_map)
+
     core_items = _yaml_to_nav_items(core_yaml, mod_map)
 
     # App-Module die in keiner YAML stehen → automatisch anhängen
     yaml_keys  = {i["key"] for i in app_items  if not i.get("separator")}
     yaml_keys |= {i["key"] for i in core_items if not i.get("separator")}
 
-    core_modules_dir = CORE_ROOT / "modules"
+    core_modules_dir = CORE_MOD_DIR
     auto_mods = [
         m for m in modules
         if m.key not in yaml_keys
