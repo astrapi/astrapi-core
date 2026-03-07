@@ -1,0 +1,15 @@
+APP_LANG: de
+APP_NAME: AstrapiFlaskUI
+APP_VERSION: 3.0.0
+module.hosts (Kopie).connect_timeout: '10'
+module.hosts (Kopie).default_port: '22'
+module.hosts (Kopie).default_user: root
+module.hosts.connect_timeout: '10'
+module.hosts.default_port: '22'
+module.hosts.default_user: root
+module.tasks.default_schedule: 0 2 * * *
+module.tasks.max_retries: '3'
+module.tasks.timeout: '300'
+module.test.connect_timeout: '10'
+module.test.default_port: '22'
+module.test.default_user: root

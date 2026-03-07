@@ -1,0 +1,24 @@
+# app/config.yaml – App-Konfiguration
+
+app:
+  name:       AstrapiControllll
+  version:    3.0.0
+  lang:       de
+  light_mode: false
+  logo_svg:   null
+
+navigation:
+  - key:   hosts
+    label: Hosts
+    group: Module
+    icon:  server
+
+  - key:   tasks
+    label: Tasks
+    group: Module
+    icon:  list
+
+  - key:   backup
+    label: Backup
+    group: Module
+    icon:  archive

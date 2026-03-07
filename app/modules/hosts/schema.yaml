@@ -1,0 +1,46 @@
+# app/modules/hosts/schema.yaml
+# Felder für Create- und Edit-Dialog
+
+id_field:
+  name: host_id
+  label: Host-ID
+  placeholder: "z. B. web-03"
+  max: 50
+
+fields:
+  - name: description
+    type: text
+    label: BeschreibungXXX
+    placeholder: "Web-Server 03"
+    max: 100
+    column: 1
+    row: 1
+
+  - name: ip
+    type: text
+    label: IP-Adresse
+    placeholder: "192.168.1.30"
+    max: 50
+    column: 2
+    row: 1
+
+  - name: port
+    type: number
+    label: Port
+    min: 1
+    max: 65535
+    column: 1
+    row: 2
+
+  - name: tags
+    type: text
+    label: Tags
+    placeholder: "web, production"
+    column: 2
+    row: 2
+
+  - name: enabled
+    type: boolean
+    label: Aktiv
+    column: 2
+    row: 3

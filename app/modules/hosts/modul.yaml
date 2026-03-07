@@ -1,0 +1,11 @@
+# app/modules/hosts/modul.yaml – Modul-Konfiguration
+
+label:       Hosts
+icon:        server
+nav_group:   Module
+nav_default: true
+
+settings_defaults:
+  default_port:    "22"
+  default_user:    root
+  connect_timeout: "10"

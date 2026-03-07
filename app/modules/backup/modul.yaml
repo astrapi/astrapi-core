@@ -1,0 +1,5 @@
+# app/modules/backup/modul.yaml – Modul-Konfiguration
+
+label:     Backup
+icon:      archive
+nav_group: Module

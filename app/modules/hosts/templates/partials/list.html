@@ -1,0 +1,68 @@
+{% import 'partials/components/ui_macros.html' as ui %}
+{% import 'partials/components/card.html' as card %}
+
+<div class="page-header">
+  <span class="page-title">{{ label }}</span>
+  <button class="btn btn-primary btn-sm"
+    hx-get="/ui/{{ key }}/create?container_id={{ container_id }}&loading_id={{ loading_id }}"
+    hx-target="body" hx-swap="beforeend">
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+      <line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>
+    </svg>
+    Neu
+  </button>
+</div>
+
+<div id="{{ container_id }}" class="ds-list-grid">
+{% if items %}
+  {% for item_id, item in items.items() %}
+    {% set title_html %}
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <rect x="2" y="2" width="20" height="8" rx="2" ry="2"></rect>
+        <rect x="2" y="14" width="20" height="8" rx="2" ry="2"></rect>
+        <line x1="6" y1="6" x2="6.01" y2="6"></line>
+        <line x1="6" y1="18" x2="6.01" y2="18"></line>
+      </svg>
+      {{ item.description or item_id }}
+    {% endset %}
+
+    {% set toggle_html %}
+      <!-- Hosts haben hier keinen Toggle Switch im Header -->
+    {% endset %}
+
+    {% set footer_left %}
+      <button class="btn-icon" title="SSH Terminal">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <polyline points="4 17 10 11 4 5"></polyline>
+          <line x1="12" y1="19" x2="20" y2="19"></line>
+        </svg>
+      </button>
+    {% endset %}
+
+    {% set footer_right %}
+      {{ ui.edit_button(module=key, item=item_id, container_id=container_id, loading_id=loading_id) }}
+      {{ ui.delete_button(module=key, item=item_id, container_id=container_id, loading_id=loading_id, description=item.description) }}
+    {% endset %}
+
+    {% call card.render(title_html, enabled=item.get('enabled', True), toggle_html=toggle_html, footer_left=footer_left, footer_right=footer_right) %}
+      <div class="meta-grid">
+        <span class="meta-label">IP</span>
+        <span class="meta-value">{{ item.ip or '—' }}</span>
+        <span class="meta-label">Port</span>
+        <span class="meta-value">{{ item.port or '22' }}</span>
+        <span class="meta-label">Tags</span>
+        <span class="meta-value">{{ item.tags or '—' }}</span>
+      </div>
+    {% endcall %}
+  {% endfor %}
+{% else %}
+  <div class="empty-state">
+    <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1">
+      <rect x="2" y="2" width="20" height="8" rx="2" ry="2"></rect>
+      <rect x="2" y="14" width="20" height="8" rx="2" ry="2"></rect>
+    </svg>
+    <div class="empty-state-title">Keine Hosts vorhanden</div>
+    <div class="empty-state-sub">Füge den ersten Host mit „Neu" hinzu.</div>
+  </div>
+{% endif %}
+</div>

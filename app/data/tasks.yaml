@@ -1,0 +1,15 @@
+backup-daily:
+  command: /usr/local/bin/backup.sh
+  description: Tägliches Backup
+  enabled: true
+  schedule: 0 2 * * *
+cleanup-logs:
+  command: find /var/log -name "*.log" -mtime +30 -delete
+  description: Log-Bereinigung
+  enabled: true
+  schedule: 0 3 * * 0
+health-check:
+  command: curl -sf http://localhost/api/health
+  description: Health-Check
+  enabled: false
+  schedule: '*/5 * * * *'

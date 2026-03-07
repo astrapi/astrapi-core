@@ -1,37 +1,30 @@
 """
-app/api/fastapi_app.py  –  FastAPI-App Factory
+app/api/fastapi_app.py  –  FastAPI-Factory V3
 
-Erstellt die FastAPI-Instanz und registriert alle API-Router.
-Wird von main.py via  create_api()  aufgerufen.
-
-Neue Router hinzufügen:
-  1. Datei anlegen:  app/api/routers/mein_router.py
-  2. Hier importieren und einbinden:
-       from .routers.mein_router import router as mein_router
-       app.include_router(mein_router, prefix="/mein-resource")
+Registriert automatisch alle Modul-Router aus app/modules/.
 """
-
+from pathlib import Path
 from fastapi import FastAPI
-from .routers import items_router
+
+APP_ROOT = Path(__file__).resolve().parents[1]
 
 
 def create() -> FastAPI:
-    """Erstellt die FastAPI-Instanz mit allen Routen."""
-
     app = FastAPI(
-        title="AstrapiFlaskUi API",
-        version="2.0.0",
-        # Swagger UI unter /api/docs – eigener Pfad damit / für Flask frei bleibt
+        title="AstrapiControl API",
+        version="3.0.0",
         docs_url="/api/docs",
         redoc_url="/api/redoc",
         openapi_url="/api/openapi.json",
     )
 
-    # ── Router einbinden ──────────────────────────────────────────────────────
-    app.include_router(items_router, prefix="/api/items", tags=["items"])
+    # ── Modul-Router automatisch registrieren ─────────────────────────────────
+    from core.ui.module_registry import load_modules, register_fastapi_modules
+    modules = load_modules(APP_ROOT)
+    register_fastapi_modules(app, modules)
 
     # ── Health-Check ──────────────────────────────────────────────────────────
-    @app.get("/api/health", tags=["system"], include_in_schema=True)
+    @app.get("/api/health", tags=["system"])
     def health():
         return {"status": "ok"}
 

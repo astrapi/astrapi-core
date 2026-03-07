@@ -1,0 +1,18 @@
+db-01:
+  description: Datenbank-Server
+  enabled: false
+  ip: 192.168.1.20
+  port: 5432
+  tags: database, production
+web-01:
+  description: Web-Server 01
+  enabled: true
+  ip: 192.168.1.10
+  port: 22
+  tags: web, production
+web-02:
+  description: Web-Server 02
+  enabled: true
+  ip: 192.168.1.11
+  port: 22
+  tags: web, staging
