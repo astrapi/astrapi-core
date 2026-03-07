@@ -24,6 +24,7 @@ Init (einmalig beim App-Start notwendig):
 
 from __future__ import annotations
 
+import threading
 from pathlib import Path
 from typing import Any
 import yaml
@@ -59,6 +60,7 @@ class YamlStorage:
     def __init__(self, collection: str, seed_data: dict | None = None):
         self.collection = collection
         self._seed      = seed_data or {}
+        self._lock      = threading.Lock()
 
     @property
     def _path(self) -> Path:
@@ -73,66 +75,74 @@ class YamlStorage:
 
     def list(self) -> dict:
         """Gibt alle Einträge zurück."""
-        if not self._path.exists():
-            if self._seed:
-                self._write(self._seed)
-            return dict(self._seed)
-        return self._read()
+        with self._lock:
+            if not self._path.exists():
+                if self._seed:
+                    self._write(self._seed)
+                return dict(self._seed)
+            return self._read()
 
     def get(self, key: str) -> dict | None:
         """Gibt einen einzelnen Eintrag zurück, oder None wenn nicht gefunden."""
-        return self._read().get(key)
+        with self._lock:
+            return self._read().get(key)
 
     def exists(self, key: str) -> bool:
-        return key in self._read()
+        with self._lock:
+            return key in self._read()
 
     # ── Schreiben (nur über API-Endpunkte aufrufen) ───────────────────────────
 
     def create(self, key: str, values: dict) -> dict:
         """Legt einen neuen Eintrag an. Wirft KeyError wenn key bereits existiert."""
-        data = self._read()
-        if key in data:
-            raise KeyError(f"'{key}' existiert bereits in '{self.collection}'")
-        data[key] = values
-        self._write(data)
-        return data[key]
+        with self._lock:
+            data = self._read()
+            if key in data:
+                raise KeyError(f"'{key}' existiert bereits in '{self.collection}'")
+            data[key] = values
+            self._write(data)
+            return data[key]
 
     def update(self, key: str, values: dict) -> dict:
         """Aktualisiert einen vorhandenen Eintrag. Wirft KeyError wenn nicht gefunden."""
-        data = self._read()
-        if key not in data:
-            raise KeyError(f"'{key}' nicht gefunden in '{self.collection}'")
-        data[key].update({k: v for k, v in values.items() if v is not None})
-        self._write(data)
-        return data[key]
+        with self._lock:
+            data = self._read()
+            if key not in data:
+                raise KeyError(f"'{key}' nicht gefunden in '{self.collection}'")
+            data[key].update(values)
+            self._write(data)
+            return data[key]
 
     def upsert(self, key: str, values: dict) -> dict:
         """Legt an oder aktualisiert – create + update kombiniert."""
-        data = self._read()
-        if key in data:
-            data[key].update(values)
-        else:
-            data[key] = values
-        self._write(data)
-        return data[key]
+        with self._lock:
+            data = self._read()
+            if key in data:
+                data[key].update(values)
+            else:
+                data[key] = values
+            self._write(data)
+            return data[key]
 
     def delete(self, key: str) -> None:
         """Löscht einen Eintrag. Wirft KeyError wenn nicht gefunden."""
-        data = self._read()
-        if key not in data:
-            raise KeyError(f"'{key}' nicht gefunden in '{self.collection}'")
-        del data[key]
-        self._write(data)
+        with self._lock:
+            data = self._read()
+            if key not in data:
+                raise KeyError(f"'{key}' nicht gefunden in '{self.collection}'")
+            del data[key]
+            self._write(data)
 
     def toggle(self, key: str, field: str = "enabled") -> bool:
         """Schaltet ein Boolean-Feld um. Gibt den neuen Wert zurück."""
-        data = self._read()
-        if key not in data:
-            raise KeyError(f"'{key}' nicht gefunden in '{self.collection}'")
-        current = bool(data[key].get(field, True))
-        data[key][field] = not current
-        self._write(data)
-        return data[key][field]
+        with self._lock:
+            data = self._read()
+            if key not in data:
+                raise KeyError(f"'{key}' nicht gefunden in '{self.collection}'")
+            current = bool(data[key].get(field, True))
+            data[key][field] = not current
+            self._write(data)
+            return data[key][field]
 
     # ── Interne Helfer ────────────────────────────────────────────────────────
 

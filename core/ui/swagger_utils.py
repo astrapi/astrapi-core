@@ -53,7 +53,7 @@ def _tag_from_url(rule: str) -> str:
 
 # Bekannte URL-Segmente → lesbarer Begriff
 _SEGMENT_LABELS = {
-    "tab":    "Tab",
+    "content": "Content",
     "list":   "List",
     "create": "Create",
     "edit":   "Edit",
@@ -63,12 +63,9 @@ _SEGMENT_LABELS = {
     "docs":   "Swagger UI",
 }
 
-# Bekannte Ressourcen-Segmente → lesbarer Name (singular)
-_RESOURCE_LABELS = {
-    "hosts":    "Host",
-    "tasks":    "Task",
-    "settings": "Settings",
-}
+def _to_singular(word: str) -> str:
+    """Plural-URL-Segment → lesbarer Singular-Name: 'hosts' → 'Host'."""
+    return (word[:-1] if word.endswith("s") else word).title()
 
 
 def _summary_from_url(rule: str, method: str) -> str:
@@ -91,13 +88,13 @@ def _summary_from_url(rule: str, method: str) -> str:
 
     # /<key>  → "<Key> Page"
     if len(parts) == 1 and not parts[0].startswith("<"):
-        label = _RESOURCE_LABELS.get(parts[0], parts[0].title())
+        label = _to_singular(parts[0])
         return f"{label} Page"
 
     # /ui/<resource>/...
     if parts and parts[0] == "ui" and len(parts) >= 2:
         resource = parts[1]
-        resource_label = _RESOURCE_LABELS.get(resource, resource.title())
+        resource_label = _to_singular(resource)
         remaining = parts[2:]
 
         # /ui/<resource>/create
@@ -190,7 +187,7 @@ def add_ui_routes_to_spec(app, project_root: Path) -> None:
                     op["parameters"] = params
                 operations[method] = op
 
-            app.apispec._paths[rule.rule] = operations
+            app.apispec.path(path=rule.rule, operations=operations)
 
 
 # ── Endpunkte registrieren ────────────────────────────────────────────────────

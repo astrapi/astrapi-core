@@ -9,6 +9,9 @@ uvicorn[standard]>=0.30
 a2wsgi>=1.10
 pydantic>=2.0
 
+# ── System-Monitoring ─────────────────────────────────────────
+psutil>=5.9
+
 # ── Konfiguration & Datenhaltung ───────────────────────────────
 pyyaml>=6.0
 apispec>=6.0

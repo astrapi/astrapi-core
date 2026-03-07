@@ -3,6 +3,11 @@ astrapi-flask-ui V3 – Einstiegspunkt (FastAPI + Flask)
 
 FastAPI  → /api/...       JSON-Endpunkte, OpenAPI, Swagger
 Flask    → /              UI, HTMX-Partials, Modals
+
+Start:
+    python main.py              # Port 5000 (Standard)
+    python main.py 8080         # Port 8080
+    python main.py --port 8080  # alternativ
 """
 import sys
 from pathlib import Path
@@ -34,6 +39,25 @@ def create_app() -> FastAPI:
 
 app = create_app()
 
+
+def _parse_port() -> int:
+    """Liest den Port aus den Kommandozeilenargumenten.
+
+    Unterstützte Formate:
+        python main.py 8080
+        python main.py --port 8080
+    """
+    args = sys.argv[1:]
+    for i, arg in enumerate(args):
+        if arg == "--port" and i + 1 < len(args):
+            return int(args[i + 1])
+        if arg.isdigit():
+            return int(arg)
+    return 5000  # Standard
+
+
 if __name__ == "__main__":
     import uvicorn
-    uvicorn.run("main:app", host="0.0.0.0", port=5000, reload=True)
+    port = _parse_port()
+    print(f"Starting on http://0.0.0.0:{port}")
+    uvicorn.run("main:app", host="0.0.0.0", port=port, reload=True)

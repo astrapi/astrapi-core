@@ -1,0 +1,65 @@
+{% import 'partials/components/ui_macros.html' as ui %}
+
+<div class="page-header">
+  <span class="page-title">{{ label }}</span>
+  <button class="btn btn-primary btn-sm"
+    hx-get="/ui/{{ key }}/create?container_id={{ container_id }}&loading_id={{ loading_id }}"
+    hx-target="body" hx-swap="beforeend">
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+      <line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>
+    </svg>
+    Neu
+  </button>
+</div>
+
+<div id="{{ container_id }}" class="ds-list-grid">
+{% if items %}
+  {% for item_id, item in items.items() %}
+  <div class="ds-card {{ 'on' if item.enabled else 'off' }}">
+    <div class="card-header">
+      <span class="card-title">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+          <circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/>
+        </svg>
+        {{ item.description or item_id }}
+      </span>
+      {{ ui.toggle_switch(module=key, item=item_id, container_id=container_id,
+                          loading_id=loading_id, enabled=item.enabled,
+                          description=item.description) }}
+    </div>
+    <div class="card-inner">
+      <div class="card-body">
+        <div class="card-meta">
+          <div class="meta-grid">
+            <span class="meta-label">ID</span>
+            <span class="meta-value">{{ item_id }}</span>
+            <span class="meta-label">Befehl</span>
+            <span class="meta-value">{{ item.command or '—' }}</span>
+            <span class="meta-label">Schedule</span>
+            <span class="meta-value">{{ item.schedule or '—' }}</span>
+          </div>
+        </div>
+      </div>
+      <div class="card-actions">
+        {{ ui.edit_button(module=key, item=item_id, container_id=container_id, loading_id=loading_id) }}
+        {{ ui.delete_button(module=key, item=item_id, container_id=container_id, loading_id=loading_id, description=item.description) }}
+      </div>
+    </div>
+    <div class="card-footer">
+      <span style="font-size:11px; color:var(--text-3); font-family:var(--mono);">{{ item_id }}</span>
+      <span style="font-size:11px; color:{{ 'var(--g)' if item.enabled else 'var(--text-3)' }}; font-family:var(--mono);">
+        {{ '● Aktiv' if item.enabled else '● Inaktiv' }}
+      </span>
+    </div>
+  </div>
+  {% endfor %}
+{% else %}
+  <div class="empty-state">
+    <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1">
+      <circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/>
+    </svg>
+    <div class="empty-state-title">Keine {{ label }} vorhanden</div>
+    <div class="empty-state-sub">Füge den ersten Eintrag mit „Neu" hinzu.</div>
+  </div>
+{% endif %}
+</div>

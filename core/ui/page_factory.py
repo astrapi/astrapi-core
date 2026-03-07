@@ -1,20 +1,16 @@
 """
-core/ui/page_factory.py  –  Automatische Page- und Tab-Routen
+core/ui/page_factory.py  –  Automatische Page- und Content-Routen
 
 URL-Schema:
-  GET /ui/<key>       → App-Shell (index.html), HTMX triggert /ui/<key>/tab
-  GET /<key>          → Redirect → /ui/<key>   (Bookmark-Kompatibilität)
-  GET /ui/<key>/tab   → Tab-Partial (HTMX-Ziel)
-  GET /ui/<key>/list  → Listen-Partial (HTMX-Polling / Refresh)
+  GET /<key>              → App-Shell (index.html), lädt /ui/<key>/content per HTMX
+  GET /ui/<key>/content   → Inhalt-Partial (Nav-Klick + Reload + Refresh)
 
-Für Module mit eigenem Blueprint (shell_only_keys) werden nur
-Shell + Redirect registriert — Tab/List kommen vom Blueprint selbst.
-
-/api/... bleibt ausschließlich FastAPI (JSON-Endpunkte).
-/ui/...  ist ausschließlich Flask  (HTML-Partials, Modals, Seiten).
+/api/... bleibt ausschließlich FastAPI (JSON).
+/ui/...  ist ausschließlich Flask (HTML-Partials, Modals).
+/<key>   ist die sichtbare Browser-URL.
 """
 
-from flask import Flask, render_template, redirect
+from flask import Flask, render_template
 
 
 def _label(key: str, nav_items: list[dict]) -> str:
@@ -25,15 +21,15 @@ def _label(key: str, nav_items: list[dict]) -> str:
 
 
 def make_shell(resource_key: str, nav_items: list[dict]) -> callable:
-    """App-Shell-View unter /ui/<key>."""
+    """App-Shell unter /<key> — komplette Seite, lädt Content per HTMX nach."""
     title       = _label(resource_key, nav_items)
-    initial_url = f"/ui/{resource_key}/tab"
+    content_url = f"/ui/{resource_key}/content"
 
     def shell():
         return render_template(
             "index.html",
             active_tab=resource_key,
-            initial_content_url=initial_url,
+            initial_content_url=content_url,
             title=title,
         )
 
@@ -41,44 +37,15 @@ def make_shell(resource_key: str, nav_items: list[dict]) -> callable:
     return shell
 
 
-def make_redirect(resource_key: str) -> callable:
-    """Redirect /<key> → /ui/<key> für Bookmark-Kompatibilität."""
-    def redir():
-        return redirect(f"/ui/{resource_key}")
-
-    redir.__name__ = f"redir_{resource_key}"
-    return redir
-
-
-def make_tab(resource_key: str, nav_items: list[dict]) -> callable:
-    """Tab-Partial unter /ui/<key>/tab."""
-    title        = _label(resource_key, nav_items)
+def make_content(resource_key: str) -> callable:
+    """Inhalt-Partial unter /ui/<key>/content — für Nav-Klick, Reload und Refresh."""
     list_partial = f"partials/lists/{resource_key}.html"
 
-    def tab():
-        return render_template(
-            "partials/tab_wrapper.html",
-            active_tab=resource_key,
-            title=title,
-            list_partial=list_partial,
-            module=resource_key,
-            container_id=f"tab-{resource_key}",
-            loading_id=f"{resource_key}-loading",
-        )
-
-    tab.__name__ = f"tab_{resource_key}"
-    return tab
-
-
-def make_list(resource_key: str) -> callable:
-    """Listen-Partial unter /ui/<key>/list."""
-    list_partial = f"partials/lists/{resource_key}.html"
-
-    def lst():
+    def content():
         return render_template(list_partial)
 
-    lst.__name__ = f"list_{resource_key}"
-    return lst
+    content.__name__ = f"content_{resource_key}"
+    return content
 
 
 def register_pages(
@@ -86,10 +53,9 @@ def register_pages(
     nav_items: list[dict],
     shell_only_keys: set[str] | None = None,
 ) -> None:
-    """Registriert Routen für jeden Nav-Eintrag.
+    """Registriert Shell- und Content-Route für jeden Nav-Eintrag.
 
-    shell_only_keys: Keys für die nur Shell + Redirect registriert werden
-                     (Tab/List kommen vom Modul-Blueprint).
+    shell_only_keys: Content kommt vom Modul-Blueprint selbst.
     """
     shell_only = shell_only_keys or set()
 
@@ -99,13 +65,9 @@ def register_pages(
 
         key = item["key"]
 
-        # /ui/<key>  → App-Shell (immer)
-        app.add_url_rule(f"/ui/{key}", endpoint=f"shell_{key}", view_func=make_shell(key, nav_items))
-        # /<key>     → Redirect → /ui/<key> (immer)
-        app.add_url_rule(f"/{key}",   endpoint=f"redir_{key}", view_func=make_redirect(key))
+        # /<key>              → App-Shell
+        app.add_url_rule(f"/{key}", endpoint=f"shell_{key}", view_func=make_shell(key, nav_items))
 
         if key not in shell_only:
-            # /ui/<key>/tab   → Tab-Partial
-            app.add_url_rule(f"/ui/{key}/tab",  endpoint=f"tab_{key}",  view_func=make_tab(key, nav_items))
-            # /ui/<key>/list  → Listen-Partial
-            app.add_url_rule(f"/ui/{key}/list", endpoint=f"list_{key}", view_func=make_list(key))
+            # /ui/<key>/content → Inhalt-Partial
+            app.add_url_rule(f"/ui/{key}/content", endpoint=f"content_{key}", view_func=make_content(key))

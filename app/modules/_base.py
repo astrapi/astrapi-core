@@ -59,7 +59,7 @@ class AstrapiModule:
 
     def __post_init__(self):
         if self.nav_url is None:
-            self.nav_url = f"/ui/{self.key}/tab"
+            self.nav_url = f"/ui/{self.key}"
 
     def to_nav_item(self) -> dict:
         """Gibt den Nav-Item-Dict zurück (kompatibel mit navigation.py)."""

@@ -1,0 +1,11 @@
+# app/modules/tasks/modul.yaml – Modul-Konfiguration
+
+label:       Tasks
+icon:        clock
+nav_group:   Module
+nav_default: false
+
+settings_defaults:
+  default_schedule: "0 2 * * *"
+  max_retries:      "3"
+  timeout:          "300"

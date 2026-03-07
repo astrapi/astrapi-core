@@ -1,22 +1,13 @@
 """
 core/ui/module_registry.py  –  AstrapiFlaskUi V3  Modul-Registry
 
-Scannt app/modules/ nach AstrapiModule-Instanzen und registriert:
-  - FastAPI-Router        unter /api/<key>/
-  - Flask-Blueprint       (UI-Routen, Modals)
-  - Template-Loader       (modul-eigene templates/ werden eingefügt)
-  - Nav-Eintrag           (in nav_items-Liste)
-  - Einstellungs-Sektion  (für /settings)
+Navigation:
+  1. app/templates/navigation/items.yaml   – optionaler Override (Reihenfolge, Label, Gruppe)
+  2. core/templates/navigation/items.yaml  – Core-Module (sysinfo, settings)
+  3. Alle geladenen App-Module die in keiner YAML stehen → automatisch angehängt
 
-Aufruf in core/ui/app.py:
-    from .module_registry import load_modules, register_flask_modules
-    modules = load_modules(app_root)
-    register_flask_modules(flask_app, modules)
-
-Und in app/api/fastapi_app.py:
-    from core.ui.module_registry import load_modules, register_fastapi_modules
-    modules = load_modules(app_root)
-    register_fastapi_modules(fastapi_app, modules)
+Ein neues Modul erscheint also automatisch in der Nav, sobald sein Ordner
+existiert und eine AstrapiModule-Instanz exportiert. Die YAML ist optional.
 """
 
 from __future__ import annotations
@@ -24,81 +15,88 @@ from __future__ import annotations
 import importlib.util
 import warnings
 from pathlib import Path
-from typing import TYPE_CHECKING
 
-if TYPE_CHECKING:
-    from flask import Flask
-    from fastapi import FastAPI
+CORE_ROOT = Path(__file__).resolve().parents[1]
 
 
-def load_modules(app_root: Path) -> list:
-    """Scannt app/modules/ und gibt alle AstrapiModule-Instanzen zurück.
+# ── Laden ─────────────────────────────────────────────────────────────────────
 
-    Ein Modul wird erkannt wenn app/modules/<name>/__init__.py eine
-    Variable `module` vom Typ AstrapiModule exportiert.
-    """
+def _load_from_dir(modules_dir: Path, pkg_prefix: str) -> dict:
+    """Lädt alle AstrapiModule-Instanzen aus einem Verzeichnis → {key: instance}."""
     from app.modules._base import AstrapiModule
 
-    modules_dir = app_root / "modules"
+    found: dict[str, AstrapiModule] = {}
     if not modules_dir.exists():
-        return []
-
-    found: list[AstrapiModule] = []
+        return found
 
     for entry in sorted(modules_dir.iterdir()):
         if not entry.is_dir() or entry.name.startswith("_"):
             continue
-
         init_file = entry / "__init__.py"
         if not init_file.exists():
             continue
-
         try:
             spec = importlib.util.spec_from_file_location(
-                f"app.modules.{entry.name}", init_file
+                f"{pkg_prefix}.{entry.name}", init_file
             )
             mod = importlib.util.module_from_spec(spec)
             spec.loader.exec_module(mod)
-
             instance = getattr(mod, "module", None)
             if instance is None or not isinstance(instance, AstrapiModule):
-                warnings.warn(
-                    f"Modul '{entry.name}': keine AstrapiModule-Instanz 'module' gefunden"
-                )
+                warnings.warn(f"Modul '{entry.name}' ({pkg_prefix}): keine AstrapiModule-Instanz gefunden")
                 continue
-
-            # Modul-Root setzen damit Templates etc. gefunden werden
             instance.module_root = entry
-            found.append(instance)
-
+            found[instance.key] = instance
         except Exception as e:
-            warnings.warn(f"Modul '{entry.name}' konnte nicht geladen werden: {e}")
+            warnings.warn(f"Modul '{entry.name}' ({pkg_prefix}) konnte nicht geladen werden: {e}")
 
     return found
 
 
+def load_modules(app_root: Path) -> list:
+    """Lädt Module aus core/modules/ und app/modules/.
+
+    app/ überschreibt core/ bei gleichem Key.
+    Reihenfolge: core zuerst, dann app-exklusive.
+    """
+    core_mods = _load_from_dir(CORE_ROOT / "modules", "core.modules")
+    app_mods  = _load_from_dir(app_root  / "modules", "app.modules")
+
+    merged  = {**core_mods, **app_mods}
+    ordered = []
+    for key in sorted(core_mods):
+        ordered.append(merged[key])
+    for key in sorted(app_mods):
+        if key not in core_mods:
+            ordered.append(merged[key])
+    return ordered
+
+
+# ── Registrieren ──────────────────────────────────────────────────────────────
+
 def register_flask_modules(flask_app, modules: list, jinja_loaders: list) -> None:
-    """Registriert Flask-Blueprints und Template-Loader aller Module."""
-    from jinja2 import FileSystemLoader
+    from jinja2 import FileSystemLoader, PrefixLoader
 
     for mod in modules:
-        # ── Template-Loader des Moduls ────────────────────────────────────────
         if mod.module_root:
             tpl_dir = mod.module_root / "templates"
             if tpl_dir.exists():
-                # Vor den App-Loaders einfügen (höchste Priorität)
-                jinja_loaders.insert(0, FileSystemLoader(str(tpl_dir)))
+                # PrefixLoader mit mod.key als Prefix → unabhängig vom Ordnernamen.
+                # render_template("hosts/partials/list.html") sucht in
+                # {module_root}/templates/partials/list.html – egal ob der Ordner
+                # "hosts", "test" oder anders heißt.
+                jinja_loaders.insert(0, PrefixLoader(
+                    {mod.key: FileSystemLoader(str(tpl_dir))}
+                ))
 
-        # ── Flask-Blueprint registrieren ──────────────────────────────────────
         if mod.ui_blueprint is not None:
             try:
                 flask_app.register_blueprint(mod.ui_blueprint)
             except Exception as e:
-                warnings.warn(f"Blueprint von Modul '{mod.key}' konnte nicht registriert werden: {e}")
+                warnings.warn(f"Blueprint '{mod.key}' konnte nicht registriert werden: {e}")
 
 
 def register_fastapi_modules(fastapi_app, modules: list) -> None:
-    """Registriert FastAPI-Router aller Module."""
     for mod in modules:
         if mod.api_router is not None:
             try:
@@ -108,61 +106,121 @@ def register_fastapi_modules(fastapi_app, modules: list) -> None:
                     tags=[mod.key],
                 )
             except Exception as e:
-                warnings.warn(f"Router von Modul '{mod.key}' konnte nicht registriert werden: {e}")
+                warnings.warn(f"Router '{mod.key}' konnte nicht registriert werden: {e}")
 
 
-def build_nav_items(modules: list, extra_yaml_path: Path | None = None) -> list[dict]:
-    """Baut die komplette nav_items-Liste aus Modulen + optionaler YAML.
+# ── Navigation ────────────────────────────────────────────────────────────────
+
+def _yaml_to_nav_items(yaml_path: Path, modules: dict) -> list[dict]:
+    """Liest eine items.yaml → Nav-Einträge. Gibt leere Liste zurück wenn Datei fehlt."""
+    import yaml
+
+    if not yaml_path.exists():
+        return []
+
+    with open(yaml_path, encoding="utf-8") as f:
+        raw = yaml.safe_load(f) or []
+
+    items: list[dict] = []
+    current_group: str = ""
+
+    for entry in raw:
+        key = entry.get("key")
+        if not key:
+            continue
+
+        mod   = modules.get(key)
+        group = entry.get("group", "")
+
+        if group != current_group:
+            items.append({"separator": True, "group": group})
+            current_group = group
+
+        items.append({
+            "key":       key,
+            "label":     entry.get("label") or (mod.label if mod else key.replace("_", " ").title()),
+            "url":       entry.get("url")   or (mod.nav_url if mod else f"/ui/{key}"),
+            "icon":      entry.get("icon")  or (mod.icon if mod else "home"),
+            "default":   bool(entry.get("default", False)),
+            "separator": False,
+        })
+
+    return items
+
+
+def _auto_nav_item(mod) -> dict:
+    """Erzeugt einen Nav-Eintrag direkt aus der Modul-Instanz."""
+    return {
+        "key":       mod.key,
+        "label":     mod.label,
+        "url":       mod.nav_url,
+        "icon":      mod.icon or "box",
+        "default":   bool(getattr(mod, "nav_default", False)),
+        "separator": False,
+    }
+
+
+def build_nav_items(modules: list, app_root: Path) -> list[dict]:
+    """Baut die komplette nav_items-Liste.
 
     Reihenfolge:
-      1. Feste Einträge aus items.yaml (falls vorhanden) – ohne Modul-Keys
-      2. Modul-Nav-Einträge (nach Modul-Reihenfolge in modules/)
-      3. Einstellungen immer am Ende
+      1. app/templates/navigation/items.yaml  (explizit konfigurierte App-Module)
+      2. App-Module die nicht in der YAML stehen → automatisch angehängt (Gruppe "Module")
+      3. core/templates/navigation/items.yaml (sysinfo, settings)
     """
-    items: list[dict] = []
+    mod_map = {m.key: m for m in modules}
 
-    # ── Optionale statische Einträge aus items.yaml ───────────────────────────
-    if extra_yaml_path and extra_yaml_path.exists():
-        from .navigation import load_nav
-        static_items = load_nav(extra_yaml_path)
-        # Modul-Keys und settings aus YAML herausfiltern
-        # (werden von Modulen selbst registriert)
-        module_keys = {m.key for m in modules} | {"settings"}
-        for item in static_items:
-            if item.get("separator") or item.get("key") not in module_keys:
-                items.append(item)
+    app_yaml  = app_root / "templates" / "navigation" / "items.yaml"
+    core_yaml = CORE_ROOT / "templates" / "navigation" / "items.yaml"
 
-    # ── Modul-Nav-Einträge ────────────────────────────────────────────────────
-    if modules:
-        # Gruppe nur wenn tatsächlich Module vorhanden
-        first_group = next((m.nav_group for m in modules if m.nav_group), None)
-        if first_group or not items:
-            # Separator vor den Modulen
-            group_label = first_group or "Module"
-            items.append({"separator": True, "group": group_label})
+    app_items  = _yaml_to_nav_items(app_yaml,  mod_map)
+    core_items = _yaml_to_nav_items(core_yaml, mod_map)
 
+    # App-Module die in keiner YAML stehen → automatisch anhängen
+    yaml_keys  = {i["key"] for i in app_items  if not i.get("separator")}
+    yaml_keys |= {i["key"] for i in core_items if not i.get("separator")}
+
+    core_modules_dir = CORE_ROOT / "modules"
+    auto_mods = [
+        m for m in modules
+        if m.key not in yaml_keys
+        and not (m.module_root and m.module_root.parent == core_modules_dir)
+    ]
+
+    if auto_mods:
+        # Gruppe "Module" als Separator wenn noch nicht vorhanden
+        existing_groups = {i.get("group") for i in app_items if i.get("separator")}
+        if "Module" not in existing_groups:
+            app_items.append({"separator": True, "group": "Module"})
+        for mod in auto_mods:
+            app_items.append(_auto_nav_item(mod))
+
+    items = app_items + core_items
+
+    # Fallback wenn gar nichts da ist
+    if not items:
+        seen_groups: set[str] = set()
         for mod in modules:
-            items.append(mod.to_nav_item())
+            group = mod.nav_group or "Module"
+            if group not in seen_groups:
+                items.append({"separator": True, "group": group})
+                seen_groups.add(group)
+            items.append(_auto_nav_item(mod))
+        items.append({"separator": True, "group": "System"})
+        items.append({
+            "key": "settings", "label": "Einstellungen",
+            "url": "/ui/settings", "icon": "settings",
+            "default": False, "separator": False,
+        })
 
-    # ── Einstellungen immer zuletzt ───────────────────────────────────────────
-    items.append({"separator": True, "group": "System"})
-    items.append({
-        "key":       "settings",
-        "label":     "Einstellungen",
-        "url":       "/ui/settings/tab",
-        "icon":      "settings",
-        "default":   False,
-        "separator": False,
-    })
+    _set_default(items)
+    return items
 
-    # ── Default setzen wenn noch keiner vorhanden ─────────────────────────────
-    has_default = any(
-        not i.get("separator") and i.get("default") for i in items
-    )
-    if not has_default:
+
+def _set_default(items: list[dict]) -> None:
+    """Setzt das erste Non-Separator-Item als Default wenn keines gesetzt ist."""
+    if not any(not i.get("separator") and i.get("default") for i in items):
         for item in items:
             if not item.get("separator"):
                 item["default"] = True
                 break
-
-    return items

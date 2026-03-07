@@ -1,0 +1,21 @@
+# app/templates/navigation/items.yaml
+#
+# Definiert die App-eigenen Navigationseinträge (erscheinen oben).
+# Reihenfolge und Gruppen werden exakt so übernommen.
+#
+# Felder:
+#   key:     Modul-Key (muss einem registrierten Modul entsprechen)
+#   label:   Anzeigename (optional, default: Modul-Label)
+#   group:   Gruppenname in der Sidebar
+#   icon:    Icon-Override (optional)
+#   default: true = Startseite beim Öffnen (max. eines)
+
+- key: hosts
+  label: Hosts
+  group: Module
+
+- key: tasks
+  label: Tasks
+  group: Module
+  
+

@@ -17,7 +17,6 @@ from jinja2 import ChoiceLoader, FileSystemLoader
 import importlib.util
 from typing import Optional, Callable
 
-from .navigation import load_nav
 from .page_factory import register_pages
 from .swagger_utils import register_ui_docs
 from .module_registry import load_modules, register_flask_modules, build_nav_items
@@ -30,8 +29,10 @@ CORE_ROOT = Path(__file__).resolve().parents[1]
 
 
 def _load_module_file(name: str, path: Path):
+    import sys
     spec = importlib.util.spec_from_file_location(name, path)
     mod  = importlib.util.module_from_spec(spec)
+    sys.modules[name] = mod
     spec.loader.exec_module(mod)
     return mod
 
@@ -119,8 +120,7 @@ def create(
         }
 
     # ── Navigation aus Modulen + optionaler items.yaml ────────────────────────
-    extra_yaml = app_root / "templates" / "navigation" / "items.yaml"
-    nav_items  = build_nav_items(modules, extra_yaml_path=extra_yaml)
+    nav_items  = build_nav_items(modules, app_root=app_root)
 
     @app.context_processor
     def _inject_nav():
@@ -130,8 +130,8 @@ def create(
     # "settings" wird von _register_settings_routes separat behandelt
     # Modul-Keys mit eigenem Blueprint registrieren tab/list selbst
     module_keys = {m.key for m in modules if m.ui_blueprint is not None}
-    skip_keys   = module_keys | {"settings"}
-    register_pages(app, [it for it in nav_items if it.get("key") not in skip_keys],
+    # Nur "settings" herausfiltern — Modul-Keys bleiben drin für Shell+Redirect
+    register_pages(app, [it for it in nav_items if it.get("key") != "settings"],
                    shell_only_keys=module_keys)
 
     # ── Optionale App-Blueprints: app/routes/__init__.py ─────────────────────
@@ -158,7 +158,7 @@ def create(
     if default_item:
         @app.get("/")
         def _root():
-            return redirect(f"/ui/{default_item['key']}")
+            return redirect(f"/{default_item['key']}")
 
     # ── Swagger UI-Docs ───────────────────────────────────────────────────────
     swagger_html = CORE_ROOT / "static" / "swagger.html"
@@ -188,12 +188,17 @@ def _register_settings_routes(app: Flask, modules: list, app_cfg: dict) -> None:
             "flash_message": flash,
         }
 
-    @app.route("/ui/settings/tab")
-    def settings_tab():
-        return render_template("partials/lists/settings.html", **_ctx())
+    @app.route("/settings")
+    def settings_shell():
+        return render_template(
+            "index.html",
+            active_tab="settings",
+            initial_content_url="/ui/settings/content",
+            title="Einstellungen",
+        )
 
-    @app.route("/ui/settings/list")
-    def settings_list():
+    @app.route("/ui/settings/content")
+    def settings_content():
         return render_template("partials/lists/settings.html", **_ctx())
 
     @app.route("/ui/settings/save/global", methods=["POST"])

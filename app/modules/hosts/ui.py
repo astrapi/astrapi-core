@@ -1,87 +1,97 @@
-"""app/modules/hosts/ui.py – Flask-Blueprint für Hosts UI-Routen (Modals, Tab)."""
+"""app/modules/hosts/ui.py – Flask-Blueprint für Hosts UI-Routen."""
 
+from pathlib import Path
 from flask import Blueprint, render_template, request
-from .storage import store
+from core.ui.schema_loader import load_schema
+from .storage import store, KEY
 
-bp = Blueprint("hosts_ui", __name__)
+_DIR   = Path(__file__).parent
+SCHEMA = load_schema(str(_DIR / "schema.yaml"))
+
+_C_ID  = f"tab-{KEY}"
+_L_ID  = f"{KEY}-loading"
+_LABEL = KEY.capitalize()
+
+bp = Blueprint(f"{KEY}_ui", __name__)
 
 
-@bp.route("/ui/hosts/tab")
-def hosts_tab():
-    return render_template(
-        "hosts/partials/list.html",
-        hosts=store.list(),
-        container_id="tab-hosts",
-        loading_id="hosts-loading",
+def _ctx(**extra):
+    """Basis-Kontext für list.html – key, label, container_id, loading_id, items."""
+    return dict(
+        key=KEY,
+        label=_LABEL,
+        items=store.list(),
+        container_id=_C_ID,
+        loading_id=_L_ID,
+        **extra,
     )
 
 
-@bp.route("/ui/hosts/list")
-def hosts_list():
+@bp.route(f"/ui/{KEY}/content")
+def content():
+    return render_template(f"{KEY}/partials/list.html", **_ctx())
+
+
+@bp.route(f"/ui/{KEY}/create")
+def create_modal():
     return render_template(
-        "hosts/partials/list.html",
-        hosts=store.list(),
-        container_id="tab-hosts",
-        loading_id="hosts-loading",
-    )
-
-
-@bp.route("/ui/hosts/create")
-def hosts_create_modal():
-    container_id = request.args.get("container_id", "tab-hosts")
-    loading_id   = request.args.get("loading_id", "hosts-loading")
-    return render_template(
-        "hosts/partials/create_modal.html",
-        container_id=container_id,
-        loading_id=loading_id,
-    )
-
-
-@bp.route("/ui/hosts/<host_id>/edit")
-def hosts_edit_modal(host_id: str):
-    container_id = request.args.get("container_id", "tab-hosts")
-    loading_id   = request.args.get("loading_id", "hosts-loading")
-    host = store.get(host_id)
-    if host is None:
-        return "Host nicht gefunden", 404
-    return render_template(
-        "hosts/partials/edit_modal.html",
-        host_id=host_id,
-        host=host,
-        container_id=container_id,
-        loading_id=loading_id,
-    )
-
-
-@bp.route("/ui/hosts/<host_id>/delete")
-def hosts_delete_modal(host_id: str):
-    container_id = request.args.get("container_id", "tab-hosts")
-    loading_id   = request.args.get("loading_id", "hosts-loading")
-    host         = store.get(host_id) or {}
-    return render_template(
-        "partials/confirm_modal.html",
-        description=host.get("description", host_id),
-        verb="löschen",
-        confirm_url=f"/api/hosts/{host_id}/delete",
-        method="delete",
-        container_id=container_id,
-        loading_id=loading_id,
-    )
-
-
-@bp.route("/ui/hosts/<host_id>/toggle")
-def hosts_toggle_modal(host_id: str):
-    container_id = request.args.get("container_id", "tab-hosts")
-    loading_id   = request.args.get("loading_id", "hosts-loading")
-    host         = store.get(host_id) or {}
-    enabled      = request.args.get("enabled", "True")
-    verb         = "deaktivieren" if enabled == "True" else "aktivieren"
-    return render_template(
-        "partials/confirm_modal.html",
-        description=host.get("description", host_id),
-        verb=verb,
-        confirm_url=f"/api/hosts/{host_id}/toggle",
+        "partials/create_edit/create_edit_modal.html",
+        schema=SCHEMA["fields"],
+        id_field=SCHEMA["id_field"],
+        item=None,
+        item_id=None,
+        submit_url=f"/api/{KEY}/",
         method="post",
-        container_id=container_id,
-        loading_id=loading_id,
+        title=f"Neuer {_LABEL}",
+        container_id=request.args.get("container_id", _C_ID),
+        loading_id=request.args.get("loading_id", _L_ID),
+    )
+
+
+@bp.route(f"/ui/{KEY}/<item_id>/edit")
+def edit_modal(item_id: str):
+    item = store.get(item_id)
+    if item is None:
+        return f"{_LABEL} nicht gefunden", 404
+    return render_template(
+        "partials/create_edit/create_edit_modal.html",
+        schema=SCHEMA["fields"],
+        id_field=SCHEMA["id_field"],
+        item=item,
+        item_id=item_id,
+        submit_url=f"/api/{KEY}/{item_id}",
+        method="put",
+        title=f"{_LABEL} bearbeiten – {item_id}",
+        container_id=request.args.get("container_id", _C_ID),
+        loading_id=request.args.get("loading_id", _L_ID),
+    )
+
+
+@bp.route(f"/ui/{KEY}/<item_id>/delete")
+def delete_modal(item_id: str):
+    item = store.get(item_id) or {}
+    return render_template(
+        "partials/confirm_modal.html",
+        description=item.get("description", item_id),
+        verb="löschen",
+        confirm_url=f"/api/{KEY}/{item_id}",
+        method="delete",
+        container_id=request.args.get("container_id", _C_ID),
+        loading_id=request.args.get("loading_id", _L_ID),
+    )
+
+
+@bp.route(f"/ui/{KEY}/<item_id>/toggle")
+def toggle_modal(item_id: str):
+    item    = store.get(item_id) or {}
+    enabled = request.args.get("enabled", "True")
+    verb    = "deaktivieren" if enabled == "True" else "aktivieren"
+    return render_template(
+        "partials/confirm_modal.html",
+        description=item.get("description", item_id),
+        verb=verb,
+        confirm_url=f"/api/{KEY}/{item_id}/toggle",
+        method="patch",
+        container_id=request.args.get("container_id", _C_ID),
+        loading_id=request.args.get("loading_id", _L_ID),
     )
