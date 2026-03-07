@@ -139,7 +139,7 @@ def _yaml_to_nav_items(yaml_path: Path, modules: dict) -> list[dict]:
         items.append({
             "key":       key,
             "label":     entry.get("label") or (mod.label if mod else key.replace("_", " ").title()),
-            "url":       entry.get("url")   or (mod.nav_url if mod else f"/ui/{key}"),
+            "url":       entry.get("url")   or (mod.nav_url if mod else f"/{key}"),
             "icon":      entry.get("icon")  or (mod.icon if mod else "home"),
             "default":   bool(entry.get("default", False)),
             "separator": False,

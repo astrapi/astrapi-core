@@ -33,7 +33,7 @@ class AstrapiModule:
     Optionale Felder:
         api_router        – FastAPI-Router für /api/<key>/...
         ui_blueprint      – Flask-Blueprint für UI-Routen (/ui/<key>/...)
-        nav_url           – URL für HTMX-Tab-Load (default: /ui/<key>/tab)
+        nav_url           – URL für hx-push-url (sichtbare Browser-URL, default: /<key>)
         nav_default       – ob dieser Eintrag die Startseite ist
         nav_group         – Gruppenbezeichnung in der Navigation
         settings_template – Pfad zum Einstellungs-Partial (relativ zu templates/)
@@ -59,7 +59,7 @@ class AstrapiModule:
 
     def __post_init__(self):
         if self.nav_url is None:
-            self.nav_url = f"/ui/{self.key}"
+            self.nav_url = f"/{self.key}"
 
     def to_nav_item(self) -> dict:
         """Gibt den Nav-Item-Dict zurück (kompatibel mit navigation.py)."""

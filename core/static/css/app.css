@@ -8,12 +8,12 @@
 /* Pixel-gemessen am GNOME Einstellungen Screenshot             */
 :root {
   /* GNOME Adwaita Dark – aus pattern-templates.svg + libadwaita Quellen */
-  --bg:          #222226;   /* Content-Bereich, Adwaita dark window  */
-  --sb:          #2e2e32;   /* Sidebar – aus SVG keyboard #2b292f    */
-  --card:        #333337;   /* Karten – Adwaita dark card surface    */
-  --card-hi:     #403e44;   /* Hover auf Karten                      */
-  --sel:         #484549;   /* Aktiver Nav-Eintrag                   */
-  --input-bg:    #383438;   /* Inputs, gleich wie Karten             */
+  --bg:          #1e1e1e;   /* @view_bg_color – Scrollbereich        */
+  --sb:          #242424;   /* @window_bg_color – Sidebar = Fenster  */
+  --card:        #2f2f2f;   /* @card_bg_color (rgba(255,255,255,.05) über #242424) */
+  --card-hi:     #383838;   /* Hover auf Karten                      */
+  --sel:         #404040;   /* rgba(255,255,255,.15) über #242424    */
+  --input-bg:    #2f2f2f;   /* Inputs                                */
 
   --border-s:    rgba(0,0,0,0.55);   /* Trennlinie: dunkler als BG   */
   --border-i:    rgba(255,255,255,0.10);
@@ -28,9 +28,9 @@
   --text-off-2:  rgba(239,238,243,0.16);
   --sh-off:      none;
 
-  --b:     #3584e4;
-  --b-h:   #4a90e8;
-  --b-dim: rgba(53,132,228,0.22);
+  --b:     #708fa6;
+  --b-h:   #82a3bb;
+  --b-dim: rgba(112,143,166,0.22);
   --btn-2:   rgba(255,255,255,0.12);   /* Dark secondary button   */
   --btn-2-t: #efeef3;
 
@@ -63,11 +63,11 @@
 /* ── GNOME Adwaita Light───────────── */
 .light-mode {
   /* GNOME Adwaita Light – exakt aus pattern-templates.svg */
-  --bg:          #fafafb;   /* SVG window bg: #fafafb                */
-  --sb:          #f2f2f4;   /* Sidebar leicht getönt                 */
-  --card:        #fafafb;   /* Cards weiß wie in Adwaita             */
-  --card-hi:     #f4f3f7;   /* Hover                                 */
-  --sel:         #dddbe3;   /* Active nav item                       */
+  --bg:          #ffffff;   /* @view_bg_color                        */
+  --sb:          #fafafb;   /* @window_bg_color – Sidebar = Fenster  */
+  --card:        #f0f0f0;   /* @card_bg_color (rgba(0,0,0,.05) über #fafafb) */
+  --card-hi:     #e8e8e8;   /* Hover                                 */
+  --sel:         #dcdcdc;   /* rgba(0,0,0,.10) über #fafafb          */
   --input-bg:    #ffffff;
 
   --border-s:    rgba(0,0,0,0.12);   /* Adwaita: subtile Trenner     */
@@ -83,9 +83,9 @@
   --text-off-2:  #c8c8c8;
   --sh-off:      0 1px 3px rgba(0,0,0,0.07);
 
-  --b:     #1c71d8;
-  --b-h:   #1561c0;
-  --b-dim: rgba(28,113,216,0.14);
+  --b:     #4e7a98;
+  --b-h:   #3f6880;
+  --b-dim: rgba(78,122,152,0.18);
   --btn-2:   #e6e6e7;   /* SVG secondary button bg               */
   --btn-2-t: #2e3436;   /* SVG secondary button text             */
 
@@ -158,14 +158,14 @@ input,select,textarea { font-family:var(--font); }
 }
 .nav-item:hover { background:rgba(255,255,255,0.07); }
 .nav-item.active {
-  background: #424246;
+  background: rgba(255,255,255,0.15);  /* Neutral – kein Akzent */
   color: var(--text);
-  font-weight: 500;
+  font-weight: 400;
 }
 .nav-item.active .nav-icon { opacity:1; color:var(--text); }
 .light-mode .nav-item:hover { background:rgba(0,0,0,0.05); }
 .light-mode .nav-item.active {
-  background: #e6e6e6;
+  background: rgba(0,0,0,0.10);  /* Neutral – kein Akzent */
   color: var(--text);
 }
 .light-mode .nav-item.active .nav-icon { color:var(--text); }

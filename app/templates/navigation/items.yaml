@@ -13,9 +13,10 @@
 - key: hosts
   label: Hosts
   group: Module
+  icon: server
 
 - key: tasks
   label: Tasks
   group: Module
+  icon: list
   
-
