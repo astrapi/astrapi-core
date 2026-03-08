@@ -18,6 +18,16 @@ from typing import Any
 import yaml
 
 
+class _SafeLoader(yaml.SafeLoader):
+    """SafeLoader der Python-spezifische Tags (!!python/…) ignoriert statt abzubrechen."""
+
+
+_SafeLoader.add_multi_constructor(
+    "tag:yaml.org,2002:python/",
+    lambda loader, suffix, node: None,
+)
+
+
 _SETTINGS_FILE: Path | None = None
 _cache: dict = {}
 
@@ -34,7 +44,7 @@ def init(app_root: Path) -> None:
 def _load() -> dict:
     if _SETTINGS_FILE and _SETTINGS_FILE.exists():
         with open(_SETTINGS_FILE, encoding="utf-8") as f:
-            return yaml.safe_load(f) or {}
+            return yaml.load(f, Loader=_SafeLoader) or {}
     return {}
 
 
