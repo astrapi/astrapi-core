@@ -73,6 +73,15 @@ def load_modules(app_root: Path) -> list:
     core_mods = _load_from_dir(CORE_MOD_DIR, "core.modules")
     app_mods  = _load_from_dir(app_root  / "modules", "app.modules")
 
+    # App-Module die Core-Module überschreiben aber keine eigenen Templates haben:
+    # module_root vom Core-Modul erben, damit der PrefixLoader korrekt greift.
+    for key in app_mods:
+        if key in core_mods:
+            app_m  = app_mods[key]
+            core_m = core_mods[key]
+            if app_m.module_root is None or not (app_m.module_root / "templates").exists():
+                app_m.module_root = core_m.module_root
+
     merged  = {**core_mods, **app_mods}
     ordered = []
     for key in sorted(core_mods):
