@@ -46,7 +46,10 @@ def _load_from_dir(modules_dir: Path, pkg_prefix: str) -> dict:
             if instance is None or not isinstance(instance, AstrapiModule):
                 warnings.warn(f"Modul '{entry.name}' ({pkg_prefix}): keine AstrapiModule-Instanz gefunden")
                 continue
-            instance.module_root = entry
+            # module_root nur setzen wenn dieses Verzeichnis Templates hat
+            # oder noch kein module_root gesetzt ist (z.B. app re-exportiert Core-Instanz)
+            if instance.module_root is None or (entry / "templates").exists():
+                instance.module_root = entry
             # settings.yaml nachladen wenn das Modul es nicht selbst gesetzt hat
             if not instance.settings_schema:
                 settings_yaml = entry / "settings.yaml"
