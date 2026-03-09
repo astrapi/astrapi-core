@@ -50,7 +50,7 @@
   --mono: 'Adwaita Mono', 'JetBrains Mono', ui-monospace, monospace;
 
   --rad:    12px;   /* SVG card radius: 15px → 12px für Web   */
-  --rad-lg: 10px;   /* SVG button radius: 10px                  */
+  --rad-lg: 6px;    /* button radius                            */
   --rad-xl: 16px;   /* Dialog/Modal: etwas größer               */
   --t:    150ms;
   --ease: cubic-bezier(0.25,0,0.3,1);
@@ -242,7 +242,7 @@ input,select,textarea { font-family:var(--font); }
 /* ═══════════════════════════ BUTTONS ════════════════════════════ */
 .btn {
   display:inline-flex; align-items:center; gap:6px;
-  padding:7px 14px; border-radius:var(--rad);
+  padding:7px 14px; border-radius:var(--rad-lg);
   font-size:13.5px; font-weight:500; font-family:var(--font);
   border:1px solid transparent; cursor:pointer;
   white-space:nowrap;
@@ -270,7 +270,7 @@ input,select,textarea { font-family:var(--font); }
 
 /* ── Icon-Buttons – immer monochrom ─────────────────────────── */
 .btn-icon {
-  width:30px; height:30px; padding:0; border-radius:var(--rad);
+  width:30px; height:30px; padding:0; border-radius:var(--rad-lg);
   background:transparent; border:none;
   display:inline-flex; align-items:center; justify-content:center;
   cursor:pointer; color:var(--text-2);
@@ -360,21 +360,22 @@ input,select,textarea { font-family:var(--font); }
 
 /* ════════════════════════ TOGGLE ════════════════════════════════ */
 .toggle-switch {
-  position:relative; display:inline-block;
-  width:34px; height:18px; border-radius:99px;
-  cursor:pointer; flex-shrink:0; padding:0; border:none;
-  transition:background var(--t);
+  position:relative; display:inline-flex; align-items:center;
+  width:36px; height:20px; border-radius:99px;
+  cursor:pointer; flex-shrink:0; padding:0;
+  background:transparent; border:2px solid;
+  appearance:none; -webkit-appearance:none;
+  transition:border-color var(--t);
 }
-.toggle-on  { background:var(--b); }
-.toggle-off { background:rgba(255,255,255,0.15); }
-.light-mode .toggle-off { background:rgba(0,0,0,0.18); }
+.toggle-on  { border-color:var(--g); }
+.toggle-off { border-color:var(--r); }
 .toggle-knob {
-  position:absolute; top:2px; left:2px;
-  width:14px; height:14px; border-radius:50%; background:#fff;
-  box-shadow:0 1px 3px rgba(0,0,0,0.35);
-  transition:transform var(--t); pointer-events:none;
+  position:absolute; left:2px;
+  width:13px; height:13px; border-radius:50%;
+  transition:transform var(--t), background var(--t); pointer-events:none;
 }
-.toggle-on .toggle-knob { transform:translateX(16px); }
+.toggle-on  .toggle-knob { background:var(--g); transform:translateX(13px); }
+.toggle-off .toggle-knob { background:var(--r); }
 
 /* ═════════════════════════ FORMS ════════════════════════════════ */
 .form-group { display:flex; flex-direction:column; gap:4px; }
@@ -611,34 +612,5 @@ input,select,textarea { font-family:var(--font); }
   padding: 1px 6px;
 }
 
-/* Toggle-Switch (Settings-Version) */
-.toggle-switch {
-  position: relative;
-  display: inline-flex;
-  align-items: center;
-  width: 42px;
-  height: 24px;
-  border-radius: 99px;
-  cursor: pointer;
-  flex-shrink: 0;
-  padding: 0;
-  border: none;
-  transition: background var(--t);
-  background: rgba(255,255,255,0.15);
-}
-.light-mode .toggle-switch { background: rgba(0,0,0,0.18); }
-.toggle-switch input { position:absolute; opacity:0; width:0; height:0; }
-.toggle-switch .toggle-knob {
-  position: absolute;
-  left: 3px;
-  width: 18px;
-  height: 18px;
-  border-radius: 50%;
-  background: #fff;
-  box-shadow: 0 1px 4px rgba(0,0,0,0.4);
-  transition: transform var(--t);
-  pointer-events: none;
-}
-.toggle-switch input:checked ~ .toggle-knob { transform: translateX(18px); }
 
 @keyframes spin { to { transform:rotate(360deg); } }
