@@ -1,7 +1,7 @@
 backup-daily:
   command: /usr/local/bin/backup.sh
   description: Tägliches Backup
-  enabled: false
+  enabled: true
   schedule: 0 2 * * *
 cleanup-logs:
   command: find /var/log -name "*.log" -mtime +30 -delete

@@ -1,124 +1,18 @@
+"""app/modules/backup/ui.py – Flask-Blueprint für Backup UI-Routen."""
+
 from pathlib import Path
-from flask import Blueprint, render_template, request
-from core.ui.schema_loader import load_schema
+
+from core.ui.crud_blueprint import make_crud_blueprint
 from .storage import store, KEY
 
-_DIR   = Path(__file__).parent
-SCHEMA = load_schema(str(_DIR / "schema.yaml"))
+_DIR = Path(__file__).parent
+bp = make_crud_blueprint(
+    store, KEY,
+    schema_path=str(_DIR / "schema.yaml"),
+    label="Backup",
+    description_field="name",
+)
 
-_C_ID  = f"tab-{KEY}"
-_L_ID  = f"{KEY}-loading"
-_LABEL = "Backup"
-
-bp = Blueprint(f"{KEY}_ui", __name__)
-
-def _ctx(**extra):
-    return dict(
-        key=KEY,
-        label=_LABEL,
-        items=store.list(),
-        container_id=_C_ID,
-        loading_id=_L_ID,
-        **extra,
-    )
-
-@bp.route(f"/ui/{KEY}/content")
-def content():
-    return render_template(f"{KEY}/partials/list.html", **_ctx())
-
-@bp.route(f"/ui/{KEY}/create")
-def create_modal():
-    return render_template(
-        "partials/create_edit/create_edit_modal.html",
-        schema=SCHEMA["fields"],
-        id_field=SCHEMA["id_field"],
-        item=None,
-        item_id=None,
-        submit_url=f"/ui/{KEY}/",
-        method="post",
-        title=f"Neuer Backup-Job",
-        reload_url="/ui/backup/content",
-        container_id=request.args.get("container_id", _C_ID),
-        loading_id=request.args.get("loading_id", _L_ID),
-    )
-
-@bp.route(f"/ui/{KEY}/<item_id>/edit")
-def edit_modal(item_id: str):
-    item = store.get(item_id)
-    if item is None:
-        return f"{_LABEL} nicht gefunden", 404
-    return render_template(
-        "partials/create_edit/create_edit_modal.html",
-        schema=SCHEMA["fields"],
-        id_field=SCHEMA["id_field"],
-        item=item,
-        item_id=item_id,
-        submit_url=f"/ui/{KEY}/{item_id}/update",
-        method="post",
-        title=f"Backup bearbeiten – {item_id}",
-        reload_url="/ui/backup/content",
-        container_id=request.args.get("container_id", _C_ID),
-        loading_id=request.args.get("loading_id", _L_ID),
-    )
-
-@bp.route(f"/ui/{KEY}/<item_id>/delete")
-def delete_modal(item_id: str):
-    item = store.get(item_id) or {}
-    return render_template(
-        "partials/confirm_modal.html",
-        description=item.get("name", item_id),
-        verb="löschen",
-        confirm_url=f"/api/{KEY}/{item_id}",
-        method="delete",
-        reload_url="/ui/backup/content",
-        container_id=request.args.get("container_id", _C_ID),
-        loading_id=request.args.get("loading_id", _L_ID),
-    )
-
-@bp.route(f"/ui/{KEY}/<item_id>/toggle")
-def toggle_modal(item_id: str):
-    item    = store.get(item_id) or {}
-    enabled = request.args.get("enabled", "True")
-    verb    = "deaktivieren" if enabled == "True" else "aktivieren"
-    return render_template(
-        "partials/confirm_modal.html",
-        description=item.get("name", item_id),
-        verb=verb,
-        confirm_url=f"/api/{KEY}/{item_id}/toggle",
-        method="patch",
-        reload_url="/ui/backup/content",
-        container_id=request.args.get("container_id", _C_ID),
-        loading_id=request.args.get("loading_id", _L_ID),
-    )
-
-def _form_data() -> dict:
-    """Liest Form-Felder typsicher aus und gibt ein dict zurück."""
-    data = {}
-    for field in SCHEMA["fields"]:
-        name = field["name"]
-        if field.get("type") == "boolean":
-            data[name] = name in request.form
-        else:
-            data[name] = request.form.get(name, "")
-    return data
-
-
-@bp.route(f"/ui/{KEY}/", methods=["POST"])
-def create_apply():
-    item_id = request.form.get(SCHEMA["id_field"]["name"], "").strip()
-    if not item_id:
-        return "ID fehlt", 400
-    try:
-        store.create(item_id, _form_data())
-    except KeyError:
-        return "Bereits vorhanden", 409
-    return render_template(f"{KEY}/partials/list.html", **_ctx())
-
-
-@bp.route(f"/ui/{KEY}/<item_id>/update", methods=["POST"])
-def edit_apply(item_id: str):
-    try:
-        store.update(item_id, _form_data())
-    except KeyError:
-        return "Nicht gefunden", 404
-    return render_template(f"{KEY}/partials/list.html", **_ctx())
+# Modulspezifische Extrarouten hier ergänzen:
+# @bp.route(f"/ui/{KEY}/<item_id>/run", methods=["POST"])
+# def run_backup(item_id: str): ...
