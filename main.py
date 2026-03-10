@@ -6,8 +6,8 @@ Flask    → /              UI, HTMX-Partials, Modals
 
 Start:
     python main.py              # Port 5000 (Standard)
-    python main.py 8080         # Port 8080
-    python main.py --port 8080  # alternativ
+    python main.py --port 8080  # anderer Port
+    python main.py --no-reload  # ohne File-Watcher
 """
 import sys
 from pathlib import Path
@@ -42,24 +42,12 @@ def create_app() -> FastAPI:
 app = create_app()
 
 
-def _parse_port() -> int:
-    """Liest den Port aus den Kommandozeilenargumenten.
-
-    Unterstützte Formate:
-        python main.py 8080
-        python main.py --port 8080
-    """
-    args = sys.argv[1:]
-    for i, arg in enumerate(args):
-        if arg == "--port" and i + 1 < len(args):
-            return int(args[i + 1])
-        if arg.isdigit():
-            return int(arg)
-    return 5000  # Standard
-
-
 if __name__ == "__main__":
+    import argparse
     import uvicorn
-    port = _parse_port()
-    print(f"Starting on http://0.0.0.0:{port}")
-    uvicorn.run("main:app", host="0.0.0.0", port=port, reload=True)
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--port", type=int, default=5000)
+    parser.add_argument("--host", default="0.0.0.0")
+    parser.add_argument("--no-reload", dest="reload", action="store_false", default=True)
+    args = parser.parse_args()
+    uvicorn.run("main:app", host=args.host, port=args.port, reload=args.reload)
