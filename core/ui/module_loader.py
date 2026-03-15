@@ -88,6 +88,20 @@ _CARD_ACTION_TYPES: dict[str, dict] = {
         "hx_target":"body",
         "hx_swap":  "beforeend",
     },
+    "archives": {
+        "title":    "Archive",
+        "icon":     "archive",
+        "hx_get":   "/api/{module}/{item}/archives",
+        "hx_target":"body",
+        "hx_swap":  "beforeend",
+    },
+    "stats": {
+        "title":    "Statistiken",
+        "icon":     "bar-chart",
+        "hx_get":   "/api/{module}/{item}/stats",
+        "hx_target":"body",
+        "hx_swap":  "beforeend",
+    },
 }
 
 _POST_TYPES = {"run", "run_debug"}
