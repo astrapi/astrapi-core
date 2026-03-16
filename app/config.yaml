@@ -1,8 +1,4 @@
 # app/config.yaml – App-Konfiguration
-#
-# navigation: ist die einzige Quelle für die Navigation.
-# Nur was hier steht erscheint im Menü.
-# label und icon sind optional – Defaults kommen aus der modul.yaml des Moduls.
 
 app:
   name:       AstrapiControl
@@ -10,27 +6,3 @@ app:
   light_mode: false
   logo_svg:   null
   icon_theme: lucide    # lucide | heroicons | tabler | oder eigenes Theme in templates/partials/components/sprites/
-
-navigation:
-  # App-Module
-  - key:   hosts
-    group: Server-Management
-
-  - key:   tasks
-    group: Server-Management
-
-  - key:   backup
-    group: Datensicherung
-
-  # Core-Module
-  - key:   notify
-    group: System
-
-  - key:   scheduler
-    group: System
-
-  - key:   sysinfo
-    group: System
-
-  - key:   settings
-    group: System

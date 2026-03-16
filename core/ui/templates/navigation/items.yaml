@@ -1,0 +1,21 @@
+# core/templates/navigation/items.yaml
+#
+# FALLBACK für Projekte ohne app/config.yaml.
+# Wenn app/config.yaml → navigation: vorhanden ist, wird diese Datei ignoriert.
+# Die vollständige Navigation gehört in app/config.yaml.
+
+- key: notify
+  label: Benachrichtigungen
+  group: System
+
+- key: scheduler
+  label: Scheduler
+  group: System
+
+- key: sysinfo
+  label: Info
+  group: System
+
+- key: settings
+  label: Einstellungen
+  group: System

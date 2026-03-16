@@ -1,6 +1,8 @@
 # app/modules/tasks/modul.yaml – Modul-Konfiguration
 
-label: Tasks
-icon:  clock
+label:       Tasks
+icon:        clock
+nav_group:   Module
+nav_default: false
 
 # settings_defaults werden automatisch aus settings.yaml extrahiert

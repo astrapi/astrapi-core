@@ -1,6 +1,8 @@
 # app/modules/hosts/modul.yaml – Modul-Konfiguration
 
-label: Hosts
-icon:  server
+label:       Hosts
+icon:        server
+nav_group:   Module
+nav_default: true
 
 # settings_defaults werden automatisch aus settings.yaml extrahiert
