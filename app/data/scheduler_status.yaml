@@ -1,4 +1,4 @@
 test_01:
   last_duration: 10.0s
-  last_run: 15.03.2026 13:00
-  last_status: OK
+  last_run: 16.03.2026 14:00
+  last_status: 'Fehler: hosts.check: invalid literal for int() with base 10: '''''

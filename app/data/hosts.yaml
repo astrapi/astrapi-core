@@ -3,6 +3,7 @@ db-01:
   enabled: true
   ip: 192.168.1.20
   port: '5432'
+  reachable: false
   tags: database, production
 hgg:
   description: ''
