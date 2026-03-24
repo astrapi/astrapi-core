@@ -14,6 +14,7 @@ psutil>=5.9
 
 # ── Konfiguration & Datenhaltung ───────────────────────────────
 pyyaml>=6.0
+cryptography>=42.0
 apscheduler>=3.10
 apispec>=6.0
 
