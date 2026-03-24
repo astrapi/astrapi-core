@@ -11,7 +11,7 @@ Neu gegenüber V2:
 
 from __future__ import annotations
 
-from flask import Flask, redirect, send_from_directory, render_template, request
+from flask import Flask, redirect, send_from_directory, render_template, request, jsonify
 from pathlib import Path
 from jinja2 import ChoiceLoader, FileSystemLoader
 import importlib.util
@@ -19,10 +19,11 @@ from typing import Optional, Callable
 
 from .page_factory import register_pages
 from .swagger_utils import register_ui_docs
-from .module_registry import load_modules, register_flask_modules, build_nav_items
-from ..system.version import get_app_version, get_core_version
+from .module_registry import load_modules, register_flask_modules, build_nav_items, list_available_core_modules
+from ..system.version import get_app_version, get_app_name, get_display_name, get_core_version
 from .settings_registry import (
     init as settings_init, seed_defaults, set_many, all_settings,
+    get as settings_get, set as settings_set,
 )
 from .storage import init as storage_init
 
@@ -101,6 +102,8 @@ def create(
                 break
 
     _app_version  = get_app_version(app_root)
+    _app_name     = get_app_name(app_root)
+    _display_name = get_display_name(app_root)
     _core_version = get_core_version(CORE_ROOT.parent)
 
     light_mode: bool = app_cfg.get("LIGHT_MODE", False)
@@ -139,6 +142,8 @@ def create(
     register_flask_modules(app, modules, all_loaders)
 
     app.jinja_env.loader = ChoiceLoader(all_loaders)
+    app.jinja_env.auto_reload = True
+    app.config["TEMPLATES_AUTO_RELOAD"] = True
 
     # ── Globale Template-Variablen ────────────────────────────────────────────
     _mod_map: dict = {m.key: m for m in modules}
@@ -157,10 +162,34 @@ def create(
             m = _mod_map.get(key)
             return m.card_actions if m else []
 
+        def col_widths(module_key: str) -> str:
+            return settings_get(f"ui.col_widths.{module_key}", "{}")
+
+        def resolve_remote_host(remote_id) -> str:
+            if not remote_id:
+                return "—"
+            try:
+                from app.modules.remotes.engine import get_remote
+                r = get_remote(remote_id)
+                return r.get("host") or "—" if r else "—"
+            except Exception:
+                return "—"
+
+        def last_run_status(module: str, item_id) -> str | None:
+            try:
+                from core.system.activity_log import list_runs_for_item
+                runs = list_runs_for_item(module, str(item_id), limit=5)
+                for run in runs:
+                    if run.get("status") != "running":
+                        return run.get("status")
+            except Exception:
+                pass
+            return None
+
         from core.ui.settings_registry import get as _srget
         _light = _srget("LIGHT_MODE", _light_default)
         return {
-            "app_name":             app_cfg.get("APP_NAME",     "myapp"),
+            "app_name":             _display_name,
             "app_version":          _app_version,
             "core_version":         _core_version,
             "app_logo_svg":         app_cfg.get("APP_LOGO_SVG", None),
@@ -173,6 +202,9 @@ def create(
             "module_has_settings":  module_has_settings,
             "module_label":         module_label,
             "module_card_actions":  module_card_actions,
+            "col_widths":           col_widths,
+            "resolve_remote_host":  resolve_remote_host,
+            "last_run_status":      last_run_status,
         }
 
     # ── Navigation aus Modulen + optionaler items.yaml ────────────────────────
@@ -204,6 +236,7 @@ def create(
     settings_has_blueprint = any(m.key == "settings" and m.ui_blueprint for m in modules)
     _register_settings_routes(app, modules, app_cfg,
                                skip_content=settings_has_blueprint)
+    _register_preferences_routes(app)
 
     # ── Generische Modul-Settings-Modal-Routen ────────────────────────────────
     _register_module_settings_routes(app, modules)
@@ -256,10 +289,11 @@ def _register_settings_routes(app: Flask, modules: list, app_cfg: dict,
 
     def _ctx(flash: str = "") -> dict:
         return {
-            "settings":      all_settings(),
-            "modules":       modules,
-            "app_cfg":       app_cfg,
-            "flash_message": flash,
+            "settings":         all_settings(),
+            "modules":          modules,
+            "app_cfg":          app_cfg,
+            "flash_message":    flash,
+            "core_module_list": list_available_core_modules(),
         }
 
     @app.route("/settings")
@@ -297,6 +331,15 @@ def _register_settings_routes(app: Flask, modules: list, app_cfg: dict,
             **_ctx(f"Einstellungen für \"{mod.label}\" gespeichert."),
         )
 
+    @app.route("/ui/settings/core-module/<key>/toggle", methods=["POST"])
+    def settings_toggle_core_module(key: str):
+        current = settings_get(f"core.module.{key}.enabled", "1")
+        settings_set(f"core.module.{key}.enabled", "0" if current != "0" else "1")
+        return render_template(
+            "partials/lists/settings.html",
+            **_ctx(f"Core-Modul '{key}' {'deaktiviert' if current != '0' else 'aktiviert'}. Neustart erforderlich."),
+        )
+
 
 # ─────────────────────────────────────────────────────────────────────────────
 # Generische Modul-Settings-Modal-Routen
@@ -305,6 +348,7 @@ def _register_settings_routes(app: Flask, modules: list, app_cfg: dict,
 def _register_module_settings_routes(app: Flask, modules: list) -> None:
     """Registriert GET/POST /ui/<key>/settings für Module mit settings_schema."""
     from .settings_registry import get_module, set_many as _set_many
+    from core.system.secrets import set_secret, get_secret_safe
 
     mod_map = {m.key: m for m in modules if m.settings_schema}
     if not mod_map:
@@ -316,27 +360,76 @@ def _register_module_settings_routes(app: Flask, modules: list) -> None:
         if mod is None:
             return "", 404
 
+        if request.method == "GET":
+            from core.ui.module_loader import reload_settings
+            reload_settings(mod)
+
         if request.method == "POST":
             password_keys = {
                 f["key"] for f in mod.settings_schema if f.get("type") == "password"
             }
+            list_keys = {
+                f["key"] for f in mod.settings_schema if f.get("type") == "list"
+            }
             prefixed = {}
+            # Listen-Felder: fieldname_0, fieldname_1, … → list
+            for lk in list_keys:
+                items = []
+                i = 0
+                while True:
+                    val = request.form.get(f"{lk}_{i}")
+                    if val is None:
+                        break
+                    if val.strip():
+                        items.append(val.strip())
+                    i += 1
+                prefixed[f"module.{module_key}.{lk}"] = items
+            # Alle anderen Felder
+            handled = {f"{lk}_{i}" for lk in list_keys for i in range(50)}
             for k, v in request.form.to_dict().items():
-                if k in password_keys and not v.strip():
-                    continue  # Leeres Passwort-Feld nicht speichern
-                prefixed[f"module.{module_key}.{k}"] = v
+                if k in handled:
+                    continue
+                if k in password_keys:
+                    if v.strip():
+                        set_secret(f"module.{module_key}.{k}", v.strip())
+                    # Leeres Passwort-Feld nicht speichern
+                else:
+                    prefixed[f"module.{module_key}.{k}"] = v
             _set_many(prefixed)
 
+        password_keys_all = {
+            f["key"] for f in mod.settings_schema if f.get("type") == "password"
+        }
         current_values = {
-            field["key"]: get_module(module_key, field["key"],
-                                     field.get("default", ""))
+            field["key"]: (
+                get_secret_safe(f"module.{module_key}.{field['key']}", field.get("default", ""))
+                if field["key"] in password_keys_all
+                else get_module(module_key, field["key"], field.get("default", ""))
+            )
             for field in mod.settings_schema
             if "key" in field
         }
+        from core.ui.field_resolver import resolve_options_endpoint
         return render_template(
             "partials/settings_modal.html",
             mod=mod,
-            schema=mod.settings_schema,
+            schema=resolve_options_endpoint(mod.settings_schema),
             values=current_values,
-            saved=(request.method == "POST"),
         )
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Preferences-Routen (Spaltenbreiten etc.)
+# ─────────────────────────────────────────────────────────────────────────────
+
+def _register_preferences_routes(app: Flask) -> None:
+
+    @app.route("/ui/preferences/col-widths/<module_key>", methods=["GET", "POST"])
+    def preferences_col_widths(module_key: str):
+        key = f"ui.col_widths.{module_key}"
+        if request.method == "POST":
+            data = request.get_json(silent=True) or {}
+            import json
+            settings_set(key, json.dumps(data.get("widths", {})))
+            return jsonify({"ok": True})
+        return jsonify({"widths": __import__("json").loads(settings_get(key, "{}"))})

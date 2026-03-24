@@ -49,12 +49,7 @@ def _run(cmd: list, timeout: int = 5) -> str:
         return ""
 
 
-def _fmt_size(n: float) -> str:
-    for unit in ["B", "KB", "MB", "GB", "TB"]:
-        if n < 1024:
-            return f"{n:.1f} {unit}"
-        n /= 1024
-    return f"{n:.1f} PB"
+from core.system.format import fmt_bytes as _fmt_size
 
 
 def _fmt_uptime(seconds: float) -> str:
@@ -169,6 +164,14 @@ def collect() -> dict:
         except Exception:
             os_name = "?"
 
+        import getpass, os as _os
+        try:
+            current_user = getpass.getuser()
+        except Exception:
+            current_user = "?"
+        cwd = _os.getcwd()
+
+
         services   = [_systemd_service(s) for s in _services]
         extra_info = _extra_info_fn() if _extra_info_fn else {}
 
@@ -179,6 +182,19 @@ def collect() -> dict:
             reverse=True,
         )[:8]:
             procs.append(p.info)
+
+        root_disk = None
+        try:
+            _rd = psutil.disk_usage("/")
+            root_disk = {
+                "mountpoint": "/",
+                "total_fmt":  _fmt_size(_rd.total),
+                "used_fmt":   _fmt_size(_rd.used),
+                "free_fmt":   _fmt_size(_rd.free),
+                "percent":    _rd.percent,
+            }
+        except Exception:
+            pass
 
         return {
             "ok":          True,
@@ -206,12 +222,15 @@ def collect() -> dict:
                 "os_name":    os_name,
                 "sys_uptime": _fmt_uptime(time.time() - boot),
                 "app_uptime": _fmt_uptime(time.time() - _START_TIME),
+                "user":       current_user,
+                "cwd":        cwd,
             },
             "software": {
                 "python":  f"{sys.version_info.major}.{sys.version_info.minor}.{sys.version_info.micro}",
                 "psutil":  psutil.__version__,
                 **extra_info,
             },
+            "root_disk":  root_disk,
             "disks":      _disk_usage(),
             "interfaces": _net_interfaces(),
             "services":   services,
