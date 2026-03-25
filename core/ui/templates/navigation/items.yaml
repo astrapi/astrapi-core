@@ -1,8 +1,8 @@
 # core/templates/navigation/items.yaml
 #
-# FALLBACK für Projekte ohne app/config.yaml.
-# Wenn app/config.yaml → navigation: vorhanden ist, wird diese Datei ignoriert.
-# Die vollständige Navigation gehört in app/config.yaml.
+# FALLBACK für Projekte ohne app/navigation.yaml.
+# Wenn app/navigation.yaml vorhanden ist, wird diese Datei ignoriert.
+# Die vollständige Navigation gehört in app/navigation.yaml.
 
 - key: notify
   label: Benachrichtigungen
