@@ -1,10 +1,5 @@
-# backupctl – Python-Abhängigkeiten
+# astrapi-core – Python-Abhängigkeiten
 # Installation: pip install -r requirements.txt
-#
-# Systemabhängigkeiten (nicht via pip):
-#   borgbackup    – borg-Befehl muss im PATH sein (/var/lib/backupadm/.venv/bin/borg)
-#   wakeonlan     – für Wake-on-LAN (apt install wakeonlan)
-#   openssh       – ssh/scp für Remote-Backups
 
 # ── Web-Framework ─────────────────────────────────────────────────
 fastapi>=0.115

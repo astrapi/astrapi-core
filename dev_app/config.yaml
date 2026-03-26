@@ -1,0 +1,8 @@
+# dev_app/config.yaml – Entwicklungsapp für astrapi-core
+
+app:
+  name:       Astrapi Dev
+  lang:       de
+  light_mode: false
+  logo_svg:   null
+  icon_theme: lucide

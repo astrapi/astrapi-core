@@ -1,0 +1,10 @@
+<div class="meta-grid">
+  <span class="meta-label">Kategorie</span>
+  <span class="meta-value">{{ item_data.category or '—' }}</span>
+  <span class="meta-label">Anzahl</span>
+  <span class="meta-value">{{ item_data.count if item_data.count is not none else '—' }}</span>
+  {% if item_data.note %}
+  <span class="meta-label">Notiz</span>
+  <span class="meta-value">{{ item_data.note }}</span>
+  {% endif %}
+</div>

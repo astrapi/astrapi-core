@@ -1,5 +1,5 @@
 """
-backupctl – Einstiegspunkt (FastAPI + Flask)
+astrapi-core – Einstiegspunkt (FastAPI + Flask)
 
 FastAPI  → /api/...       JSON-Endpunkte, OpenAPI, Swagger
 Flask    → /              UI, HTMX-Partials, Modals
@@ -14,7 +14,7 @@ import time
 from pathlib import Path
 
 PROJECT_ROOT = Path(__file__).resolve().parent
-APP_ROOT     = PROJECT_ROOT / "app"
+APP_ROOT     = PROJECT_ROOT / "dev_app"
 
 if str(PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(PROJECT_ROOT))
@@ -27,13 +27,12 @@ from a2wsgi import WSGIMiddleware
 import uvicorn
 
 from astrapi.core.ui import create as create_ui
-from astrapi.core.ui.module_registry import load_modules
+from astrapi.core.ui.module_registry import load_modules, register_fastapi_modules
 from astrapi.core.ui.settings_registry import init as settings_init
 from astrapi.core.system.health import register_health
 from astrapi.core.system.systemd import sd_notify, start_watchdog
-from astrapi.core.system.version import get_display_name
+from astrapi.core.system.version import get_display_name, get_app_version
 from astrapi.core.modules.settings.engine import configure as configure_settings
-from app.api.fastapi_app import create as create_api
 
 _START_TIME = time.time()
 
@@ -57,14 +56,24 @@ def create_app() -> FastAPI:
 
     settings_init(APP_ROOT)
     modules = load_modules(APP_ROOT)
-    api = create_api(modules=modules)
+
+    api = FastAPI(
+        title=get_display_name(APP_ROOT) + " API",
+        version=get_app_version(APP_ROOT, default="0.0.0"),
+        docs_url="/api/docs",
+        redoc_url="/api/redoc",
+        openapi_url="/api/openapi.json",
+    )
+    register_fastapi_modules(api, modules)
+
+    register_health(api, check_fn=_db_check, start_time=_START_TIME)
+
     ui  = create_ui(app_root=APP_ROOT, modules=modules)
 
-    core_static = PROJECT_ROOT / "core" / "ui" / "static"
+    core_static = PROJECT_ROOT / "astrapi" / "core" / "ui" / "static"
     api.mount("/static", StaticFiles(directory=str(core_static)), name="static")
     api.mount("/", WSGIMiddleware(ui))
 
-    register_health(api, check_fn=_db_check, start_time=_START_TIME)
     start_watchdog(check_fn=lambda: _db_check()[0])
     sd_notify("READY=1")
     return api

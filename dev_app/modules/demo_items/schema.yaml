@@ -1,0 +1,52 @@
+# dev_app/modules/demo_items/schema.yaml
+# Deckt alle relevanten Feldtypen ab: text, number, boolean, select
+
+id_field:
+  name:        item_id
+  label:       Item-ID
+  placeholder: "z. B. item-01"
+  max:         50
+
+fields:
+  - name:        description
+    type:        text
+    label:       Bezeichnung
+    placeholder: "Beschreibung des Eintrags"
+    max:         100
+    column:      1
+    row:         1
+
+  - name:    category
+    type:    select
+    label:   Kategorie
+    options:
+      - value: alpha
+        label: Alpha
+      - value: beta
+        label: Beta
+      - value: gamma
+        label: Gamma
+    column:  2
+    row:     1
+
+  - name:   count
+    type:   number
+    label:  Anzahl
+    min:    0
+    max:    9999
+    column: 1
+    row:    2
+
+  - name:        note
+    type:        text
+    label:       Notiz
+    placeholder: "Beliebige Notiz"
+    max:         200
+    column:      2
+    row:         2
+
+  - name:   enabled
+    type:   boolean
+    label:  Aktiv
+    column: 2
+    row:    3
