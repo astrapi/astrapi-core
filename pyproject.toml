@@ -1,5 +1,5 @@
 [project]
-name = "astrapi-framework"
+name = "astrapi-core"
 dynamic = ["version"]   # Version kommt aus Git
 
 [build-system]
