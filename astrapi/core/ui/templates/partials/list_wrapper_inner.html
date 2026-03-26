@@ -31,7 +31,9 @@
     {% if cfg and has_run_buttons | default(True) %}
     {% endif %}
 
+    {% if has_create | default(True) %}
     {{ ui.add_button(module=module, container_id=container_id, loading_id=loading_id) }}
+    {% endif %}
 
   </div>
 </div>
@@ -97,8 +99,13 @@
           {% for action in _card_actions %}{{ ui.card_action_button(action, item_name, item_data, container_id, loading_id) }}{% endfor %}
         </div>
         <div class="card-footer-actions">
+          {% if extra_actions_template %}{% include extra_actions_template ignore missing %}{% endif %}
+          {% if has_edit | default(True) %}
           {{ ui.edit_button(module=module, item=item_name, container_id=container_id, loading_id=loading_id) }}
+          {% endif %}
+          {% if has_delete | default(True) %}
           {{ ui.delete_button(module=module, item=item_name, container_id=container_id, loading_id=loading_id, description=item_data.description or item_data.host or item_name) }}
+          {% endif %}
         </div>
       </div>
 
@@ -168,7 +175,10 @@
           <td class="col-actions">
             <div class="table-actions">
               {% for action in _run_actions %}{{ ui.card_action_button(action, item_name, item_data, container_id, loading_id) }}{% endfor %}
+              {% if extra_actions_template %}{% include extra_actions_template ignore missing %}{% endif %}
+              {% if has_edit | default(True) %}
               {{ ui.edit_button(module=module, item=item_name, container_id=container_id, loading_id=loading_id) }}
+              {% endif %}
               <div class="table-ctx-menu"
                    x-data="{open: false, pos: {top:0, right:0}, toggle(btn){ const r=btn.getBoundingClientRect(); this.pos={top: r.bottom+2, right: window.innerWidth-r.right}; this.open=!this.open; }}"
                    @click.outside="open = false">
@@ -177,7 +187,9 @@
                 </button>
                 <div class="table-ctx-dropdown" x-show="open" :style="'top:'+pos.top+'px;right:'+pos.right+'px'" @click="open = false">
                   {% for action in _menu_actions %}{{ ui.card_action_button(action, item_name, item_data, container_id, loading_id) }}{% endfor %}
+                  {% if has_delete | default(True) %}
                   {{ ui.delete_button(module=module, item=item_name, container_id=container_id, loading_id=loading_id, description=item_data.description or item_data.host or item_name) }}
+                  {% endif %}
                 </div>
               </div>
             </div>
