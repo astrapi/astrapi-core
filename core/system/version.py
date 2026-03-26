@@ -24,4 +24,8 @@ def get_display_name(app_root: Path, default: str = "App") -> str:
 
 
 def get_core_version(core_root: Path, default: str = "—") -> str:
-    return str(_read_yaml(core_root / "core.yaml").get("version", default))
+    try:
+        from importlib.metadata import version
+        return version("astrapi-framework")
+    except Exception:
+        return str(_read_yaml(core_root / "core.yaml").get("version", default))
