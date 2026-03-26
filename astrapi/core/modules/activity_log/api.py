@@ -16,8 +16,7 @@ router = APIRouter(tags=["activity_log"])
 
 @router.get("/clear-confirm", response_class=HTMLResponse)
 def activity_log_clear_confirm(request: Request):
-    return get_templates().TemplateResponse("partials/confirm_modal.html", {
-        "request":      request,
+    return get_templates().TemplateResponse(request, "partials/confirm_modal.html", {
         "description":  "Alle Activity-Log-Einträge",
         "verb":         "löschen",
         "confirm_url":  "/api/activity_log/clear",
@@ -30,8 +29,7 @@ def activity_log_clear_confirm(request: Request):
 @router.delete("/clear", response_class=HTMLResponse)
 def activity_log_clear(request: Request):
     clear_activity_log()
-    return get_templates().TemplateResponse("activity_log/partials/list.html", {
-        "request": request,
+    return get_templates().TemplateResponse(request, "activity_log/partials/list.html", {
         "entries": [],
         "modules": registered_modules(),
     })
@@ -40,8 +38,7 @@ def activity_log_clear(request: Request):
 @router.get("/tab", response_class=HTMLResponse)
 def activity_log_tab(request: Request):
     entries = enrich(list_activity(limit=200))
-    return get_templates().TemplateResponse("activity_log/partials/list.html", {
-        "request": request,
+    return get_templates().TemplateResponse(request, "activity_log/partials/list.html", {
         "entries": entries,
         "modules": registered_modules(),
     })
@@ -72,8 +69,7 @@ def activity_log_rows(
         date_from=date_from,
         search=search   or None,
     ))
-    return get_templates().TemplateResponse("activity_log/partials/rows.html", {
-        "request": request,
+    return get_templates().TemplateResponse(request, "activity_log/partials/rows.html", {
         "entries": entries,
     })
 
@@ -90,8 +86,7 @@ def activity_log_detail(request: Request, log_id: int):
             entry["metadata_dict"] = json.loads(entry["metadata"])
         except Exception:
             entry["metadata_dict"] = {}
-    return get_templates().TemplateResponse("activity_log/partials/detail_modal.html", {
-        "request": request,
+    return get_templates().TemplateResponse(request, "activity_log/partials/detail_modal.html", {
         "entry": entry,
     })
 
@@ -103,8 +98,7 @@ def activity_log_viewer(request: Request, log_id: int):
         return HTMLResponse("<div>Log nicht gefunden</div>")
     lines = get_log_lines(log_id)
     full_log = "\n".join(f"[{r['level']}] {r['line']}" for r in lines) if lines else entry.get("full_log", "")
-    return get_templates().TemplateResponse("activity_log/partials/log_viewer_modal.html", {
-        "request": request,
-        "entry": entry,
+    return get_templates().TemplateResponse(request, "activity_log/partials/log_viewer_modal.html", {
+        "entry":    entry,
         "full_log": full_log,
     })

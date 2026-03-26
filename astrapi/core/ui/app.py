@@ -145,6 +145,17 @@ def create(
     app.jinja_env.auto_reload = True
     app.config["TEMPLATES_AUTO_RELOAD"] = True
 
+    # Separate Jinja2-Umgebung für FastAPI-Routen (z.B. activity_log/api.py).
+    # Dieselben Loader wie Flask, aber ohne Flask-Globals (die nicht hashbar sind
+    # und Starletttes Template-Cache zum Absturz bringen würden).
+    from jinja2 import Environment
+    from starlette.templating import Jinja2Templates
+    from . import fastapi_templates as _ft
+    _ft.configure(Jinja2Templates(env=Environment(
+        loader=ChoiceLoader(all_loaders),
+        autoescape=True,
+    )))
+
     # ── Globale Template-Variablen ────────────────────────────────────────────
     _mod_map: dict = {m.key: m for m in modules}
 
