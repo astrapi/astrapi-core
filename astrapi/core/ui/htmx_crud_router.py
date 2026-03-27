@@ -59,9 +59,9 @@ def make_htmx_crud_router(
         from api.storage import load_config
         from api.routers.run import get_running
         content = templates.TemplateResponse(
+            request,
             "partials/list_wrapper_inner.html",
             {
-                "request":          request,
                 "cfg":              load_config(key),
                 "module":           key,
                 "content_template": f"{key}/partials/list.html",
@@ -158,8 +158,7 @@ def make_htmx_crud_router(
             entry = get_item(key, item_id)
             if entry is None:
                 raise HTTPException(404, "Item not found")
-            return templates.TemplateResponse("partials/preview_modal.html", {
-                "request":     request,
+            return templates.TemplateResponse(request, "partials/preview_modal.html", {
                 "description": entry.get("description", item_id),
                 "commands":    preview_fn(item_id),
             })
