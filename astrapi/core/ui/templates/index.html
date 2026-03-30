@@ -26,8 +26,9 @@
 
 <script>
 /* ── Generisches Run-Polling + Log-Modal ──────────────────────────────────────
-   Funktioniert mit allen Modulen die /api/{module}/status und
-   /api/{module}/{item}/logs?live=1 bereitstellen.
+   Funktioniert mit allen Modulen die /ui/{module}/status oder
+   /api/{module}/status und /api/{module}/{item}/logs?live=1 bereitstellen.
+   Versucht zuerst /ui/, fällt bei 404 auf /api/ zurück.
 
    Unterstützte List-Container-IDs:
      id="tab-{module}"       (Framework-Standard)
@@ -45,7 +46,11 @@
   }
 
   function _poll(mod, el) {
-    htmx.ajax('GET', '/api/' + mod + '/status', {target: '#' + el.id, swap: 'innerHTML'});
+    fetch('/ui/' + mod + '/status')
+      .then(function(r) { return r.ok ? r : fetch('/api/' + mod + '/status'); })
+      .then(function(r) { return r.text(); })
+      .then(function(html) { el.innerHTML = html; htmx.process(el); })
+      .catch(function() {});
   }
 
   function startPolling(mod, el) {
