@@ -7,7 +7,7 @@ requires = ["setuptools>=61", "setuptools-scm"]
 build-backend = "setuptools.build_meta"
 
 [tool.setuptools_scm]
-version_scheme = "astrapi.core.system._version_scheme:calver_next"
+version_scheme = "_version_scheme:calver_next"
 
 [tool.setuptools.packages.find]
 include = ["astrapi*"]
