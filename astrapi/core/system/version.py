@@ -24,8 +24,27 @@ def get_display_name(app_root: Path, default: str = "App") -> str:
 
 
 def _clean_version(v: str) -> str:
-    """Entfernt den lokalen Hash-Teil (z.B. '+gabc123.d20260330'), behält .devN."""
-    return v.split("+")[0]
+    """Bereinigt Dev-Versionen:
+    - Entfernt lokalen Hash-Teil (+g...)
+    - Ersetzt bei Monatswechsel die Basis durch YY.NewMM.1
+      z.B. '26.3.14.dev2' im April → '26.4.1.dev2'
+    """
+    from datetime import date
+    v = v.split("+")[0]  # Hash entfernen
+    if ".dev" not in v:
+        return v
+    base, dev = v.split(".dev", 1)
+    parts = base.split(".")
+    if len(parts) == 3:
+        today = date.today()
+        cur_yy, cur_mm = today.year % 100, today.month
+        try:
+            tag_yy, tag_mm = int(parts[0]), int(parts[1])
+            if cur_yy != tag_yy or cur_mm != tag_mm:
+                base = f"{cur_yy}.{cur_mm}.1"
+        except ValueError:
+            pass
+    return f"{base}.dev{dev}"
 
 
 def get_core_version(core_root: Path, default: str = "—") -> str:
