@@ -139,7 +139,8 @@ def load_modules(app_root: Path) -> list:
     Core-Module können per Einstellung deaktiviert werden:
       core.module.<key>.enabled = "0"  →  Modul wird nicht geladen
     """
-    core_mods, core_failed = _load_from_dir(CORE_MOD_DIR,            "core.modules")
+    import importlib as _il; _il.import_module("astrapi.core.modules")
+    core_mods, core_failed = _load_from_dir(CORE_MOD_DIR,            "astrapi.core.modules")
     ext_mods,  ext_failed  = _load_from_dir(app_root / "overrides", "app.overrides")
     app_mods,  app_failed  = _load_from_dir(app_root / "modules",   "app.modules")
     failed_keys: set[str]  = core_failed | ext_failed | app_failed

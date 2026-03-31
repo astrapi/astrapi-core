@@ -77,6 +77,7 @@
 <div class="sysinfo-info" style="display:grid; grid-template-columns:1fr 1fr; gap:12px;">
 
   {# Anwendung #}
+  {% set _skip = ('python', 'psutil', 'Borg', 'DB') %}
   <div class="ds-card on" style="overflow:hidden;">
     <div style="padding:10px 16px; border-bottom:1px solid var(--border-s); font-size:11px;
                 text-transform:uppercase; letter-spacing:0.07em; color:var(--text-3); font-weight:600;">
@@ -84,10 +85,12 @@
     </div>
     <div style="padding:12px 16px;">
       <div class="meta-grid" style="row-gap:8px;">
-        <span class="meta-label">BackupCtl</span>
-        <span class="meta-value" style="font-family:var(--mono); color:var(--text);">{{ info.software.get("backupctl", "—") }}</span>
-        <span class="meta-label">Core</span>
-        <span class="meta-value" style="font-family:var(--mono); color:var(--text-2);">{{ info.software.get("core", "—") }}</span>
+        {% for key, val in info.software.items() %}
+        {% if key not in _skip %}
+        <span class="meta-label">{{ key }}</span>
+        <span class="meta-value" style="font-family:var(--mono); color:{{ 'var(--text)' if loop.first else 'var(--text-2)' }};">{{ val }}</span>
+        {% endif %}
+        {% endfor %}
         <span class="meta-label">Python</span>
         <span class="meta-value" style="font-family:var(--mono); color:var(--text-2);">{{ info.software.get("python", "—") }}</span>
         <span class="meta-label">Verzeichnis</span>
@@ -100,18 +103,23 @@
     </div>
   </div>
 
-  {# Backup-Stack #}
+  {# Stack-Infos (nur wenn Borg oder DB in extra_info) #}
+  {% if info.software.get("Borg") or info.software.get("DB") %}
   <div class="ds-card on" style="overflow:hidden;">
     <div style="padding:10px 16px; border-bottom:1px solid var(--border-s); font-size:11px;
                 text-transform:uppercase; letter-spacing:0.07em; color:var(--text-3); font-weight:600;">
-      Backup-Stack
+      Stack
     </div>
     <div style="padding:12px 16px;">
       <div class="meta-grid" style="row-gap:8px;">
+        {% if info.software.get("Borg") %}
         <span class="meta-label">Borg</span>
-        <span class="meta-value" style="font-family:var(--mono); color:var(--text-2);">{{ info.software.get("Borg", "—") }}</span>
+        <span class="meta-value" style="font-family:var(--mono); color:var(--text-2);">{{ info.software.get("Borg") }}</span>
+        {% endif %}
+        {% if info.software.get("DB") %}
         <span class="meta-label">Datenbank</span>
-        <span class="meta-value" style="font-family:var(--mono); color:var(--text-2);">{{ info.software.get("DB", "—") }}</span>
+        <span class="meta-value" style="font-family:var(--mono); color:var(--text-2);">{{ info.software.get("DB") }}</span>
+        {% endif %}
       </div>
       {% if info.services %}
       {% set svc = info.services[0] %}
@@ -133,6 +141,7 @@
       {% endif %}
     </div>
   </div>
+  {% endif %}
 
 </div>
 

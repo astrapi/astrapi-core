@@ -27,11 +27,13 @@ _BUILTIN_BACKENDS = [
 # ── Kontext-Helfer ────────────────────────────────────────────────────────────
 
 def _ctx(**extra) -> dict:
+    module_sources, scheduler_sources = _split_sources()
     return dict(
         key=KEY,
         label="Benachrichtigungen",
         channels=list_channels(),
         jobs=list_jobs(),
+        all_sources={**module_sources, **scheduler_sources},
         container_id=_CONTAINER_ID,
         loading_id=_LOADING_ID,
         **extra,

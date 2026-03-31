@@ -12,6 +12,13 @@ def _read_yaml(yaml_path: Path) -> dict:
 
 
 def get_app_version(app_root: Path, default: str = "—") -> str:
+    try:
+        from importlib.metadata import version
+        name = str(_read_yaml(app_root / "app.yaml").get("name", ""))
+        if name:
+            return _clean_version(version(name))
+    except Exception:
+        pass
     return str(_read_yaml(app_root / "app.yaml").get("version", default))
 
 

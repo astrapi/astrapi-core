@@ -252,7 +252,7 @@
         {% set srcs = job.get('sources') or [] %}
         {% if srcs %}
           <span class="meta-label">Quellen</span>
-          <span class="meta-value">{{ srcs | join(', ') }}</span>
+          <span class="meta-value">{% set ns = namespace(labels=[]) %}{% for s in srcs %}{% set ns.labels = ns.labels + [all_sources.get(s, s)] %}{% endfor %}{{ ns.labels | join(', ') }}</span>
         {% endif %}
 
       </div>
