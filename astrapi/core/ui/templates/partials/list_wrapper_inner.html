@@ -17,6 +17,13 @@
 #}
 {% import 'partials/components/ui_macros.html' as ui %}
 
+{% if running %}
+<div hx-get="/ui/{{ module }}/status"
+     hx-trigger="every 2s"
+     hx-target="#{{ container_id }}"
+     hx-swap="innerHTML"
+     style="display:none"></div>
+{% endif %}
 <div x-data="viewToggle('{{ module }}')">
 
 {# ── Page-Header: Titel + Settings | Bulk-Aktionen + View-Toggle + Neu ──────── #}
