@@ -1,0 +1,143 @@
+{# updater/partials/panel.html – wird per HTMX-Polling aktualisiert #}
+
+<div id="updater-panel"
+     {% if status == 'running' or status == 'checking' %}
+     hx-get="/ui/updater/panel"
+     hx-trigger="every 2s"
+     hx-swap="outerHTML"
+     {% endif %}>
+
+  {# ── Versions-Tabelle ──────────────────────────────────────────────── #}
+  <div class="ds-card on" style="overflow:hidden; margin-bottom:12px;">
+    <table style="width:100%; border-collapse:collapse; font-size:13px;">
+      <thead>
+        <tr>
+          {% for col in ['Paket', 'Installiert', 'Verfügbar', ''] %}
+          <th style="padding:9px 16px; text-align:left; font-size:11px;
+                     text-transform:uppercase; letter-spacing:0.05em;
+                     color:var(--text-3); font-weight:600; white-space:nowrap;
+                     border-bottom:1px solid var(--border-s);">{{ col }}</th>
+          {% endfor %}
+        </tr>
+      </thead>
+      <tbody>
+        {% for pkg in packages %}
+        <tr style="border-bottom:1px solid var(--border-s);">
+          <td style="padding:10px 16px; font-family:var(--mono); font-size:12px;">{{ pkg.name }}</td>
+          <td style="padding:10px 16px; font-family:var(--mono); font-size:12px; color:var(--text-2);">{{ pkg.installed }}</td>
+          <td style="padding:10px 16px; font-family:var(--mono); font-size:12px;">
+            {% if pkg.latest == '—' %}
+              <span style="color:var(--text-3);">—</span>
+            {% elif pkg.update_available %}
+              <span style="color:var(--g); font-weight:600;">{{ pkg.latest }}</span>
+            {% else %}
+              <span style="color:var(--text-3);">aktuell</span>
+            {% endif %}
+          </td>
+          <td style="padding:10px 16px; text-align:right;">
+            {% if pkg.update_available %}
+            <span style="font-size:11px; padding:2px 8px; border-radius:99px;
+                         background:rgba(38,162,105,0.15); color:var(--g); font-weight:600;">
+              Update verfügbar
+            </span>
+            {% endif %}
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+
+  {# ── Aktions-Zeile ─────────────────────────────────────────────────── #}
+  <div style="display:flex; align-items:center; gap:10px; margin-bottom:12px;">
+
+    {# Check-Button #}
+    {% if status not in ('running', 'checking') %}
+    <button class="btn btn-ghost btn-sm"
+            hx-post="/ui/updater/check"
+            hx-target="#updater-panel"
+            hx-swap="outerHTML"
+            hx-indicator="#updater-spinner">
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <polyline points="23 4 23 10 17 10"/>
+        <path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/>
+      </svg>
+      Auf Updates prüfen
+    </button>
+    {% endif %}
+
+    {# Update-Button (nur wenn mindestens ein Update verfügbar) #}
+    {% if status not in ('running', 'checking') and packages | selectattr('update_available') | list %}
+    <button class="btn btn-sm" style="background:var(--g); color:#fff; border:none;"
+            hx-post="/ui/updater/update"
+            hx-target="#updater-panel"
+            hx-swap="outerHTML"
+            hx-confirm="Pakete jetzt aktualisieren und Service neu starten?">
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+        <polyline points="7 10 12 15 17 10"/>
+        <line x1="12" y1="15" x2="12" y2="3"/>
+      </svg>
+      Jetzt aktualisieren
+    </button>
+    {% endif %}
+
+    {# Spinner #}
+    <svg id="updater-spinner" class="htmx-indicator" width="14" height="14"
+         viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+         style="animation:updater-spin 1s linear infinite; display:none;">
+      <line x1="12" y1="2" x2="12" y2="6"/><line x1="12" y1="18" x2="12" y2="22"/>
+      <line x1="4.93" y1="4.93" x2="7.76" y2="7.76"/>
+      <line x1="16.24" y1="16.24" x2="19.07" y2="19.07"/>
+    </svg>
+
+    {# Laufend-Badge #}
+    {% if status == 'running' %}
+    <span style="font-size:12px; color:var(--b); display:flex; align-items:center; gap:6px;">
+      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+           style="animation:updater-spin 1s linear infinite;">
+        <line x1="12" y1="2" x2="12" y2="6"/><line x1="12" y1="18" x2="12" y2="22"/>
+        <line x1="4.93" y1="4.93" x2="7.76" y2="7.76"/>
+        <line x1="16.24" y1="16.24" x2="19.07" y2="19.07"/>
+      </svg>
+      Update läuft…
+    </span>
+    {% elif status == 'checking' %}
+    <span style="font-size:12px; color:var(--text-3);">Prüfe auf Updates…</span>
+    {% elif status == 'done' %}
+    <span style="font-size:12px; color:var(--g); font-weight:600;">
+      ✓ Update abgeschlossen · Neustart in Kürze
+    </span>
+    {% elif status == 'error' %}
+    <span style="font-size:12px; color:var(--err);">✗ {{ error }}</span>
+    {% endif %}
+
+    <div style="flex:1;"></div>
+
+    {% if last_checked %}
+    <span style="font-size:11px; color:var(--text-3);">Zuletzt geprüft: {{ last_checked }}</span>
+    {% endif %}
+  </div>
+
+  {# ── pip-Output ────────────────────────────────────────────────────── #}
+  {% if output or status in ('running', 'done', 'error') %}
+  <div class="ds-card on" style="overflow:hidden;">
+    <div style="padding:10px 16px; border-bottom:1px solid var(--border-s);
+                font-size:11px; text-transform:uppercase; letter-spacing:0.07em;
+                color:var(--text-3); font-weight:600;">
+      pip-Ausgabe
+    </div>
+    <pre style="margin:0; padding:12px 16px; font-family:var(--mono); font-size:11.5px;
+                color:var(--text-2); overflow-x:auto; white-space:pre-wrap;
+                max-height:320px; overflow-y:auto;">{% for line in output %}{{ line }}
+{% endfor %}{% if not output %}<span style="color:var(--text-3);">Warte auf Ausgabe…</span>{% endif %}</pre>
+  </div>
+  {% endif %}
+
+
+</div>
+
+<style>
+@keyframes updater-spin { from { transform:rotate(0deg); } to { transform:rotate(360deg); } }
+.htmx-request #updater-spinner { display:block !important; }
+</style>

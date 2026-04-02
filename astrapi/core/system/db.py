@@ -15,6 +15,16 @@ def configure(db_path: Path | str) -> None:
     """Setzt den DB-Pfad. Muss vor dem ersten _conn()-Aufruf aufgerufen werden."""
     global _db_path
     _db_path = Path(db_path)
+    # Secrets automatisch im selben Verzeichnis initialisieren
+    try:
+        from astrapi.core.system.secrets import configure as _secrets_configure
+        data_dir = _db_path.parent
+        _secrets_configure(
+            key_path     = data_dir / ".secret.key",
+            dev_key_path = data_dir / ".secret.key",
+        )
+    except Exception:
+        pass
 
 
 def _conn() -> sqlite3.Connection:

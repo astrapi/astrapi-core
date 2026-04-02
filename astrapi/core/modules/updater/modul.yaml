@@ -1,0 +1,5 @@
+label:       Updater
+icon:        download
+nav_group:   System
+nav_default: false
+nav_hidden:  true

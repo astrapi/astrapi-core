@@ -1,0 +1,13 @@
+{# updater/partials/tab.html #}
+<div id="tab-updater" class="tab-content">
+  <div class="page-header">
+    <div class="page-header-main">
+      <div class="page-title">Updater</div>
+      {% if last_checked %}
+      <span class="page-subtitle">Zuletzt geprüft: {{ last_checked }}</span>
+      {% endif %}
+    </div>
+  </div>
+
+  {% include "updater/partials/panel.html" %}
+</div>

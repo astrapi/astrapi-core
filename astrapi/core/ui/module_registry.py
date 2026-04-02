@@ -352,14 +352,16 @@ def list_available_core_modules() -> list:
         key = entry.name
         enabled = _settings_get(f"core.module.{key}.enabled", "1") != "0"
         label = key.replace("_", " ").title()
+        nav_hidden = False
         modul_yaml = entry / "modul.yaml"
         if modul_yaml.exists():
             try:
                 data = _yaml.safe_load(modul_yaml.read_text(encoding="utf-8")) or {}
-                label = data.get("label", label)
+                label      = data.get("label", label)
+                nav_hidden = bool(data.get("nav_hidden", False))
             except Exception:
                 pass
-        result.append({"key": key, "label": label, "enabled": enabled})
+        result.append({"key": key, "label": label, "enabled": enabled, "nav_hidden": nav_hidden})
     return result
 
 
