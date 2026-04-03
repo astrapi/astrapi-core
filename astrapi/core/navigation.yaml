@@ -18,8 +18,8 @@
   group: System
 
 - key:   sysinfo
-  label: Info
-  icon:  info
+  label: System
+  icon:  monitor
   group: System
 
 - key:   settings

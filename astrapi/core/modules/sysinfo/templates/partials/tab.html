@@ -11,9 +11,9 @@
 <div class="page-header">
   <div class="page-header-main">
     <div class="page-title">System</div>
-    <span class="page-subtitle" style="font-family:var(--mono);">Stand: <span id="sysinfo-time">{{ info.collected_at }}</span></span>
   </div>
   <div class="page-header-actions">
+    <span class="page-subtitle" style="font-family:var(--mono);">Stand: <span id="sysinfo-time">{{ info.collected_at }}</span></span>
     <button class="btn btn-ghost btn-sm"
             hx-get="/ui/sysinfo/metrics"
             hx-target="#sysinfo-metrics"

@@ -46,33 +46,11 @@ def configure(app_root: Path) -> None:
 
 # ── Settings-Helpers ──────────────────────────────────────────────────────────
 
-_INDEX_URL = "https://gitlab.com/api/v4/groups/astrapi-os%2Fctl/-/packages/pypi/simple"
-
-
-def _index_url() -> str:
-    return _INDEX_URL
-
-
-def _index_token() -> str:
-    try:
-        from astrapi.core.system.secrets import get_secret_safe
-        return get_secret_safe("module.updater.index_token") or ""
-    except Exception:
-        return ""
+_INDEX_URL = "https://gitlab.com/api/v4/projects/81004951/packages/pypi/simple"
 
 
 def _pip_index_args() -> list[str]:
-    url   = _index_url()
-    token = _index_token()
-    if not url:
-        return []
-    if token:
-        from urllib.parse import urlparse, urlunparse
-        p        = urlparse(url)
-        auth_url = urlunparse(p._replace(netloc=f"__token__:{token}@{p.netloc}"))
-    else:
-        auth_url = url
-    return ["--index-url", auth_url]
+    return ["--index-url", _INDEX_URL] if _INDEX_URL else []
 
 
 def _packages_to_update() -> list[str]:
@@ -101,16 +79,12 @@ def _latest_version(package: str) -> str | None:
     import urllib.error
     import re
 
-    url   = _index_url().rstrip("/")
-    token = _index_token()
-    if not url:
+    if not _INDEX_URL:
         return None
 
-    pkg_url = f"{url}/{package}/"
+    pkg_url = f"{_INDEX_URL.rstrip('/')}/{package}/"
     req     = urllib.request.Request(pkg_url)
-    if token:
-        req.add_header("Private-Token", token)
-    _log.debug("updater: GET %s (token=%s)", pkg_url, "ja" if token else "nein")
+    _log.debug("updater: GET %s", pkg_url)
 
     try:
         with urllib.request.urlopen(req, timeout=15) as resp:

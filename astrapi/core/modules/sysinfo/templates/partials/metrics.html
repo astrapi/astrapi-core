@@ -92,66 +92,68 @@
 </div>
 
 
-{# ── Anwendung ─────────────────────────────────────────────────────── #}
-<div class="ds-card on" style="overflow:hidden;">
-  <div style="padding:10px 16px; border-bottom:1px solid var(--border-s); font-size:11px;
-              text-transform:uppercase; letter-spacing:0.07em; color:var(--text-3); font-weight:600;">
-    Anwendung
-  </div>
-  <div style="padding:12px 16px;">
-    <div class="meta-grid" style="row-gap:8px;">
-      {% for key, val in info.software.items() %}
-      {% if key != 'psutil' %}
-      <span class="meta-label">{{ key }}</span>
-      <span class="meta-value" style="font-family:var(--mono); color:var(--text-2);">{{ val }}</span>
-      {% endif %}
-      {% endfor %}
-      <span class="meta-label">Verzeichnis</span>
-      <span class="meta-value" style="font-family:var(--mono); font-size:11px; color:var(--text-2);
-                                      overflow:hidden; text-overflow:ellipsis; white-space:nowrap;"
-            title="{{ info.system.cwd }}">{{ info.system.cwd }}</span>
-      <span class="meta-label">User</span>
-      <span class="meta-value" style="font-family:var(--mono); color:var(--text-2);">{{ info.system.user }}</span>
-    </div>
-    {% if info.services %}
-    <div style="margin-top:14px; display:flex; flex-direction:column; gap:6px;">
-      {% for svc in info.services %}
-      <div style="display:flex; align-items:center; justify-content:space-between;
-                  padding:8px 10px; background:var(--sel); border-radius:var(--rad);">
-        <div>
-          <div style="font-family:var(--mono); font-size:13px; color:var(--text);">{{ svc.name }}</div>
-          {% if svc.desc %}<div style="font-size:11px; color:var(--text-3); margin-top:1px;">{{ svc.desc }}</div>{% endif %}
-        </div>
-        <div style="display:flex; align-items:center; gap:8px;">
-          <span style="font-size:11px; color:var(--text-3);">{{ svc.enabled }}</span>
-          <span style="font-size:12px; font-weight:600; padding:2px 8px; border-radius:99px;
-                       background:{{ 'rgba(38,162,105,0.2)' if svc.ok else 'var(--err-bg)' }};
-                       color:{{ 'var(--g)' if svc.ok else 'var(--err)' }};">
-            {{ svc.active }}
-          </span>
-        </div>
-      </div>
-      {% endfor %}
-    </div>
-    {% endif %}
-  </div>
-</div>
+{# ── Anwendung + Updates nebeneinander ────────────────────────────── #}
+<div style="display:grid; grid-template-columns:{% if info.update_packages is defined and info.update_packages is not none %}1fr 1fr{% else %}1fr{% endif %}; gap:12px;">
 
-{# ── Updates (nur wenn update_packages_fn konfiguriert) ───────────── #}
-{% if info.update_packages is defined and info.update_packages is not none %}
-<div class="ds-card on" style="margin-top:12px;">
-  <div class="card-body" style="padding:16px;">
-    <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:12px;">
-      <div style="font-weight:600;">Updates</div>
-      {{ ui.settings_button(module='updater') }}
-    </div>
-    <div hx-get="/ui/updater/panel"
-         hx-trigger="load"
-         hx-swap="innerHTML">
-      <span style="font-size:12px; color:var(--text-3);">Lade…</span>
+  {# Anwendung #}
+  <div class="ds-card on">
+    <div class="card-body" style="padding:16px;">
+      <div style="font-weight:600; margin-bottom:12px;">Anwendung</div>
+      <div class="meta-grid" style="row-gap:8px;">
+        {% for key, val in info.software.items() %}
+        {% if key != 'psutil' %}
+        <span class="meta-label">{{ key }}</span>
+        <span class="meta-value" style="font-family:var(--mono); color:var(--text-2);">{{ val }}</span>
+        {% endif %}
+        {% endfor %}
+        <span class="meta-label">Verzeichnis</span>
+        <span class="meta-value" style="font-family:var(--mono); font-size:11px; color:var(--text-2);
+                                        overflow:hidden; text-overflow:ellipsis; white-space:nowrap;"
+              title="{{ info.system.cwd }}">{{ info.system.cwd }}</span>
+        <span class="meta-label">User</span>
+        <span class="meta-value" style="font-family:var(--mono); color:var(--text-2);">{{ info.system.user }}</span>
+      </div>
+      {% if info.services %}
+      <div style="margin-top:14px; display:flex; flex-direction:column; gap:6px;">
+        {% for svc in info.services %}
+        <div style="display:flex; align-items:center; justify-content:space-between;
+                    padding:8px 10px; background:var(--sel); border-radius:var(--rad);">
+          <div>
+            <div style="font-family:var(--mono); font-size:13px; color:var(--text);">{{ svc.name }}</div>
+            {% if svc.desc %}<div style="font-size:11px; color:var(--text-3); margin-top:1px;">{{ svc.desc }}</div>{% endif %}
+          </div>
+          <div style="display:flex; align-items:center; gap:8px;">
+            <span style="font-size:11px; color:var(--text-3);">{{ svc.enabled }}</span>
+            <span style="font-size:12px; font-weight:600; padding:2px 8px; border-radius:99px;
+                         background:{{ 'rgba(38,162,105,0.2)' if svc.ok else 'var(--err-bg)' }};
+                         color:{{ 'var(--g)' if svc.ok else 'var(--err)' }};">
+              {{ svc.active }}
+            </span>
+          </div>
+        </div>
+        {% endfor %}
+      </div>
+      {% endif %}
     </div>
   </div>
+
+  {# Updates (nur wenn update_packages_fn konfiguriert) #}
+  {% if info.update_packages is defined and info.update_packages is not none %}
+  <div class="ds-card on">
+    <div class="card-body" style="padding:16px;">
+      <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:12px;">
+        <div style="font-weight:600;">Updates</div>
+        <div id="updater-header-actions"></div>
+      </div>
+      <div hx-get="/ui/updater/panel"
+           hx-trigger="load"
+           hx-swap="innerHTML">
+        <span style="font-size:12px; color:var(--text-3);">Lade…</span>
+      </div>
+    </div>
+  </div>
+  {% endif %}
+
 </div>
-{% endif %}
 
 </div>{# /data-collected-at #}

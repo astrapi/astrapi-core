@@ -51,36 +51,6 @@
   {# ── Aktions-Zeile ─────────────────────────────────────────────────── #}
   <div style="display:flex; align-items:center; gap:10px; margin-bottom:12px;">
 
-    {# Check-Button #}
-    {% if status not in ('running', 'checking') %}
-    <button class="btn btn-ghost btn-sm"
-            hx-post="/ui/updater/check"
-            hx-target="#updater-panel"
-            hx-swap="outerHTML"
-            hx-indicator="#updater-spinner">
-      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-        <polyline points="23 4 23 10 17 10"/>
-        <path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/>
-      </svg>
-      Auf Updates prüfen
-    </button>
-    {% endif %}
-
-    {# Update-Button (nur wenn mindestens ein Update verfügbar) #}
-    {% if status not in ('running', 'checking') and packages | selectattr('update_available') | list %}
-    <button class="btn btn-sm" style="background:var(--g); color:#fff; border:none;"
-            hx-post="/ui/updater/update"
-            hx-target="#updater-panel"
-            hx-swap="outerHTML"
-            hx-confirm="Pakete jetzt aktualisieren und Service neu starten?">
-      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
-        <polyline points="7 10 12 15 17 10"/>
-        <line x1="12" y1="15" x2="12" y2="3"/>
-      </svg>
-      Jetzt aktualisieren
-    </button>
-    {% endif %}
 
     {# Spinner #}
     <svg id="updater-spinner" class="htmx-indicator" width="14" height="14"
@@ -112,11 +82,6 @@
     <span style="font-size:12px; color:var(--err);">✗ {{ error }}</span>
     {% endif %}
 
-    <div style="flex:1;"></div>
-
-    {% if last_checked %}
-    <span style="font-size:11px; color:var(--text-3);">Zuletzt geprüft: {{ last_checked }}</span>
-    {% endif %}
   </div>
 
   {# ── pip-Output ────────────────────────────────────────────────────── #}
@@ -135,6 +100,43 @@
   {% endif %}
 
 
+</div>
+
+{# ── OOB: Card-Header-Button aktualisieren ─────────────────────────── #}
+<div id="updater-header-actions" hx-swap-oob="true"
+     style="display:flex; align-items:center; gap:10px;">
+  {% if last_checked %}
+  <span style="font-size:11px; color:var(--text-3);">Zuletzt geprüft: {{ last_checked }}</span>
+  {% endif %}
+  {% if status in ('running', 'checking') %}
+  <span style="font-size:12px; color:var(--text-3);">
+    {{ 'Update läuft…' if status == 'running' else 'Prüfe…' }}
+  </span>
+  {% elif packages | selectattr('update_available') | list %}
+  <button class="btn btn-sm" style="background:var(--g); color:#fff; border:none;"
+          hx-post="/ui/updater/update"
+          hx-target="#updater-panel"
+          hx-swap="outerHTML"
+          hx-confirm="Pakete jetzt aktualisieren und Service neu starten?">
+    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+      <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+      <polyline points="7 10 12 15 17 10"/>
+      <line x1="12" y1="15" x2="12" y2="3"/>
+    </svg>
+    Jetzt aktualisieren
+  </button>
+  {% else %}
+  <button class="btn btn-ghost btn-sm"
+          hx-post="/ui/updater/check"
+          hx-target="#updater-panel"
+          hx-swap="outerHTML">
+    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+      <polyline points="23 4 23 10 17 10"/>
+      <path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/>
+    </svg>
+    Auf Updates prüfen
+  </button>
+  {% endif %}
 </div>
 
 <style>
