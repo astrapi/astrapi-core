@@ -3,9 +3,9 @@
   Inline-Einstellungskarte für ein Modul auf der Einstellungsseite.
   Erwartet im Kontext: data.mod, data.schema, data.values
 #}
-{% set mod    = data.mod %}
-{% set schema = data.schema %}
-{% set values = data.values %}
+{% set mod    = data['mod'] %}
+{% set schema = data['schema'] %}
+{% set values = data['values'] %}
 
 <div>
   <div class="ds-card on">
