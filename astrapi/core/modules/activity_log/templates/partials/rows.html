@@ -41,7 +41,18 @@
   {# Beschreibung #}
   <td style="padding:8px 14px; color:var(--text); max-width:280px;
              overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">
-    {{ e.description }}
+    <span class="al-mobile-meta">
+      <span style="font-family:var(--mono);">{{ e.module }}</span>
+      <span class="al-mobile-meta-sep">·</span>
+      {% if e.log_type == 'job' %}job
+      {% elif e.log_type == 'scheduler' %}sched
+      {% elif e.log_type == 'error' %}err
+      {% elif e.log_type == 'warning' %}warn
+      {% else %}sys{% endif %}
+      {% if e.duration_fmt %}
+      <span class="al-mobile-meta-sep">·</span>{{ e.duration_fmt }}
+      {% endif %}
+    </span>{{ e.description }}
   </td>
 
   {# Status #}
