@@ -60,11 +60,6 @@
       <div>{{ entry.items_count }}</div>
       {% endif %}
 
-      {% if entry.started_at %}
-      <div style="color:var(--text-3); font-weight:600;">Gestartet</div>
-      <div>{{ entry.started_at }}</div>
-      {% endif %}
-
       {% if entry.finished_at %}
       <div style="color:var(--text-3); font-weight:600;">Beendet</div>
       <div>{{ entry.finished_at }}</div>
@@ -101,18 +96,10 @@
     </div>
 
     <div class="ds-modal-footer-simple" style="justify-content:flex-end; gap:8px;">
-      {% if entry.log_type == 'job' and entry.item_id and entry.module %}
-      <button class="btn btn-primary"
-              hx-get="/api/{{ entry.module }}/{{ entry.item_id }}/logs"
-              hx-target="body" hx-swap="beforeend"
-              x-on:click="$el.closest('.ds-modal-backdrop').remove()">
-        Log anzeigen
-      </button>
-      {% elif entry.log_type == 'scheduler' %}
+      {% if entry.log_type in ('job', 'scheduler') %}
       <button class="btn btn-primary"
               hx-get="/api/activity_log/{{ entry.id }}/log"
-              hx-target="body" hx-swap="beforeend"
-              x-on:click="$el.closest('.ds-modal-backdrop').remove()">
+              hx-target="body" hx-swap="beforeend">
         Log anzeigen
       </button>
       {% endif %}

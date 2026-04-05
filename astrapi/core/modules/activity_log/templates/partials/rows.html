@@ -2,7 +2,7 @@
 {% import 'partials/components/ui_macros.html' as ui %}
 {% if not entries %}
 <tr>
-  <td colspan="8" style="padding:40px 14px; text-align:center; color:var(--text-3);">
+  <td colspan="7" style="padding:40px 14px; text-align:center; color:var(--text-3);">
     Keine Einträge gefunden.
   </td>
 </tr>
@@ -65,44 +65,8 @@
     {{ e.duration_fmt }}
   </td>
 
-  {# Bytes #}
-  <td class="al-col-hide" style="padding:8px 14px; font-family:var(--mono); font-size:12px; color:var(--text-2); white-space:nowrap;">
-    {{ e.bytes_fmt }}
-  </td>
-
   {# Aktionen #}
   <td style="padding:8px 14px; text-align:right; white-space:nowrap;">
-    {# Job-Log via activity_log_lines #}
-    {% if e.log_type == 'job' and e.item_id and e.module %}
-    <button class="btn-icon btn-icon-log" title="Log anzeigen"
-            hx-get="/api/{{ e.module }}/{{ e.item_id }}/logs"
-            hx-target="body" hx-swap="beforeend">
-      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-        <path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/>
-        <polyline points="14 2 14 8 20 8"/>
-      </svg>
-    </button>
-    {% elif e.log_type == 'scheduler' %}
-    {# Scheduler-Log via activity_log_lines #}
-    <button class="btn-icon btn-icon-log" title="Log anzeigen"
-            hx-get="/api/activity_log/{{ e.id }}/log"
-            hx-target="body" hx-swap="beforeend">
-      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-        <path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/>
-        <polyline points="14 2 14 8 20 8"/>
-      </svg>
-    </button>
-    {% elif e.full_log %}
-    {# Fallback: ältere Einträge mit full_log-Text #}
-    <button class="btn-icon btn-icon-log" title="Log anzeigen"
-            hx-get="/api/activity_log/{{ e.id }}/log"
-            hx-target="body" hx-swap="beforeend">
-      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-        <path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/>
-        <polyline points="14 2 14 8 20 8"/>
-      </svg>
-    </button>
-    {% endif %}
     <button class="btn-icon" title="Details"
             hx-get="/api/activity_log/{{ e.id }}/detail"
             hx-target="body" hx-swap="beforeend">
