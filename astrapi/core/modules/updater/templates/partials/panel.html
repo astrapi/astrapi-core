@@ -124,7 +124,7 @@
       Jetzt aktualisieren
     </button>
     <template x-teleport="body">
-      <div x-show="open"
+      <div x-show="open" x-init="htmx.process($el)"
            class="ds-modal-backdrop"
            x-on:keydown.escape.window="open = false"
            @click.self="open = false">
