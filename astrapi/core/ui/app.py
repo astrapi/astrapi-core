@@ -312,19 +312,22 @@ def _register_settings_routes(app: Flask, modules: list, app_cfg: dict,
         for m in modules:
             if not m.settings_schema:
                 continue
-            values = {
-                f["key"]: (
-                    _get_secret(f"module.{m.key}.{f['key']}", f.get("default", ""))
-                    if f.get("type") == "password"
-                    else _get_mod(m.key, f["key"], f.get("default", ""))
-                )
-                for f in m.settings_schema if "key" in f
-            }
-            mod_settings[m.key] = {
-                "mod":    m,
-                "schema": _resolve(m.settings_schema),
-                "values": values,
-            }
+            try:
+                values = {
+                    f["key"]: (
+                        _get_secret(f"module.{m.key}.{f['key']}", f.get("default", ""))
+                        if f.get("type") == "password"
+                        else _get_mod(m.key, f["key"], f.get("default", ""))
+                    )
+                    for f in m.settings_schema if "key" in f
+                }
+                mod_settings[m.key] = {
+                    "mod":    m,
+                    "schema": _resolve(m.settings_schema),
+                    "values": values,
+                }
+            except Exception:
+                pass
 
         return {
             "settings":         all_settings(),

@@ -39,7 +39,7 @@
 
 
   {# ── Moduleinstellungen ──────────────────────────────────────────────────── #}
-  {% for key, data in mod_settings.items() %}
+  {% for key, data in (mod_settings | default({})).items() %}
   {% include "settings/partials/module_card.html" %}
   {% endfor %}
 
