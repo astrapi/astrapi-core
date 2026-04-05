@@ -893,8 +893,9 @@ input,select,textarea { font-family:var(--font); }
 
 /* ── Sysinfo: responsive Grids ───────────────────────────────── */
 @media (max-width:768px) {
-  .sysinfo-gauges { grid-template-columns:1fr !important; }
-  .sysinfo-info   { grid-template-columns:1fr !important; }
+  .sysinfo-gauges    { grid-template-columns:1fr !important; }
+  .sysinfo-info      { grid-template-columns:1fr !important; }
+  .sysinfo-app-grid  { grid-template-columns:1fr !important; }
 }
 
 /* ── Activity Log: Filter Desktop/Mobile ─────────────────────── */

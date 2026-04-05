@@ -113,18 +113,43 @@
     {{ 'Update läuft…' if status == 'running' else 'Prüfe…' }}
   </span>
   {% elif packages | selectattr('update_available') | list %}
-  <button class="btn btn-sm" style="background:var(--g); color:#fff; border:none;"
-          hx-post="/ui/updater/update"
-          hx-target="#updater-panel"
-          hx-swap="outerHTML"
-          hx-confirm="Pakete jetzt aktualisieren und Service neu starten?">
-    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-      <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
-      <polyline points="7 10 12 15 17 10"/>
-      <line x1="12" y1="15" x2="12" y2="3"/>
-    </svg>
-    Jetzt aktualisieren
-  </button>
+  <div x-data="{ open: false }">
+    <button class="btn btn-sm" style="background:var(--g); color:#fff; border:none;"
+            @click="open = true">
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+        <polyline points="7 10 12 15 17 10"/>
+        <line x1="12" y1="15" x2="12" y2="3"/>
+      </svg>
+      Jetzt aktualisieren
+    </button>
+    <template x-teleport="body">
+      <div x-show="open"
+           class="ds-modal-backdrop"
+           x-on:keydown.escape.window="open = false"
+           @click.self="open = false">
+        <div class="confirm-dialog" tabindex="-1" x-init="$watch('open', v => v && $nextTick(() => $el.focus()))">
+          <button type="button" class="ds-modal-close" @click="open = false">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+              <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+            </svg>
+          </button>
+          <p class="modal-lead">Pakete aktualisieren</p>
+          <p class="modal-copy">Pakete jetzt aktualisieren und Service neu starten?</p>
+          <div class="ds-modal-footer-simple">
+            <button class="btn btn-ghost btn-sm" @click="open = false">Abbrechen</button>
+            <button class="btn btn-sm" style="background:var(--g); color:#fff; border:none;"
+                    hx-post="/ui/updater/update"
+                    hx-target="#updater-panel"
+                    hx-swap="outerHTML"
+                    @click="open = false">
+              Aktualisieren
+            </button>
+          </div>
+        </div>
+      </div>
+    </template>
+  </div>
   {% else %}
   <button class="btn btn-ghost btn-sm"
           hx-post="/ui/updater/check"

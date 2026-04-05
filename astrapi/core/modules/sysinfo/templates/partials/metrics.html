@@ -93,7 +93,7 @@
 
 
 {# ── Anwendung + Updates nebeneinander ────────────────────────────── #}
-<div style="display:grid; grid-template-columns:{% if info.update_packages is defined and info.update_packages is not none %}1fr 1fr{% else %}1fr{% endif %}; gap:12px;">
+<div class="sysinfo-app-grid" style="display:grid; grid-template-columns:{% if info.update_packages is defined and info.update_packages is not none %}repeat(auto-fit, minmax(min(100%, 340px), 1fr)){% else %}1fr{% endif %}; gap:12px;">
 
   {# Anwendung #}
   <div class="ds-card on">
