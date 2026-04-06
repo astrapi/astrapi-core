@@ -1,11 +1,11 @@
 <!DOCTYPE html>
-<html lang="{{ app_lang | default('de') }}" class="{{ 'light-mode' if light_mode else '' }}">
+<html lang="{{ app_lang | default('de') }}" class="{{ 'light-mode' if light_mode else '' }}{{ ' debug-mode' if is_debug else '' }}{{ ' ui-debug' if is_ui_debug else '' }}">
 <head>
   <meta charset="UTF-8">
   <script>var _lm=localStorage.getItem('lightMode');if(_lm==='1')document.documentElement.classList.add('light-mode');else if(_lm==='0')document.documentElement.classList.remove('light-mode');</script>
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <link rel="icon" type="image/svg+xml" href="{{ app_icon_svg | default('data:image/svg+xml,<svg xmlns=\'http://www.w3.org/2000/svg\' viewBox=\'0 0 24 24\' fill=\'none\' stroke=\'%23a3a3a3\' stroke-width=\'1.8\'><circle cx=\'12\' cy=\'12\' r=\'10\'/><polyline points=\'9 12 11 14 15 10\'/></svg>') }}">
-  <title>{% block title %}{{ app_name }}{% endblock %}</title>
+  <title>{% block title %}{{ app_name }}{% if is_debug %} (Debug){% endif %}{% endblock %}</title>
   <link rel="manifest" href="/static/manifest.json">
   <meta name="mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-capable" content="yes">
@@ -16,7 +16,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
   <!-- Core styles (nicht überschreiben – per Update austauschbar) -->
-  <link rel="stylesheet" href="{{ url_for('static', filename='css/app.css') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/app.css') }}?v={{ static_v }}">
 
   <!-- App-eigene Erweiterungen -->
   {% block extra_css %}{% endblock %}
@@ -37,5 +37,51 @@
 <script src="{{ url_for('static', filename='js/components/navigation.js') }}"></script>
 
 {% block extra_js %}{% endblock %}
+
+{% if is_ui_debug %}
+<script>
+(function () {
+  var _map = {
+    'sidebar':               'sidebar',
+    'sb-logo':               'sb-logo',
+    'sb-footer':             'sb-footer',
+    'nav-items':             'nav-items',
+    'nav-item':              'nav-item',
+    'main-content':          'main-content',
+    'page-header':           'page-header',
+    'page-header-main':      'page-header-main',
+    'page-header-actions':   'page-header-actions',
+    'ds-card':               'ds-card',
+    'card-header':           'card-header',
+    'card-inner':            'card-inner',
+    'card-body':             'card-body',
+    'card-run-info':         'card-run-info',
+    'card-footer':           'card-footer',
+    'ds-list-table-wrap':    'ds-list-table-wrap',
+    'ds-list-table':         'ds-list-table',
+    'col-name':              'col-name',
+    'col-last-run':          'col-last-run',
+    'col-status':            'col-status',
+    'col-actions':           'col-actions',
+    'table-actions':         'table-actions',
+    'table-ctx-menu':        'table-ctx-menu',
+    'table-ctx-dropdown':    'table-ctx-dropdown',
+    'ds-modal-backdrop':     'ds-modal-backdrop',
+    'ds-modal':              'ds-modal',
+    'ds-modal-footer-simple':'ds-modal-footer',
+    'form-group':            'form-input',
+  };
+  function applyLabels() {
+    for (var cls in _map) {
+      document.querySelectorAll('.' + cls + ':not([data-debug-label])').forEach(function (el) {
+        el.setAttribute('data-debug-label', _map[cls]);
+      });
+    }
+  }
+  applyLabels();
+  document.addEventListener('htmx:afterSettle', applyLabels);
+})();
+</script>
+{% endif %}
 </body>
 </html>

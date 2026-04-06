@@ -5,7 +5,7 @@
 <div class="sysinfo-gauges" style="display:grid; grid-template-columns:repeat(auto-fit,minmax(180px,1fr)); gap:12px; margin-bottom:16px;">
 
   {# CPU #}
-  <div class="ds-card on" style="padding:16px 18px;">
+  <div class="ds-card on" style="padding:16px 18px;" data-debug-label="ds-card">
     <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:10px;">
       <div style="font-size:11px; text-transform:uppercase; letter-spacing:0.07em; color:var(--text-3); font-weight:600;">CPU</div>
       <div style="font-size:24px; font-weight:700; color:var(--text);">{{ info.cpu.percent }}<span style="font-size:14px; color:var(--text-3);">%</span></div>
@@ -22,7 +22,7 @@
   </div>
 
   {# RAM #}
-  <div class="ds-card on" style="padding:16px 18px;">
+  <div class="ds-card on" style="padding:16px 18px;" data-debug-label="ds-card">
     <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:10px;">
       <div style="font-size:11px; text-transform:uppercase; letter-spacing:0.07em; color:var(--text-3); font-weight:600;">RAM</div>
       <div style="font-size:24px; font-weight:700; color:var(--text);">{{ info.mem.percent }}<span style="font-size:14px; color:var(--text-3);">%</span></div>
@@ -38,7 +38,7 @@
   </div>
 
   {# Swap #}
-  <div class="ds-card on" style="padding:16px 18px;">
+  <div class="ds-card on" style="padding:16px 18px;" data-debug-label="ds-card">
     <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:10px;">
       <div style="font-size:11px; text-transform:uppercase; letter-spacing:0.07em; color:var(--text-3); font-weight:600;">SWAP</div>
       <div style="font-size:24px; font-weight:700; color:var(--text);">{{ info.swap.percent }}<span style="font-size:14px; color:var(--text-3);">%</span></div>
@@ -55,7 +55,7 @@
 
   {# Disk (/) #}
   {% if info.root_disk %}
-  <div class="ds-card on" style="padding:16px 18px;">
+  <div class="ds-card on" style="padding:16px 18px;" data-debug-label="ds-card">
     <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:10px;">
       <div style="font-size:11px; text-transform:uppercase; letter-spacing:0.07em; color:var(--text-3); font-weight:600;">DISK</div>
       <div style="font-size:24px; font-weight:700; color:var(--text);">{{ info.root_disk.percent }}<span style="font-size:14px; color:var(--text-3);">%</span></div>
@@ -73,7 +73,7 @@
 
   {# Extra-Disks (projektspezifisch via configure(extra_disks=[...])) #}
   {% for ed in info.extra_disks %}
-  <div class="ds-card on" style="padding:16px 18px;">
+  <div class="ds-card on" style="padding:16px 18px;" data-debug-label="ds-card">
     <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:10px;">
       <div style="font-size:11px; text-transform:uppercase; letter-spacing:0.07em; color:var(--text-3); font-weight:600;">{{ ed.label }}</div>
       <div style="font-size:24px; font-weight:700; color:var(--text);">{{ ed.percent }}<span style="font-size:14px; color:var(--text-3);">%</span></div>
@@ -96,8 +96,8 @@
 <div class="sysinfo-app-grid" style="display:grid; grid-template-columns:{% if info.update_packages is defined and info.update_packages is not none %}repeat(auto-fit, minmax(min(100%, 340px), 1fr)){% else %}1fr{% endif %}; gap:12px;">
 
   {# Anwendung #}
-  <div class="ds-card on">
-    <div class="card-body" style="padding:16px;">
+  <div class="ds-card on" data-debug-label="ds-card">
+    <div class="card-body" style="padding:16px;" data-debug-label="card-body">
       <div style="font-weight:600; margin-bottom:12px;">Anwendung</div>
       <div class="meta-grid" style="row-gap:8px;">
         {% for key, val in info.software.items() %}
@@ -139,8 +139,8 @@
 
   {# Updates (nur wenn update_packages_fn konfiguriert) #}
   {% if info.update_packages is defined and info.update_packages is not none %}
-  <div class="ds-card on">
-    <div class="card-body" style="padding:16px;">
+  <div class="ds-card on" data-debug-label="ds-card">
+    <div class="card-body" style="padding:16px;" data-debug-label="card-body">
       <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:12px;">
         <div style="font-weight:600;">Updates</div>
         <div id="updater-header-actions"></div>

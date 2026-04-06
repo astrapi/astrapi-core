@@ -8,11 +8,11 @@
 </div>
 {% else %}
 
-<div class="page-header">
-  <div class="page-header-main">
+<div class="page-header" data-debug-label="page-header">
+  <div class="page-header-main" data-debug-label="page-header-main">
     <div class="page-title">System</div>
   </div>
-  <div class="page-header-actions">
+  <div class="page-header-actions" data-debug-label="page-header-actions">
     <span class="page-subtitle" style="font-family:var(--mono);">Stand: <span id="sysinfo-time">{{ info.collected_at }}</span></span>
     <button class="btn btn-ghost btn-sm"
             hx-get="/ui/sysinfo/metrics"

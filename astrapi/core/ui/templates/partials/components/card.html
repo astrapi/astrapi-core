@@ -1,15 +1,15 @@
 {% macro render(title_html, enabled=True, toggle_html="", footer_left="", footer_right="") -%}
-<div class="ds-card {{ 'on' if enabled else 'off' }}">
-  <div class="card-header">
+<div class="ds-card {{ 'on' if enabled else 'off' }}" data-debug-label="ds-card">
+  <div class="card-header" data-debug-label="card-header">
     <span class="card-title">
       {{ title_html | safe }}
     </span>
     {{ toggle_html | safe }}
   </div>
-  <div class="card-body">
+  <div class="card-body" data-debug-label="card-body">
     {{ caller() }}
   </div>
-  <div class="card-footer">
+  <div class="card-footer" data-debug-label="card-footer">
     <div class="card-footer-actions">
       {{ footer_left | safe }}
     </div>

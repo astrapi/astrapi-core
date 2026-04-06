@@ -4,17 +4,17 @@
 </svg>
 {%- endmacro %}
 
-<aside id="sidebar">
+<aside id="sidebar" data-debug-label="sidebar">
 <div class="sb-scroll">
 
   <!-- Logo — anpassen in app/config.py via app_name / app_logo_svg -->
-  <div class="sb-logo">
+  <div class="sb-logo" data-debug-label="sb-logo">
     <span class="sb-logo-text">{{ app_name }}</span>
   </div>
 
   <!-- Navigation -->
   <hr class="sb-divider">
-  <nav class="nav-items">
+  <nav class="nav-items" data-debug-label="nav-items">
     {% for item in nav_items %}
       {% if item.separator %}
         <div class="nav-separator {{ 'nav-separator-first' if loop.first else '' }}">
@@ -29,6 +29,7 @@
         hx-push-url="{{ item.url }}"
         id="nav-{{ item.key }}"
         class="nav-item {% if item.default %}active{% endif %}"
+        data-debug-label="nav-item"
       >
         {{ svg_icon(item.icon if item.icon is defined else '') }}
         <span>{{ item.label }}</span>
@@ -38,7 +39,7 @@
   </nav>
 
   <!-- Footer -->
-  <div class="sb-footer">
+  <div class="sb-footer" data-debug-label="sb-footer">
     <button class="btn-theme" id="btn-theme-toggle" style="margin-left:auto; display:flex;" onclick="toggleDarkMode()" title="Erscheinungsbild">
       <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor" stroke="none"><use id="theme-toggle-icon" href="#icon-moon"></use></svg>
     </button>

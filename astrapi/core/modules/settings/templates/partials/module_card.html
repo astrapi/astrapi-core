@@ -8,8 +8,8 @@
 {% set values = data['values'] %}
 
 <div>
-  <div class="ds-card on" x-data="{ open: false }">
-    <div class="card-body" style="padding:16px;">
+  <div class="ds-card on" x-data="{ open: false }" data-debug-label="ds-card">
+    <div class="card-body" style="padding:16px;" data-debug-label="card-body">
 
       <button type="button"
               @click="open = !open"

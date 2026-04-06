@@ -21,10 +21,11 @@
 <div
   id="create-edit-modal"
   class="ds-modal-backdrop"
+  data-debug-label="ds-modal-backdrop"
   x-data
   x-on:keydown.escape.window="$el.remove()"
 >
-  <div class="ds-modal" style="max-width:{{ modal_width | default(620) }}px; padding:20px 24px;">
+  <div class="ds-modal" style="max-width:{{ modal_width | default(620) }}px; padding:20px 24px;" data-debug-label="ds-modal">
 
     {{ modal_title(is_edit=item is not none, title=title) }}
 
@@ -114,7 +115,7 @@
       {% else %}
 
         {# ── Altes row-basiertes Rendering (Rückwärtskompatibilität) ──────── #}
-        {% set rows = render_fields | groupby("row") %}
+        {% set rows = render_fields | groupby("row", default=0) %}
         {% for row, fields in rows %}
           <div style="display:grid;
                       grid-template-columns:{% if fields | length == 2 and fields[1].type == 'boolean' %}1fr auto{% else %}repeat({{ fields | length }}, 1fr){% endif %};

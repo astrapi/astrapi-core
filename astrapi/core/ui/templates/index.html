@@ -9,7 +9,7 @@
 
 <div class="app-layout">
   {% include "navigation/index.html" %}
-  <div class="main-content">
+  <div class="main-content" data-debug-label="main-content">
     <div id="main-content"
          hx-get="{{ initial_content_url }}"
          hx-trigger="load"

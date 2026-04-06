@@ -18,18 +18,18 @@
 {# SEKTION 1 – KANÄLE                                                         #}
 {# ═══════════════════════════════════════════════════════════════════════════ #}
 
-<div class="page-header">
-  <div class="page-header-main">
+<div class="page-header" data-debug-label="page-header">
+  <div class="page-header-main" data-debug-label="page-header-main">
     <span class="page-title">Benachrichtigungen</span>
   </div>
 </div>
 
-<div class="page-header page-header--inline page-header--section">
-  <div class="page-header-main">
+<div class="page-header page-header--inline page-header--section" data-debug-label="page-header">
+  <div class="page-header-main" data-debug-label="page-header-main">
     <span class="page-title">Kanäle</span>
     <span class="page-subtitle">Backend-Konfiguration (Server, Zugangsdaten)</span>
   </div>
-  <div class="page-header-actions">
+  <div class="page-header-actions" data-debug-label="page-header-actions">
     <button class="btn btn-primary btn-sm"
       hx-get="/ui/{{ key }}/backend-select"
       hx-target="body" hx-swap="beforeend">
@@ -136,12 +136,12 @@
 {# SEKTION 2 – NOTIFY-JOBS                                                    #}
 {# ═══════════════════════════════════════════════════════════════════════════ #}
 
-<div class="page-header page-header--inline page-header--section" style="margin-top:36px;">
-  <div class="page-header-main">
+<div class="page-header page-header--inline page-header--section" style="margin-top:36px;" data-debug-label="page-header">
+  <div class="page-header-main" data-debug-label="page-header-main">
     <span class="page-title">Notify-Jobs</span>
     <span class="page-subtitle">Kanal + Ereignisse + Quellen</span>
   </div>
-  <div class="page-header-actions">
+  <div class="page-header-actions" data-debug-label="page-header-actions">
   <button class="btn btn-primary btn-sm"
     hx-get="/ui/{{ key }}/jobs/create"
     hx-target="body" hx-swap="beforeend">

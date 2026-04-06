@@ -41,11 +41,11 @@
 {% endmacro %}
 
 <div id="tab-activity_log" class="tab-content">
-  <div class="page-header">
-    <div class="page-header-main">
+  <div class="page-header" data-debug-label="page-header">
+    <div class="page-header-main" data-debug-label="page-header-main">
       <div class="page-title">Activity Log</div>
     </div>
-    <div class="page-header-actions">
+    <div class="page-header-actions" data-debug-label="page-header-actions">
       <div class="al-filters-desktop">{{ filters() }}</div>
       <button class="btn btn-danger btn-sm"
               hx-get="/api/activity_log/clear-confirm"
@@ -58,7 +58,7 @@
 
   <div class="al-filters-mobile">{{ filters() }}</div>
 
-  <div class="ds-card on" style="overflow:hidden;">
+  <div class="ds-card on" style="overflow:hidden;" data-debug-label="ds-card">
     <div style="overflow-x:auto;">
       <table style="width:100%; border-collapse:collapse; font-size:12.5px;">
         <thead>

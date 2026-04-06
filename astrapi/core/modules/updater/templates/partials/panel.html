@@ -8,7 +8,7 @@
      {% endif %}>
 
   {# ── Versions-Tabelle ──────────────────────────────────────────────── #}
-  <div class="ds-card on" style="overflow:hidden; margin-bottom:12px;">
+  <div class="ds-card on" style="overflow:hidden; margin-bottom:12px;" data-debug-label="ds-card">
     <table style="width:100%; border-collapse:collapse; font-size:13px;">
       <thead>
         <tr>
@@ -86,7 +86,7 @@
 
   {# ── pip-Output ────────────────────────────────────────────────────── #}
   {% if output or status in ('running', 'done', 'error') %}
-  <div class="ds-card on" style="overflow:hidden;">
+  <div class="ds-card on" style="overflow:hidden;" data-debug-label="ds-card">
     <div style="padding:10px 16px; border-bottom:1px solid var(--border-s);
                 font-size:11px; text-transform:uppercase; letter-spacing:0.07em;
                 color:var(--text-3); font-weight:600;">

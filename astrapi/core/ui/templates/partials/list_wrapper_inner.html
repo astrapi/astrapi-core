@@ -12,8 +12,13 @@
     content_template – Pfad zum modul-spezifischen Inhalt-Partial
     running          – dict der laufenden Jobs {key: mode}
     light_mode       – bool (optionaler schreibgeschützter Modus)
-    has_toggle       – bool (default True)  Toggle-Schalter im Card-Header
-    has_run_buttons  – bool (default True)  Bulk-Run/Enable-Buttons im Page-Header
+    has_toggle       – bool (default True)  Toggle-Schalter in Card-Header und Ctx-Menu
+    has_create       – bool (default True)  Neu-Button im Page-Header
+    has_edit         – bool (default True)  Bearbeiten-Button im Ctx-Menu
+    has_delete       – bool (default True)  Löschen-Button im Ctx-Menu
+
+  Tabellen-Struktur (immer gleich):
+    col-name | [modul-spezifische Spalten] | col-last-run (130px) | col-status (60px) | col-actions (38px)
 #}
 {% import 'partials/components/ui_macros.html' as ui %}
 
@@ -27,14 +32,14 @@
 <div x-data="viewToggle('{{ module }}')">
 
 {# ── Page-Header: Titel + Settings | Bulk-Aktionen + View-Toggle + Neu ──────── #}
-<div class="page-header">
-  <div class="page-header-main">
+<div class="page-header" data-debug-label="page-header">
+  <div class="page-header-main" data-debug-label="page-header-main">
     <div class="page-title">{{ module_label(module) }}</div>
     {% if module_has_settings(module) %}
     {{ ui.settings_button(module=module) }}
     {% endif %}
   </div>
-  <div class="page-header-actions">
+  <div class="page-header-actions" data-debug-label="page-header-actions">
     {% if cfg and has_run_buttons | default(True) %}
     {% endif %}
 
@@ -57,10 +62,10 @@
     {% set is_running = (module ~ ":" ~ item_name) in (running or {}) %}
     {% set run_mode = (running or {}).get(module ~ ":" ~ item_name, "") %}
 
-    <article class="ds-card {{ 'on' if item_data.enabled else 'off' }}">
+    <article class="ds-card {{ 'on' if item_data.enabled else 'off' }}" data-debug-label="ds-card">
 
       <!-- Card Header -->
-      <div class="card-header">
+      <div class="card-header" data-debug-label="card-header">
         <div class="card-title">
           {{ item_data.description or item_data.host or item_name }}
           {% if is_running %}
@@ -78,8 +83,8 @@
       <!-- Card Body -->
       {% set _card_content %}{% include content_template %}{% endset %}
       {% if _card_content | trim %}
-      <div class="card-inner">
-        <div class="card-body">
+      <div class="card-inner" data-debug-label="card-inner">
+        <div class="card-body" data-debug-label="card-body">
           <div class="card-meta">
             {{ _card_content }}
           </div>
@@ -92,7 +97,7 @@
       {% set _run_date = item_data.last_built if item_data.last_built is defined and item_data.last_built else item_data.last_run %}
       {% set _run_label = 'Letzter Build:' if item_data.last_built is defined and item_data.last_built else 'Letzter Lauf:' %}
       {% if _run_date or _status %}
-      <div class="card-run-info">
+      <div class="card-run-info" data-debug-label="card-run-info">
         <div class="card-run-left">
           <span>{{ _run_label }}</span>
           <span class="card-run-date">{{ _run_date or '—' }}</span>
@@ -104,7 +109,7 @@
       {% endif %}
 
       <!-- Card Footer -->
-      <div class="card-footer">
+      <div class="card-footer" data-debug-label="card-footer">
         <div class="card-footer-actions">
           {% set _card_actions = module_card_actions(module) %}
           {% for action in _card_actions %}{{ ui.card_action_button(action, item_name, item_data, container_id, loading_id) }}{% endfor %}
@@ -137,25 +142,21 @@
 </div>
 
 {# ── Tabellen-Ansicht ─────────────────────────────────────────────────────── #}
-<div class="ds-list-table-wrap" x-show="view === 'list'" style="display:none;">
+<div class="ds-list-table-wrap" x-show="view === 'list'" style="display:none;" data-debug-label="ds-list-table-wrap">
 <div class="ds-list-table-wrap-scroll">
 {% if cfg %}
   {% set _card_actions = module_card_actions(module) %}
-  {% set _run_actions = _card_actions | selectattr('style', 'equalto', 'run') | list %}
-  {% set _menu_actions = _card_actions | rejectattr('style', 'equalto', 'run') | list %}
-  {% set _actions_width = (_run_actions|length + 2) * 34 + 4 %}
   {% set _name_fixed = {'rsync': false} %}
-  <table class="ds-list-table" data-module="{{ module }}" data-col-widths="{{ col_widths(module) | e }}">
+  <table class="ds-list-table" data-module="{{ module }}" data-col-widths="{{ col_widths(module) | e }}" data-debug-label="ds-list-table">
     <thead>
       <tr>
-        <th class="col-toggle"></th>
-        <th class="col-name sortable"{% if _name_fixed.get(module, true) %} style="width:250px"{% endif %}>Name</th>
+        <th class="col-name sortable">Name</th>
         {% include module + '/partials/list_header.html' ignore missing %}
         {% if has_run_buttons | default(True) %}
-        <th class="sortable" style="width:130px">Letzter Lauf</th>
-        <th style="width:60px">Status</th>
+        <th class="col-last-run sortable">Letzter Lauf</th>
         {% endif %}
-        <th class="col-actions" style="width:{{ _actions_width }}px"></th>
+        <th class="col-status">Status</th>
+        <th class="col-actions"></th>
       </tr>
     </thead>
     <tbody>
@@ -163,15 +164,7 @@
         {% set item_name = name %}
         {% set item_data = item %}
         {% set is_running = (module ~ ":" ~ item_name) in (running or {}) %}
-        {% set run_mode = (running or {}).get(module ~ ":" ~ item_name, "") %}
-        <tr class="{{ 'on' if item_data.enabled else 'off' }}">
-          <td class="col-toggle">
-            {% if has_toggle | default(True) %}
-            {{ ui.toggle_switch(module=module, item=item_name, container_id=container_id,
-                                loading_id=loading_id, enabled=item_data.enabled,
-                                description=item_data.description or item_data.host or item_name) }}
-            {% endif %}
-          </td>
+        <tr class="{{ 'on' if item_data.enabled else 'off' }}" data-debug-label="list-row">
           <td class="col-name">
             {{ item_data.description or item_data.host or item_name }}
             {% if is_running %}
@@ -180,24 +173,24 @@
           </td>
           {% include module + '/partials/list_row.html' ignore missing %}
           {% if has_run_buttons | default(True) %}
-          <td style="white-space:nowrap">{{ item_data.last_run or '—' }}</td>
-          {% set _status = last_run_status(module, item_name) %}<td>{{ ui.status_inline(_status) }}</td>
+          <td class="col-last-run">{{ item_data.last_run or '—' }}</td>
           {% endif %}
+          {% set _status = last_run_status(module, item_name) or item_data.last_status %}
+          <td class="col-status">{{ ui.status_inline(_status) }}</td>
           <td class="col-actions">
-            <div class="table-actions">
-              {% for action in _run_actions %}{{ ui.card_action_button(action, item_name, item_data, container_id, loading_id) }}{% endfor %}
-              {% if extra_actions_template %}{% include extra_actions_template ignore missing %}{% endif %}
-              {% if has_edit | default(True) %}
-              {{ ui.edit_button(module=module, item=item_name, container_id=container_id, loading_id=loading_id) }}
-              {% endif %}
-              <div class="table-ctx-menu"
+            <div class="table-actions" data-debug-label="table-actions">
+              <div class="table-ctx-menu" data-debug-label="table-ctx-menu"
                    x-data="{open: false, pos: {top:0, right:0}, toggle(btn){ const r=btn.getBoundingClientRect(); this.pos={top: r.bottom+2, right: window.innerWidth-r.right}; this.open=!this.open; }}"
                    @click.outside="open = false">
                 <button type="button" class="btn-icon" @click="toggle($el)" title="Weitere Aktionen" :class="{'active': open}">
                   <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="5" r="1.8"/><circle cx="12" cy="12" r="1.8"/><circle cx="12" cy="19" r="1.8"/></svg>
                 </button>
-                <div class="table-ctx-dropdown" x-show="open" :style="'top:'+pos.top+'px;right:'+pos.right+'px'" @click="open = false">
-                  {% for action in _menu_actions %}{{ ui.card_action_button(action, item_name, item_data, container_id, loading_id) }}{% endfor %}
+                <div class="table-ctx-dropdown" data-debug-label="table-ctx-dropdown" x-show="open" :style="'top:'+pos.top+'px;right:'+pos.right+'px'" @click="open = false">
+                  {% for action in _card_actions %}{{ ui.card_action_button(action, item_name, item_data, container_id, loading_id) }}{% endfor %}
+                  {% if extra_actions_template %}{% include extra_actions_template ignore missing %}{% endif %}
+                  {% if has_edit | default(True) %}
+                  {{ ui.edit_button(module=module, item=item_name, container_id=container_id, loading_id=loading_id) }}
+                  {% endif %}
                   {% if has_delete | default(True) %}
                   {{ ui.delete_button(module=module, item=item_name, container_id=container_id, loading_id=loading_id, description=item_data.description or item_data.host or item_name) }}
                   {% endif %}

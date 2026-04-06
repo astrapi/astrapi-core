@@ -11,6 +11,7 @@ Konfiguriert eine FastAPI-App mit:
 
 from __future__ import annotations
 
+import time
 from pathlib import Path
 from jinja2 import ChoiceLoader, FileSystemLoader
 import importlib.util
@@ -22,6 +23,7 @@ from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse
 from .page_factory import register_pages
 from .module_registry import load_modules, register_ui_modules, build_nav_items, list_available_core_modules
 from ..system.version import get_app_version, get_app_name, get_display_name, get_core_version
+from ..system.paths import is_debug, is_ui_debug
 from .settings_registry import (
     init as settings_init, seed_defaults, set_many, all_settings,
     get as settings_get, set as settings_set,
@@ -122,6 +124,9 @@ def create(
         auto_reload=True,
     )
     templates = Jinja2Templates(env=jinja_env)
+    jinja_env.globals["is_debug"] = is_debug()
+    jinja_env.globals["is_ui_debug"] = is_ui_debug()
+    _static_v = int(time.time())
 
     _ft.configure(templates)
 
@@ -191,6 +196,9 @@ def create(
             "updater_in_sysinfo":   _updater_in_sysinfo,
             "show_ssh_key":         app_cfg.get("SHOW_SSH_KEY", False),
             "nav_items":            _nav_items_ref[0],
+            "is_debug":             is_debug(),
+            "is_ui_debug":          is_ui_debug(),
+            "static_v":             _static_v,
         }
 
     # Platzhalter – wird nach build_nav_items befüllt

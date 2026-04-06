@@ -81,3 +81,76 @@ def apply_work_dir_argument(args, app_name: str) -> None:
     """Konfiguriert app_name und setzt die Env-Variable aus dem argparse-Namespace."""
     configure(app_name)
     os.environ[_env_var()] = args.work_dir
+
+
+_debug: bool = False
+_ui_debug: bool = False
+
+
+def add_debug_argument(parser) -> None:
+    """Fügt --debug als optionales Flag zu einem argparse.ArgumentParser hinzu."""
+    parser.add_argument(
+        "--debug",
+        action="store_true",
+        default=False,
+        help="Debug-Modus aktivieren",
+    )
+
+
+def apply_debug_argument(args) -> None:
+    """Übernimmt args.debug in den globalen Debug-Zustand und setzt ASTRAPI_DEBUG."""
+    global _debug
+    _debug = bool(args.debug)
+    if _debug:
+        import os
+        os.environ["ASTRAPI_DEBUG"] = "1"
+
+
+def is_debug() -> bool:
+    """Gibt True zurück wenn die App mit --debug gestartet wurde."""
+    import os
+    return _debug or os.environ.get("ASTRAPI_DEBUG") == "1"
+
+
+def is_ui_debug() -> bool:
+    """Gibt True zurück wenn die App mit --ui-debug gestartet wurde."""
+    import os
+    return _ui_debug or os.environ.get("ASTRAPI_UI_DEBUG") == "1"
+
+
+def run_app(app: str, app_name: str, default_port: int = 5000) -> None:
+    """Standardisierter CLI-Einstiegspunkt für astrapi-Apps.
+
+    Parst --host, --port, --debug und --work-dir, konfiguriert Pfade
+    und startet uvicorn. --debug aktiviert automatisch den Reload-Modus.
+
+    Verwendung in _cli.py::
+
+        from astrapi.core.system.paths import run_app
+        run_app("astrapi_backup._app:app", "astrapi-backup", default_port=5001)
+    """
+    import argparse
+    import uvicorn
+
+    parser = argparse.ArgumentParser(prog=app_name)
+    parser.add_argument("--port", type=int, default=default_port)
+    parser.add_argument("--host", default="0.0.0.0")
+    add_debug_argument(parser)
+    parser.add_argument(
+        "--ui-debug",
+        action="store_true",
+        default=False,
+        help="UI-Debug-Modus: Flächen einfärben und Rahmen sichtbar machen",
+    )
+    add_work_dir_argument(parser)
+    args = parser.parse_args()
+    apply_work_dir_argument(args, app_name)
+    apply_debug_argument(args)
+
+    global _ui_debug
+    _ui_debug = bool(args.ui_debug)
+    if _ui_debug:
+        import os as _os
+        _os.environ["ASTRAPI_UI_DEBUG"] = "1"
+
+    uvicorn.run(app, host=args.host, port=args.port, reload=args.debug)

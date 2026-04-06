@@ -6,8 +6,10 @@
 
 <div id="settings-container">
 
-  <div class="page-header">
-    <div class="page-title">Einstellungen</div>
+  <div class="page-header" data-debug-label="page-header">
+    <div class="page-header-main" data-debug-label="page-header-main">
+      <div class="page-title">Einstellungen</div>
+    </div>
   </div>
 
   <div class="section-stack">
@@ -21,8 +23,8 @@
   {# ── SSH-Key (nur wenn App es benötigt) ──────────────────────────────────── #}
   {% if show_ssh_key %}
   <div>
-    <div class="ds-card on" x-data="{ open: false }">
-      <div class="card-body" style="padding:16px;">
+    <div class="ds-card on" x-data="{ open: false }" data-debug-label="ds-card">
+      <div class="card-body" style="padding:16px;" data-debug-label="card-body">
         <button type="button"
                 @click="open = !open"
                 style="display:flex; align-items:center; justify-content:space-between;
@@ -59,8 +61,8 @@
   {# ── Update (nur wenn nicht bereits in Sysinfo eingebettet) ──────────────── #}
   {% if not updater_in_sysinfo %}
   <div>
-    <div class="ds-card on">
-      <div class="card-body" style="padding:16px;">
+    <div class="ds-card on" data-debug-label="ds-card">
+      <div class="card-body" style="padding:16px;" data-debug-label="card-body">
         <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:12px;">
           <div style="font-weight:600;">Update</div>
           {{ ui.settings_button(module='updater') }}
