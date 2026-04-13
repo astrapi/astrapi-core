@@ -1,8 +1,6 @@
 {# activity_log/partials/detail_modal.html #}
 {% from "partials/components/ui_macros.html" import modal_title, modal_footer_simple %}
-<div class="ds-modal-backdrop"
-     x-data
-     x-on:keydown.escape.window="$el.remove()">
+<div class="ds-modal-backdrop">
   <div class="ds-modal" style="max-width:600px;">
 
     {{ modal_title(title="Activity Log – Details") }}
@@ -104,7 +102,7 @@
       </button>
       {% endif %}
       <button class="btn btn-secondary"
-              x-on:click="$el.closest('.ds-modal-backdrop').remove()">
+              onclick="closeModal(this)">
         Schließen
       </button>
     </div>

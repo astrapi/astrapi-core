@@ -22,12 +22,14 @@
   id="create-edit-modal"
   class="ds-modal-backdrop"
   data-debug-label="ds-modal-backdrop"
-  x-data
-  x-on:keydown.escape.window="$el.remove()"
 >
   <div class="ds-modal" style="max-width:{{ modal_width | default(620) }}px; padding:20px 24px;" data-debug-label="ds-modal">
 
     {{ modal_title(is_edit=item is not none, title=title) }}
+
+    {% if prefill_template %}
+    <div style="margin-bottom:14px;">{% include prefill_template %}</div>
+    {% endif %}
 
     <form id="create-edit-form"
       hx-{{ method }}="{{ submit_url }}"

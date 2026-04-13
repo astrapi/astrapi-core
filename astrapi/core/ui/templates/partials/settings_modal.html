@@ -16,9 +16,7 @@
 
 {% set modal_w = mod.settings_modal_width | default(480) %}
 
-<div id="settings-modal-backdrop" class="ds-modal-backdrop"
-     x-data
-     x-on:keydown.escape.window="$el.remove()">
+<div id="settings-modal-backdrop" class="ds-modal-backdrop">
 
   <div class="ds-modal" style="width:{{ modal_w }}px; max-width:95vw; padding:24px 28px;" tabindex="-1"
        id="settings-modal">

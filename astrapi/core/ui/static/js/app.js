@@ -150,6 +150,20 @@ function initAllTableSort(root) {
 document.addEventListener('DOMContentLoaded', () => initAllTableSort());
 document.body.addEventListener('htmx:afterSwap', e => initAllTableSort(e.detail.target));
 
+// ── Modal schließen ──────────────────────────────────────────────────────
+function closeModal(el) {
+    el.closest('.ds-modal-backdrop')?.remove();
+}
+
+// Escape-Taste schließt das oberste offene Modal.
+// Modals mit x-show werden übersprungen – Alpine verwaltet deren Sichtbarkeit selbst.
+document.addEventListener('keydown', function(e) {
+    if (e.key !== 'Escape') return;
+    var modals = Array.from(document.querySelectorAll('.ds-modal-backdrop'))
+        .filter(function(m) { return !m.hasAttribute('x-show'); });
+    if (modals.length > 0) modals[modals.length - 1].remove();
+});
+
 // ── Karten-/Listenansicht Toggle ─────────────────────────────────────────────
 function viewToggle(_module) {
     const mq = window.matchMedia('(max-width: 767px)');

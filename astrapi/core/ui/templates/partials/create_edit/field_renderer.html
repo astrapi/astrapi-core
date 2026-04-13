@@ -86,6 +86,38 @@
 
   {% elif field.type == "list" %}
     {% include "partials/create_edit/list_field.html" %}
+
+  {% elif field.type == "info" %}
+    {% set _raw = values[field.name] if values else '' %}
+    {% if field.resolve == "remote_host" and resolve_remote_host is defined %}
+      {% set _raw = resolve_remote_host(_raw) %}
+    {% endif %}
+    <div class="form-info-value"
+         style="padding:6px 0; color:var(--text-muted); font-size:0.9em;">
+      {{ _raw or '—' }}
+    </div>
+
+  {% elif field.type == "multiselect" %}
+    {% set current = values[field.name] if values else [] %}
+    <div style="display:flex; flex-wrap:wrap; gap:6px; margin-top:4px;">
+      {% for opt in field.options %}
+        {% if opt is mapping %}
+          {% set opt_value = opt.value %}
+          {% set opt_label = opt.label %}
+        {% else %}
+          {% set opt_value = opt %}
+          {% set opt_label = opt %}
+        {% endif %}
+        {% set is_checked = opt_value in current %}
+        <label style="cursor:pointer; user-select:none;"
+               onclick="var cb=this.querySelector('input'); cb.checked=!cb.checked; this.querySelector('span').className='badge-pill '+(cb.checked?'badge-live':'badge-muted');">
+          <input type="checkbox" name="{{ field.name }}" value="{{ opt_value }}"
+                 {% if is_checked %}checked{% endif %}
+                 style="display:none;">
+          <span class="badge-pill {{ 'badge-live' if is_checked else 'badge-muted' }}">{{ opt_label }}</span>
+        </label>
+      {% endfor %}
+    </div>
   {% endif %}
 
 </div>

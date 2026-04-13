@@ -67,13 +67,13 @@
       <!-- Card Header -->
       <div class="card-header" data-debug-label="card-header">
         <div class="card-title">
-          {{ item_data.description or item_data.host or item_name }}
+          {{ item_data.description or item_data.job or item_data.host or item_name }}
           {% if is_running %}
             <span class="run-badge">läuft</span>
           {% endif %}
         </div>
         {% if has_toggle | default(True) %}
-        {% set _display_name = item_data.description or item_data.host or item_name %}
+        {% set _display_name = item_data.description or item_data.job or item_data.host or item_name %}
         {{ ui.toggle_switch(module=module, item=item_name, container_id=container_id,
                             loading_id=loading_id, enabled=item_data.enabled,
                             description=_display_name) }}
@@ -120,7 +120,7 @@
           {{ ui.edit_button(module=module, item=item_name, container_id=container_id, loading_id=loading_id) }}
           {% endif %}
           {% if has_delete | default(True) %}
-          {{ ui.delete_button(module=module, item=item_name, container_id=container_id, loading_id=loading_id, description=item_data.description or item_data.host or item_name) }}
+          {{ ui.delete_button(module=module, item=item_name, container_id=container_id, loading_id=loading_id, description=item_data.description or item_data.job or item_data.host or item_name) }}
           {% endif %}
         </div>
       </div>
@@ -182,7 +182,7 @@
         {% set is_running = (module ~ ":" ~ item_name) in (running or {}) %}
         <tr class="{{ 'on' if item_data.enabled else 'off' }}" data-debug-label="list-row">
           <td class="col-name">
-            {{ item_data.description or item_data.host or item_name }}
+            {{ item_data.description or item_data.job or item_data.host or item_name }}
             {% if is_running %}
               <span class="run-badge">läuft</span>
             {% endif %}
@@ -208,7 +208,7 @@
                   {{ ui.edit_button(module=module, item=item_name, container_id=container_id, loading_id=loading_id) }}
                   {% endif %}
                   {% if has_delete | default(True) %}
-                  {{ ui.delete_button(module=module, item=item_name, container_id=container_id, loading_id=loading_id, description=item_data.description or item_data.host or item_name) }}
+                  {{ ui.delete_button(module=module, item=item_name, container_id=container_id, loading_id=loading_id, description=item_data.description or item_data.job or item_data.host or item_name) }}
                   {% endif %}
                 </div>
               </div>

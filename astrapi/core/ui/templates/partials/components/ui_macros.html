@@ -150,9 +150,7 @@
     padding   – CSS padding der inneren Box     (default: "28px 32px")
 #}
 {% macro modal_wrapper(id, max_width="620px", padding="28px 32px") %}
-<div id="{{ id }}" class="ds-modal-backdrop"
-     x-data
-     x-on:keydown.escape.window="$el.remove()">
+<div id="{{ id }}" class="ds-modal-backdrop">
   <div class="ds-modal" style="max-width:{{ max_width }}; padding:{{ padding }};">
     {{ caller() }}
   </div>
@@ -170,7 +168,7 @@
 <div class="ds-modal-title">
   {{ title }}
 </div>
-<button type="button" class="ds-modal-close" x-on:click="$el.closest('.ds-modal-backdrop').remove()">
+<button type="button" class="ds-modal-close" onclick="closeModal(this)">
   <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" stroke="none"><use href="#icon-close"></use></svg>
 </button>
 {% endmacro %}
@@ -210,7 +208,7 @@
   {% endif %}
   <div class="modal-actions">
     <button type="button" class="btn btn-ghost btn-sm"
-            x-on:click="$el.closest('.ds-modal-backdrop').remove()">
+            onclick="closeModal(this)">
       Abbrechen
     </button>
     <button type="{{ save_type }}" class="btn btn-primary btn-sm"
@@ -230,7 +228,7 @@
 {% macro modal_footer_simple(close_label="Schließen") %}
 <div class="ds-modal-footer-simple">
   <button type="button" class="btn btn-ghost btn-sm"
-          x-on:click="$el.closest('.ds-modal-backdrop').remove()">
+          onclick="closeModal(this)">
     {{ close_label }}
   </button>
 </div>

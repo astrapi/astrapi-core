@@ -35,6 +35,7 @@ def make_htmx_crud_router(
     *,
     post_process: Callable[[dict], dict] | None = None,
     preview_fn: Callable[[str], list[dict]] | None = None,
+    running_fn: Callable[[], dict] | None = None,
 ) -> APIRouter:
     """Erstellt einen HTMX-CRUD-Router für ein Modul.
 
@@ -55,9 +56,9 @@ def make_htmx_crud_router(
             raise HTTPException(500, f"Schema-Datei fehlerhaft: {e}")
 
     def _list_response(request: Request):
-        from astrapi.core.ui.fastapi_templates import get_templates
+        from astrapi.core.ui.render import render
         from astrapi.core.system.db import load_config
-        content = get_templates().TemplateResponse(
+        content = render(
             request,
             "partials/list_wrapper_inner.html",
             {
@@ -66,7 +67,7 @@ def make_htmx_crud_router(
                 "content_template": f"{key}/partials/list.html",
                 "container_id":     f"tab-{key}",
                 "loading_id":       f"{key}-loading",
-                "running":          {},
+                "running":          running_fn() if running_fn else {},
             },
         ).body.decode()
         return HTMLResponse(content, headers={
@@ -109,6 +110,9 @@ def make_htmx_crud_router(
 
     def _parse_form(form, schema: dict) -> dict:
         payload = dict(form)
+        for f in schema.get("fields", []):
+            if f.get("type") == "multiselect" and f.get("name"):
+                payload[f["name"]] = list(form.getlist(f["name"]))
         payload["enabled"] = payload.get("enabled") in ("on", "1", True)
         payload = _extract_lists(schema, payload)
         if post_process:

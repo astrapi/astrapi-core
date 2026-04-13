@@ -86,8 +86,6 @@
 <div
   id="backend-select-modal"
   class="ds-modal-backdrop"
-  x-data
-  x-on:keydown.escape.window="$el.remove()"
 >
   <div class="confirm-dialog" style="max-width:{{ '500px' if total_backends == 2 else '420px' }};">
 
@@ -208,7 +206,7 @@
 
     <div style="display:flex; justify-content:center; margin-top:20px;">
       <button class="btn btn-ghost btn-sm"
-              x-on:click="$el.closest('.ds-modal-backdrop').remove()">
+              onclick="closeModal(this)">
         Abbrechen
       </button>
     </div>

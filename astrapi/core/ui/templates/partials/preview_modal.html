@@ -7,9 +7,7 @@
     description – Anzeigename des Jobs
     commands    – list[dict(label, cmd)]  – Befehle mit Abschnitts-Label
 #}
-<div id="preview-modal" class="ds-modal-backdrop"
-     x-data
-     x-on:keydown.escape.window="$el.remove()">
+<div id="preview-modal" class="ds-modal-backdrop">
   <div class="ds-modal" style="max-width:800px;">
 
     {{ modal_title(title="Befehlsvorschau – " + description) }}

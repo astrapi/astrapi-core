@@ -1,8 +1,6 @@
 {# activity_log/partials/log_viewer_modal.html #}
 {% from "partials/components/ui_macros.html" import modal_title %}
-<div class="ds-modal-backdrop"
-     x-data
-     x-on:keydown.escape.window="$el.remove()">
+<div class="ds-modal-backdrop">
   <div class="ds-modal" style="max-width:1000px; width:90%;">
 
     {{ modal_title(title="Log: " + entry.description) }}
@@ -14,11 +12,11 @@
 
     <div class="ds-modal-footer-simple" style="justify-content:flex-end; gap:8px;">
       <button class="btn btn-secondary"
-              x-on:click="navigator.clipboard.writeText($el.closest('.ds-modal').querySelector('pre').innerText)">
+              onclick="navigator.clipboard.writeText(this.closest('.ds-modal').querySelector('pre').innerText)">
         Kopieren
       </button>
       <button class="btn btn-secondary"
-              x-on:click="$el.closest('.ds-modal-backdrop').remove()">
+              onclick="closeModal(this)">
         Schließen
       </button>
     </div>

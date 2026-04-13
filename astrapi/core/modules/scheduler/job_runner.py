@@ -82,7 +82,7 @@ def run_all(
         RuntimeError: Wenn mindestens ein Eintrag mit Status ``"error"`` abgeschlossen hat.
                       Dadurch wird der übergeordnete Scheduler-Job ebenfalls als fehlerhaft markiert.
     """
-    failed: list[str] = []
+    failed: list[tuple[str, str]] = []
     for item_id, entry in config.items():
         if not entry.get("enabled", True):
             continue
@@ -98,10 +98,11 @@ def run_all(
             lambda iid=item_id, e=entry: run_single_fn(iid, e),
         )
         if status == "error":
-            failed.append(str(item_id))
+            failed.append((str(item_id), desc))
 
     if failed:
-        raise RuntimeError(f"Fehler in: {', '.join(failed)}")
+        rows = "\n".join(f"  - {desc}" for _, desc in failed)
+        raise RuntimeError(f"Fehler in {len(failed)} Job(s):\n{rows}")
 
 
 def _notify(module: str, description: str, status: str, duration: int) -> None:

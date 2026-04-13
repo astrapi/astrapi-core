@@ -12,9 +12,7 @@
 {% set is_new = job is none or job.get('id') is none %}
 
 <div id="scheduler-job-modal"
-     class="ds-modal-backdrop"
-     x-data
-     x-on:keydown.escape.window="$el.remove()">
+     class="ds-modal-backdrop">
 
   <div class="ds-modal" style="max-width:580px; padding:20px 24px;">
 

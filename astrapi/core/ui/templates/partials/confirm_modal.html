@@ -4,14 +4,11 @@
   Variablen: description, verb, confirm_url, method, container_id, loading_id
   reload_url: optional – wenn gesetzt, wird nach Erfolg /reload_url in #main-content geladen
 #}
-<div class="ds-modal-backdrop"
-     x-data
-     x-init="$nextTick(() => $el.querySelector('.confirm-dialog').focus())"
-     x-on:keydown.escape.window="$el.remove()">
+<div class="ds-modal-backdrop">
 
   <div class="confirm-dialog" tabindex="-1">
 
-    <button type="button" class="ds-modal-close" x-on:click="$el.closest('.ds-modal-backdrop').remove()">
+    <button type="button" class="ds-modal-close" onclick="closeModal(this)">
       <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
         <line x1="18" y1="6" x2="6" y2="18"/>
         <line x1="6" y1="6" x2="18" y2="18"/>
@@ -35,7 +32,7 @@
 
     <div class="ds-modal-footer-simple">
       <button class="btn btn-ghost btn-sm"
-              x-on:click="$el.closest('.ds-modal-backdrop').remove()">
+              onclick="closeModal(this)">
         Abbrechen
       </button>
       {% if reload_url %}
@@ -57,3 +54,4 @@
 
   </div>
 </div>
+<script>(function(){var d=document.querySelectorAll('.confirm-dialog');if(d.length)d[d.length-1].focus();})();</script>

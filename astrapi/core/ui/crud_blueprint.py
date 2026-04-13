@@ -45,6 +45,8 @@ def make_crud_router(
     has_toggle: bool = True,
     resolve_fields_fn: Callable[[list], list] | None = None,
     extra_page_actions_template: str | None = None,
+    prefill_template: str | None = None,
+    running_fn: Callable[[], dict] | None = None,
 ) -> APIRouter:
     """Erstellt einen generischen CRUD-APIRouter.
 
@@ -59,6 +61,7 @@ def make_crud_router(
         has_toggle:        Ob Toggle-Aktion verfügbar sein soll
         resolve_fields_fn: Optionale Funktion zum Anreichern der Schema-Felder
         extra_page_actions_template: Optionales Template für zusätzliche Page-Actions
+        running_fn:        Optionale Funktion () -> dict mit laufenden Jobs
 
     Returns:
         FastAPI APIRouter mit allen Standard-UI-Routen
@@ -79,7 +82,7 @@ def make_crud_router(
             container_id=_c_id,
             loading_id=_l_id,
             content_template=f"{key}/partials/list.html",
-            running={},
+            running=running_fn() if running_fn else {},
             has_run_buttons=has_run_buttons,
         )
         if extra_page_actions_template:
@@ -96,11 +99,13 @@ def make_crud_router(
     def _form_data(form) -> dict:
         data = {}
         for field in schema["fields"]:
-            if field.get("type") == "section" or not field.get("name"):
+            if field.get("type") in ("section", "info") or not field.get("name"):
                 continue
             name = field["name"]
             if field.get("type") == "boolean":
                 data[name] = name in form
+            elif field.get("type") in ("multiselect", "list"):
+                data[name] = list(form.getlist(name))
             else:
                 data[name] = form.get(name, "")
         return data
@@ -123,6 +128,7 @@ def make_crud_router(
             reload_url=f"/ui/{key}/content",
             container_id=request.query_params.get("container_id", _c_id),
             loading_id=request.query_params.get("loading_id", _l_id),
+            prefill_template=prefill_template,
         ))
 
     @router.get(f"/ui/{key}/{{item_id}}/edit", response_class=HTMLResponse)
@@ -138,7 +144,7 @@ def make_crud_router(
             item_id=item_id,
             submit_url=f"/ui/{key}/{item_id}/update",
             method="post",
-            title=f"{_label} bearbeiten – {item_id}",
+            title=f"{_label} bearbeiten",
             reload_url=f"/ui/{key}/content",
             container_id=request.query_params.get("container_id", _c_id),
             loading_id=request.query_params.get("loading_id", _l_id),
@@ -150,7 +156,7 @@ def make_crud_router(
         return render(request, "partials/confirm_modal.html", dict(
             description=item.get(description_field, item_id),
             verb="löschen",
-            confirm_url=f"/api/{key}/{item_id}",
+            confirm_url=f"/api/{key}/{item_id}/delete",
             method="delete",
             reload_url=f"/ui/{key}/content",
             container_id=request.query_params.get("container_id", _c_id),

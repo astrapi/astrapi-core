@@ -17,9 +17,7 @@
     dates    – list[str]: verfügbare Datum-Dateien
     selected – str: aktuell gewähltes Datum
 #}
-<div id="log-modal" class="ds-modal-backdrop"
-     x-data
-     x-on:keydown.escape.window="$el.remove()">
+<div id="log-modal" class="ds-modal-backdrop">
   <div class="ds-modal log-modal-inner">
 
     {{ modal_title(title="Log – " + description, icon="log") }}
