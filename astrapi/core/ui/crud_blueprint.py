@@ -34,6 +34,37 @@ from fastapi.responses import HTMLResponse
 
 from astrapi.core.ui.schema_loader import load_schema
 
+# Registry: module_key → filter-Definitionen (für run.py zugänglich)
+_module_filters: dict[str, list[dict]] = {}
+
+
+def resolve_filters_for_request(module: str, request: Request, items: dict) -> tuple[dict, dict]:
+    """Wendet die registrierten Filter eines Moduls auf items an.
+
+    Liest Werte aus Query-Parametern (Priorität) oder Cookies (Fallback).
+    Gibt (gefilterte items, extra_ctx) zurück; extra_ctx enthält filter_defs.
+    """
+    import re
+    filters = _module_filters.get(module, [])
+    if not filters:
+        return items, {}
+    resolved = []
+    for f in filters:
+        val = request.query_params.get(f["param"], "")
+        if not val:
+            cookie_name = re.sub(r"[^a-zA-Z0-9]", "_", f"mf_{module}__{f['param']}")
+            val = request.cookies.get(cookie_name, "")
+        if val:
+            items = {k: v for k, v in items.items() if str(v.get(f["param"], "")) == val}
+        resolved.append({
+            "param":     f["param"],
+            "label":     f["label"],
+            "all_label": f.get("all_label", "Alle"),
+            "active":    val,
+            "options":   f["options_fn"](),
+        })
+    return items, {"filter_defs": resolved}
+
 
 def make_crud_router(
     store,
@@ -73,6 +104,7 @@ def make_crud_router(
     _c_id   = f"tab-{key}"
     _l_id   = f"{key}-loading"
     schema  = load_schema(schema_path)
+    _module_filters[key] = filters or []
 
     router = APIRouter()
 
@@ -107,6 +139,11 @@ def make_crud_router(
                 data[name] = name in form
             elif field.get("type") in ("multiselect", "list"):
                 data[name] = list(form.getlist(name))
+            elif field.get("type") == "password":
+                val = form.get(name, "")
+                if val:
+                    data[name] = val
+                # Leer → nicht überschreiben, vorhandener verschlüsselter Wert bleibt
             else:
                 data[name] = form.get(name, "")
         return data

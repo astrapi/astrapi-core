@@ -67,7 +67,7 @@
     var el  = e.target;
     var mod = _moduleFromEl(el);
     if (!mod) return;
-    if (el.querySelector('.run-badge')) {
+    if (el.querySelector('.status-inline--running')) {
       startPolling(mod, el);
     } else {
       stopPolling(mod);

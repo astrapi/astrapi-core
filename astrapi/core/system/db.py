@@ -1,6 +1,6 @@
 # core/system/db.py
 #
-# Generische SQLite-Verbindungsverwaltung und Settings-Tabelle.
+# Generische SQLite-Verbindungsverwaltung.
 # Die App konfiguriert den DB-Pfad einmalig beim Start via configure().
 #
 import sqlite3
@@ -15,14 +15,21 @@ def configure(db_path: Path | str) -> None:
     """Setzt den DB-Pfad. Muss vor dem ersten _conn()-Aufruf aufgerufen werden."""
     global _db_path
     _db_path = Path(db_path)
-    # Secrets automatisch im selben Verzeichnis initialisieren
     try:
+        import os
         from astrapi.core.system.secrets import configure as _secrets_configure
         data_dir = _db_path.parent
-        _secrets_configure(
-            key_path     = data_dir / ".secret.key",
-            dev_key_path = data_dir / ".secret.key",
-        )
+        external = os.environ.get("ASTRAPI_SECRET_KEY_PATH")
+        if external:
+            _secrets_configure(
+                key_path     = Path(external),
+                dev_key_path = data_dir / ".secret.key",
+            )
+        else:
+            _secrets_configure(
+                key_path     = data_dir / ".secret.key",
+                dev_key_path = data_dir / ".secret.key",
+            )
     except Exception:
         pass
 
@@ -39,36 +46,6 @@ def _conn() -> sqlite3.Connection:
     return _local.conn
 
 
-# ── Settings-Tabelle (key/value) ──────────────────────────────────
-
-_SETTINGS_DDL = """
-    CREATE TABLE IF NOT EXISTS settings (
-        key   TEXT PRIMARY KEY,
-        value TEXT NOT NULL DEFAULT ''
-    )
-"""
-
-
-def _init_settings() -> None:
-    _conn().execute(_SETTINGS_DDL)
-    _conn().commit()
-
-
-def get_setting(key: str, default: str = "") -> str:
-    _init_settings()
-    row = _conn().execute("SELECT value FROM settings WHERE key=?", (key,)).fetchone()
-    return row["value"] if row else default
-
-
-def set_setting(key: str, value: str) -> None:
-    _init_settings()
-    _conn().execute(
-        "INSERT INTO settings (key, value) VALUES (?,?) ON CONFLICT(key) DO UPDATE SET value=excluded.value",
-        (key, value)
-    )
-    _conn().commit()
-
-
 # ── Generische Tabellen-Registry + CRUD ───────────────────────────
 
 _TABLE_CONFIG: dict = {}  # key → {ddl, list_fields, col_in, col_out}
@@ -77,23 +54,26 @@ _TABLE_CONFIG: dict = {}  # key → {ddl, list_fields, col_in, col_out}
 def register_table(
     key: str,
     ddl: str,
-    list_fields: list | None = None,
-    col_in:  dict | None = None,
-    col_out: dict | None = None,
+    list_fields:   list | None = None,
+    col_in:        dict | None = None,
+    col_out:       dict | None = None,
+    secret_fields: list | None = None,
 ) -> None:
     """Registriert eine Tabelle für generisches CRUD.
 
-    key:         Tabellenname (= Modul-Key)
-    ddl:         CREATE TABLE IF NOT EXISTS …
-    list_fields: DB-Spaltennamen die als '\\n'-getrennte Listen gespeichert werden
-    col_in:      {db_col: python_key}  – Umbenennung beim Lesen aus der DB
-    col_out:     {python_key: db_col}  – Umbenennung beim Schreiben in die DB
+    key:           Tabellenname (= Modul-Key)
+    ddl:           CREATE TABLE IF NOT EXISTS …
+    list_fields:   DB-Spaltennamen die als '\\n'-getrennte Listen gespeichert werden
+    col_in:        {db_col: python_key}  – Umbenennung beim Lesen aus der DB
+    col_out:       {python_key: db_col}  – Umbenennung beim Schreiben in die DB
+    secret_fields: DB-Spaltennamen die Fernet-verschlüsselt gespeichert werden
     """
     _TABLE_CONFIG[key] = {
-        "ddl":         ddl,
-        "list_fields": list_fields or [],
-        "col_in":      col_in  or {},
-        "col_out":     col_out or {},
+        "ddl":           ddl,
+        "list_fields":   list_fields   or [],
+        "col_in":        col_in        or {},
+        "col_out":       col_out       or {},
+        "secret_fields": secret_fields or [],
     }
 
 
@@ -129,6 +109,10 @@ def _row_to_dict(key: str, row) -> dict:
     for field in cfg.get("list_fields", []):
         raw = d.get(field)
         d[field] = [line for line in raw.split("\n") if line] if raw else []
+    for field in cfg.get("secret_fields", []):
+        if d.get(field):
+            from astrapi.core.system.secrets import decrypt
+            d[field] = decrypt(d[field], default=d[field])
     for db_col, py_key in cfg.get("col_in", {}).items():
         if db_col in d:
             d[py_key] = d.pop(db_col)
@@ -144,6 +128,13 @@ def _dict_to_params(key: str, item: dict) -> dict:
             p[db_col] = p.pop(py_key)
     for field in cfg.get("list_fields", []):
         p[field] = "\n".join(_to_list(p.get(field)))
+    for field in cfg.get("secret_fields", []):
+        if field in p:
+            if p[field]:
+                from astrapi.core.system.secrets import encrypt
+                p[field] = encrypt(p[field])
+            else:
+                del p[field]  # leer → nicht überschreiben
     p.pop("id", None)
     return p
 

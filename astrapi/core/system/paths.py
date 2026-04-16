@@ -142,6 +142,11 @@ def run_app(app: str, app_name: str, default_port: int = 5000) -> None:
         default=False,
         help="UI-Debug-Modus: Flächen einfärben und Rahmen sichtbar machen",
     )
+    parser.add_argument(
+        "--secret-key-path",
+        default=None,
+        help="Pfad zum Fernet-Key (außerhalb des Work-Dir, z.B. /var/lib/backupadm/secret.key)",
+    )
     add_work_dir_argument(parser)
     args = parser.parse_args()
     apply_work_dir_argument(args, app_name)
@@ -152,5 +157,8 @@ def run_app(app: str, app_name: str, default_port: int = 5000) -> None:
     if _ui_debug:
         import os as _os
         _os.environ["ASTRAPI_UI_DEBUG"] = "1"
+
+    if args.secret_key_path:
+        os.environ["ASTRAPI_SECRET_KEY_PATH"] = args.secret_key_path
 
     uvicorn.run(app, host=args.host, port=args.port, reload=args.debug)

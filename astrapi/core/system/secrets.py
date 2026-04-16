@@ -53,17 +53,32 @@ def _fernet() -> Fernet:
 
 
 def _db_set(key: str, value: str) -> None:
-    from astrapi.core.system.db import set_setting
+    from astrapi.core.system.db import kv_set
     token = _fernet().encrypt(value.encode()).decode()
-    set_setting(f"__secret__{key}", token)
+    kv_set("__secrets__", key, token)
     os.environ[key] = value
 
 
 def _db_get(key: str, default: str = "") -> str:
-    from astrapi.core.system.db import get_setting
-    token = get_setting(f"__secret__{key}", "")
+    from astrapi.core.system.db import kv_get
+    token = kv_get("__secrets__", key) or ""
     if not token:
         return default
+    try:
+        return _fernet().decrypt(token.encode()).decode()
+    except Exception:
+        return default
+
+
+# ── Interne Crypto-Helper ─────────────────────────────────────────────────────
+
+def encrypt(value: str) -> str:
+    """Verschlüsselt einen Wert mit Fernet. Gibt den Ciphertext-String zurück."""
+    return _fernet().encrypt(value.encode()).decode()
+
+
+def decrypt(token: str, default: str = "") -> str:
+    """Entschlüsselt einen Fernet-Token. Gibt default zurück wenn ungültig."""
     try:
         return _fernet().decrypt(token.encode()).decode()
     except Exception:
@@ -92,19 +107,14 @@ def get_secret_safe(key: str, default: str = "") -> str:
 
 def get_all_secrets() -> dict:
     """Gibt alle gesetzten Secrets als Klartext-Dict zurück."""
-    from astrapi.core.system.db import _conn, _init_settings
-    _init_settings()
-    rows = _conn().execute(
-        "SELECT key, value FROM settings WHERE key LIKE '__secret__%'"
-    ).fetchall()
+    from astrapi.core.system.db import kv_list
     f = _fernet()
     result = {}
-    for row in rows:
-        env_key = row["key"].replace("__secret__", "", 1)
+    for key, token in kv_list("__secrets__").items():
         try:
-            result[env_key] = f.decrypt(row["value"].encode()).decode()
+            result[key] = f.decrypt(token.encode()).decode()
         except Exception:
-            result[env_key] = ""
+            result[key] = ""
     return result
 
 

@@ -87,9 +87,6 @@
       <div class="card-header" data-debug-label="card-header">
         <div class="card-title">
           {{ item_data.description or item_data.job or item_data.host or item_name }}
-          {% if is_running %}
-            <span class="run-badge">läuft</span>
-          {% endif %}
         </div>
         {% if has_toggle | default(True) %}
         {% set _display_name = item_data.description or item_data.job or item_data.host or item_name %}
@@ -112,7 +109,7 @@
       {% endif %}
 
       <!-- Card Run Info -->
-      {% set _status = last_run_status(module, item_name) %}
+      {% set _status = 'running' if is_running else last_run_status(module, item_name) %}
       {% set _run_date = item_data.last_built if item_data.last_built is defined and item_data.last_built else item_data.last_run %}
       {% set _run_label = 'Letzter Build:' if item_data.last_built is defined and item_data.last_built else 'Letzter Lauf:' %}
       {% if _run_date or _status %}
@@ -202,15 +199,12 @@
         <tr class="{{ 'on' if item_data.enabled else 'off' }}" data-debug-label="list-row">
           <td class="col-name">
             {{ item_data.description or item_data.job or item_data.host or item_name }}
-            {% if is_running %}
-              <span class="run-badge">läuft</span>
-            {% endif %}
           </td>
           {% include module + '/partials/list_row.html' ignore missing %}
           {% if has_run_buttons | default(True) %}
           <td class="col-last-run">{{ item_data.last_run or '—' }}</td>
           {% endif %}
-          {% set _status = last_run_status(module, item_name) or item_data.last_status %}
+          {% set _status = 'running' if is_running else (last_run_status(module, item_name) or item_data.last_status) %}
           <td class="col-status">{{ ui.status_inline(_status) }}</td>
           <td class="col-actions">
             <div class="table-actions" data-debug-label="table-actions">

@@ -6,7 +6,7 @@
 import json
 from datetime import datetime
 
-from astrapi.core.system.db import _conn, get_setting, set_setting
+from astrapi.core.system.db import _conn
 
 
 # ── Activity Log ──────────────────────────────────────────────────
@@ -75,9 +75,6 @@ def _init_activity_log() -> None:
         if stmt.strip():
             _conn().execute(stmt)
     _conn().commit()
-    if get_setting('activity_log_migrated', '') != '1':
-        _migrate_history_to_activity_log()
-        set_setting('activity_log_migrated', '1')
 
 
 def _init_log_lines() -> None:
@@ -87,51 +84,6 @@ def _init_log_lines() -> None:
     )
     _conn().commit()
 
-
-def _migrate_history_to_activity_log() -> None:
-    """Einmalige Migration: kopiert job_history → activity_log."""
-    try:
-        _HISTORY_DDL = """
-            CREATE TABLE IF NOT EXISTS job_history (
-                id          INTEGER PRIMARY KEY AUTOINCREMENT,
-                started_at  TEXT    NOT NULL,
-                finished_at TEXT,
-                module      TEXT    NOT NULL DEFAULT '',
-                item_id     TEXT    NOT NULL DEFAULT '',
-                description TEXT    NOT NULL DEFAULT '',
-                status      TEXT    NOT NULL DEFAULT 'running',
-                duration_s  INTEGER,
-                mode        TEXT    NOT NULL DEFAULT 'run'
-            )
-        """
-        _conn().execute(_HISTORY_DDL)
-        rows = _conn().execute("SELECT * FROM job_history ORDER BY id").fetchall()
-        if not rows:
-            return
-        for row in rows:
-            r = dict(row)
-            _conn().execute("""
-                INSERT OR IGNORE INTO activity_log (
-                    created_at, started_at, finished_at,
-                    log_type, module, item_id, description,
-                    status, duration_s, mode
-                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-            """, (
-                r.get('started_at'),
-                r.get('started_at'),
-                r.get('finished_at'),
-                'job',
-                r.get('module', ''),
-                r.get('item_id', ''),
-                r.get('description', ''),
-                r.get('status', 'ok'),
-                r.get('duration_s'),
-                r.get('mode', 'run'),
-            ))
-        _conn().commit()
-        print(f"[activity_log] Migration: {len(rows)} job_history-Einträge → activity_log")
-    except Exception as e:
-        print(f"[activity_log] Migration job_history → activity_log fehlgeschlagen: {e}")
 
 
 def log_activity(
@@ -282,7 +234,6 @@ def clear_activity_log() -> int:
     _conn().execute("DELETE FROM activity_log")
     _conn().execute("DELETE FROM sqlite_sequence WHERE name IN ('activity_log','activity_log_lines')")
     _conn().commit()
-    set_setting('activity_log_migrated', '1')
     return count
 
 
