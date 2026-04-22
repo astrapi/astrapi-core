@@ -54,10 +54,16 @@ def _pip_index_args() -> list[str]:
 
 
 def _packages_to_update() -> list[str]:
+    """Vollständige Liste für pip install –– astrapi-core wird immer mit-upgegraded."""
     pkgs = ["astrapi-core"]
     if _app_package:
         pkgs.append(_app_package)
     return pkgs
+
+
+def _packages_to_display() -> list[str]:
+    """Pakete die in der UI als Update-Zeile erscheinen sollen (ohne astrapi-core)."""
+    return [p for p in _packages_to_update() if p != "astrapi-core"]
 
 
 # ── Hilfsfunktionen ───────────────────────────────────────────────────────────
@@ -134,7 +140,7 @@ def check_updates() -> list[dict]:
         _state["status"] = "checking"
 
     packages = []
-    for pip_name in _packages_to_update():
+    for pip_name in _packages_to_display():
         installed = _installed_version(pip_name)
         error     = None
         try:
@@ -286,5 +292,5 @@ def get_packages_with_versions() -> list[dict]:
             "update_available": False,
             "error":            None,
         }
-        for p in _packages_to_update()
+        for p in _packages_to_display()
     ]

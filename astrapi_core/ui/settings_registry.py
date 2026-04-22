@@ -40,12 +40,38 @@ class SettingsRegistry:
         self._data_dir.mkdir(exist_ok=True)
         self._maybe_migrate()
 
-    # ── YAML-Migration ─────────────────────────────────────────────
+    # ── Migrationen ────────────────────────────────────────────────
 
     def _maybe_migrate(self) -> None:
         if self._migrated or self._data_dir is None:
             return
         self._migrated = True
+        self._migrate_settings_table()
+        self._migrate_yaml()
+
+    def _migrate_settings_table(self) -> None:
+        """Migriert alte settings-Tabelle (≤v26.4.19) → kvstore._settings."""
+        try:
+            from astrapi_core.system.db import _conn, kv_list, kv_set_many
+            if kv_list(_COLLECTION):
+                return
+            cur = _conn().execute(
+                "SELECT name FROM sqlite_master WHERE type='table' AND name='settings'"
+            ).fetchone()
+            if not cur:
+                return
+            rows = _conn().execute("SELECT key, value FROM settings").fetchall()
+            if not rows:
+                return
+            kv_set_many(_COLLECTION, {row["key"]: json.dumps(row["value"]) for row in rows})
+            print(f"[settings] Migriert: {len(rows)} Einträge (settings-Tabelle → kvstore)")
+        except Exception as e:
+            print(f"[settings] settings-Tabelle-Migration fehlgeschlagen: {e}")
+
+    def _migrate_yaml(self) -> None:
+        """Migriert settings.yaml (≤v26.3.x) → kvstore._settings."""
+        if self._data_dir is None:
+            return
         yaml_path = self._data_dir / "settings.yaml"
         if not yaml_path.exists():
             return
