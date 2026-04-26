@@ -35,11 +35,7 @@ Neuer Kanal
         {% set ch_enabled = ch.get('enabled', True) %}
 
         {% set title_html %}
-          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <rect x="2" y="3" width="20" height="14" rx="2" ry="2"/>
-            <line x1="8" y1="21" x2="16" y2="21"/>
-            <line x1="12" y1="17" x2="12" y2="21"/>
-          </svg>
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor" stroke="none"><use href="#icon-monitor"></use></svg>
           {{ ch.label or ch_id }}
           <span style="font-size:11px; font-weight:500; padding:1px 7px;
                        border-radius:99px; margin-left:6px;
@@ -59,10 +55,7 @@ Neuer Kanal
             hx-post="/ui/{{ key }}/{{ ch_id }}/test"
             hx-target="#test-result-ch-{{ ch_id }}" hx-swap="innerHTML"
             hx-on::after-request="setTimeout(() => { document.getElementById('test-result-ch-{{ ch_id }}').innerHTML = ''; }, 4000)">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <line x1="22" y1="2" x2="11" y2="13"/>
-              <polygon points="22 2 15 22 11 13 2 9 22 2"/>
-            </svg>
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" stroke="none"><use href="#icon-send"></use></svg>
           </button>
           <span id="test-result-ch-{{ ch_id }}"></span>
         {% endset %}
@@ -101,11 +94,7 @@ Neuer Kanal
       {% endfor %}
     {% else %}
       <div class="empty-state">
-        <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1">
-          <rect x="2" y="3" width="20" height="14" rx="2" ry="2"/>
-          <line x1="8" y1="21" x2="16" y2="21"/>
-          <line x1="12" y1="17" x2="12" y2="21"/>
-        </svg>
+          <svg width="36" height="36" viewBox="0 0 24 24" fill="currentColor" stroke="none"><use href="#icon-monitor"></use></svg>
         <div class="empty-state-title">Keine Kanäle konfiguriert</div>
         <div class="empty-state-sub">Lege mit „Neuer Kanal" einen ntfy-Server oder E-Mail-Account an.</div>
       </div>
@@ -133,10 +122,7 @@ Neuer Job
         {% set ch = channels.get(job.get('channel_id', '')) %}
 
         {% set title_html %}
-          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <path d="M18 8A6 6 0 006 8c0 7-3 9-3 9h18s-3-2-3-9"/>
-            <path d="M13.73 21a2 2 0 01-3.46 0"/>
-          </svg>
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor" stroke="none"><use href="#icon-bell"></use></svg>
           {{ job.label or job_id }}
           {% if ch %}
           <span style="font-size:11px; font-weight:500; padding:1px 7px;
@@ -164,10 +150,7 @@ Neuer Job
             hx-post="/ui/{{ key }}/jobs/{{ job_id }}/test"
             hx-target="#test-result-job-{{ job_id }}" hx-swap="innerHTML"
             hx-on::after-request="setTimeout(() => { document.getElementById('test-result-job-{{ job_id }}').innerHTML = ''; }, 4000)">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <line x1="22" y1="2" x2="11" y2="13"/>
-              <polygon points="22 2 15 22 11 13 2 9 22 2"/>
-            </svg>
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" stroke="none"><use href="#icon-send"></use></svg>
           </button>
           <span id="test-result-job-{{ job_id }}"></span>
         {% endset %}
@@ -176,19 +159,12 @@ Neuer Job
           <button class="btn-icon" title="Job bearbeiten"
             hx-get="/ui/{{ key }}/jobs/{{ job_id }}/edit"
             hx-target="body" hx-swap="beforeend">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/>
-              <path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/>
-            </svg>
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" stroke="none"><use href="#icon-edit"></use></svg>
           </button>
           <button class="btn-icon btn-icon-danger" title="Job löschen"
             hx-get="/ui/{{ key }}/jobs/{{ job_id }}/delete"
             hx-target="body" hx-swap="beforeend">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <polyline points="3 6 5 6 21 6"/>
-              <path d="M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6"/>
-              <path d="M10 11v6m4-6v6"/><path d="M9 6V4h6v2"/>
-            </svg>
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" stroke="none"><use href="#icon-trash"></use></svg>
           </button>
         {% endset %}
 
@@ -221,10 +197,7 @@ Neuer Job
       {% endfor %}
     {% else %}
       <div class="empty-state">
-        <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1">
-          <path d="M18 8A6 6 0 006 8c0 7-3 9-3 9h18s-3-2-3-9"/>
-          <path d="M13.73 21a2 2 0 01-3.46 0"/>
-        </svg>
+        <svg width="36" height="36" viewBox="0 0 24 24" fill="currentColor" stroke="none"><use href="#icon-bell"></use></svg>
         <div class="empty-state-title">Keine Notify-Jobs</div>
         <div class="empty-state-sub">Erstelle mit „Neuer Job" eine Benachrichtigungsregel.</div>
       </div>

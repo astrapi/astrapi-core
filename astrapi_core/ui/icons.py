@@ -23,14 +23,16 @@ from pathlib import Path
 
 def _symbol(icon_id: str, svg_content: str) -> str:
     """Wandelt eine SVG-Datei in ein <symbol>-Element um."""
-    vb_m    = re.search(r'viewBox="([^"]+)"', svg_content)
+    vb_m = re.search(r'viewBox="([^"]+)"', svg_content)
     viewbox = vb_m.group(1) if vb_m else "0 0 24 24"
 
     inner = re.sub(r"<\?xml[^>]*\?>", "", svg_content)
-    inner = re.sub(r"<svg[^>]*>",     "", inner)
-    inner = re.sub(r"</svg\s*>",      "", inner)
+    inner = re.sub(r"<svg[^>]*>", "", inner)
+    inner = re.sub(r"</svg\s*>", "", inner)
     inner = re.sub(r"<title[^>]*>.*?</title>", "", inner, flags=re.DOTALL)
     inner = inner.strip()
+    inner = inner.replace('fill="black"', 'fill="currentColor"')
+    inner = inner.replace("fill='black'", "fill='currentColor'")
 
     return f'<symbol id="{icon_id}" viewBox="{viewbox}">{inner}</symbol>'
 
@@ -44,7 +46,7 @@ def build_sprite(modules: list, extra_dirs: list[Path] | None = None) -> str:
                     (Dateiname / <title> wird zur Symbol-ID).
     """
     symbols: list[str] = []
-    seen:    set[str]  = set()
+    seen: set[str] = set()
 
     def _add(icon_id: str, path: Path) -> None:
         if icon_id in seen or not path.exists():
@@ -57,17 +59,17 @@ def build_sprite(modules: list, extra_dirs: list[Path] | None = None) -> str:
         root = getattr(mod, "module_root", None)
         if not root:
             continue
-        _add(f"icon-{mod.key}",          root / "icon.svg")
-        _add(f"icon-{mod.key}-outline",  root / "icon-outline.svg")
+        _add(f"icon-{mod.key}", root / "icon.svg")
+        _add(f"icon-{mod.key}-outline", root / "icon-outline.svg")
 
     # ── 2. Generische Icons aus extra_dirs ────────────────────────────────────
-    for d in (extra_dirs or []):
+    for d in extra_dirs or []:
         if not d.is_dir():
             continue
         for svg_file in sorted(d.glob("*.svg")):
             content = svg_file.read_text(encoding="utf-8")
             title_m = re.search(r"<title[^>]*>(.*?)</title>", content, re.DOTALL)
-            name    = title_m.group(1).strip() if title_m else svg_file.stem
+            name = title_m.group(1).strip() if title_m else svg_file.stem
             icon_id = "icon-" + name
             if icon_id in seen:
                 continue

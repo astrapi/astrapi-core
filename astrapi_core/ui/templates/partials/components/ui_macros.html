@@ -50,11 +50,11 @@
   {% if _s == 'ok' %}
     <span class="badge-pill badge-status-ok">OK</span>
   {% elif _s == 'error' %}
-    <span class="badge-pill badge-status-err"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>Fehler</span>
+    <span class="badge-pill badge-status-err"><svg width="11" height="11" viewBox="0 0 24 24" fill="currentColor" stroke="none"><use href="#icon-close"></use></svg>Fehler</span>
   {% elif _s == 'warning' %}
-    <span class="badge-pill badge-status-warn"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 2L2 20h20L12 2z"/></svg>Warnung</span>
+    <span class="badge-pill badge-status-warn"><svg width="11" height="11" viewBox="0 0 24 24" fill="currentColor" stroke="none"><use href="#icon-alert"></use></svg>Warnung</span>
   {% elif _s == 'running' or _s == 'building' %}
-    <span class="badge-pill badge-status-running"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="animation:spin 1s linear infinite;flex-shrink:0"><path d="M21 12a9 9 0 1 1-6.219-8.56"/></svg>läuft</span>
+    <span class="badge-pill badge-status-running"><svg width="11" height="11" viewBox="0 0 24 24" fill="currentColor" stroke="none" style="animation:spin 1s linear infinite;flex-shrink:0"><use href="#icon-loading"></use></svg>läuft</span>
   {% elif _s == 'pending' %}
     <span class="badge-pill badge-status-none"><span style="animation:pulse 1.2s infinite;line-height:1">●</span>Pending</span>
   {% elif _s %}

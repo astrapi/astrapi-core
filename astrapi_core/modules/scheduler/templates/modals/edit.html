@@ -98,11 +98,7 @@
           <div class="sched-step-item" data-key="{{ step }}" draggable="true"
                style="display:flex; align-items:center; gap:8px; padding:5px 10px;
                       background:rgba(99,102,241,0.08); border-radius:6px; cursor:grab; user-select:none;">
-            <svg width="10" height="10" viewBox="0 0 24 24" fill="currentColor" style="color:var(--text-3); flex-shrink:0;">
-              <circle cx="9" cy="5" r="1.5"/><circle cx="15" cy="5" r="1.5"/>
-              <circle cx="9" cy="12" r="1.5"/><circle cx="15" cy="12" r="1.5"/>
-              <circle cx="9" cy="19" r="1.5"/><circle cx="15" cy="19" r="1.5"/>
-            </svg>
+            <svg width="10" height="10" viewBox="0 0 24 24" fill="currentColor" stroke="none" style="color:var(--text-3); flex-shrink:0;"><use href="#icon-drag-vertical"></use></svg>
             <span style="flex:1; font-size:12px; color:var(--text-1);">{{ actions.get(step, step) }}</span>
             <span style="font-size:11px; color:var(--text-3); font-family:monospace;">{{ step }}</span>
             <button type="button" onclick="schedRemoveStep('{{ step }}')"
@@ -181,10 +177,7 @@
     div.style.cssText = 'display:flex;align-items:center;gap:8px;padding:5px 10px;' +
       'background:rgba(99,102,241,0.08);border-radius:6px;cursor:grab;user-select:none;';
     div.innerHTML =
-      '<svg width="10" height="10" viewBox="0 0 24 24" fill="currentColor" style="color:var(--text-3);flex-shrink:0;">' +
-      '<circle cx="9" cy="5" r="1.5"/><circle cx="15" cy="5" r="1.5"/>' +
-      '<circle cx="9" cy="12" r="1.5"/><circle cx="15" cy="12" r="1.5"/>' +
-      '<circle cx="9" cy="19" r="1.5"/><circle cx="15" cy="19" r="1.5"/></svg>' +
+      '<svg width="10" height="10" viewBox="0 0 24 24" fill="currentColor" stroke="none" style="color:var(--text-3);flex-shrink:0;"><use href="#icon-drag-vertical"></use></svg>' +
       '<span style="flex:1;font-size:12px;color:var(--text-1);">' + label + '</span>' +
       '<span style="font-size:11px;color:var(--text-3);font-family:monospace;">' + key + '</span>' +
       '<button type="button" onclick="schedRemoveStep(\'' + key + '\')" ' +

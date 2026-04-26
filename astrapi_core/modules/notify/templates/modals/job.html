@@ -130,11 +130,7 @@
         {% if scheduler_sources %}
         <div style="margin-top:{{ '10px' if all_sources else '4px' }};">
           <div style="display:flex; align-items:center; gap:5px; margin-bottom:6px;">
-            <svg width="11" height="11" viewBox="0 0 24 24" fill="none"
-                 stroke="currentColor" stroke-width="2" style="color:var(--text-3); flex-shrink:0;">
-              <circle cx="12" cy="12" r="10"/>
-              <polyline points="12 6 12 12 16 14"/>
-            </svg>
+            <svg width="11" height="11" viewBox="0 0 24 24" fill="currentColor" stroke="none" style="color:var(--text-3); flex-shrink:0;"><use href="#icon-clock"></use></svg>
             <span style="font-size:11px; color:var(--text-3); font-weight:500; letter-spacing:.02em;">
               Scheduler-Jobs
             </span>

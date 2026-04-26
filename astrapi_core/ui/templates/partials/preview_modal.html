@@ -24,22 +24,17 @@
                       padding:12px 40px 12px 16px; white-space:pre-wrap; word-break:break-all; margin:0;">{{ entry.cmd }}</pre>
           <button type="button"
                   style="position:absolute; top:6px; right:8px; background:none; border:none;
-                         cursor:pointer; padding:4px; border-radius:4px; opacity:.5;
-                         color:var(--text-2); transition:opacity .15s;"
+                         cursor:pointer; padding:4px; border-radius:4px; opacity:.75;
+                         color:#e8e8e8; transition:opacity .15s;"
                   title="Kopieren"
                   x-on:mouseenter="$el.style.opacity=1"
-                  x-on:mouseleave="$el.style.opacity=copied?1:.5"
+                  x-on:mouseleave="$el.style.opacity=copied?1:.75"
                   x-on:click="navigator.clipboard.writeText($refs.cmd.textContent.trim()); copied=true; setTimeout(()=>copied=false,1500)">
             <template x-if="!copied">
-              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <rect x="9" y="9" width="13" height="13" rx="2"/>
-                <path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/>
-              </svg>
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor" stroke="none"><use href="#icon-copy"></use></svg>
             </template>
             <template x-if="copied">
-              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#4ade80" stroke-width="2.5">
-                <polyline points="20 6 9 17 4 12"/>
-              </svg>
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor" stroke="none"><use href="#icon-check"></use></svg>
             </template>
           </button>
         </div>

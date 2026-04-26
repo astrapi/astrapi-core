@@ -115,12 +115,7 @@
   {% endfor %}
 {% else %}
   <div class="empty-state">
-    <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1">
-      <rect x="3" y="3" width="18" height="18" rx="2"/>
-      <line x1="9" y1="9" x2="15" y2="9"/>
-      <line x1="9" y1="12" x2="15" y2="12"/>
-      <line x1="9" y1="15" x2="12" y2="15"/>
-    </svg>
+    <svg width="40" height="40" viewBox="0 0 24 24" fill="currentColor" stroke="none"><use href="#icon-file-text"></use></svg>
     <div class="empty-state-title">Keine Einträge vorhanden</div>
     <div class="empty-state-sub">Erstelle den ersten Eintrag mit „Neu"</div>
   </div>
@@ -175,11 +170,11 @@
                  x-data="{open: false, pos: {top:0, right:0}, toggle(btn){ const r=btn.getBoundingClientRect(); this.pos={top: r.bottom+2, right: window.innerWidth-r.right}; this.open=!this.open; }}"
                  @click.outside="open = false">
               <button type="button" class="btn-icon" @click="toggle($el)" :class="{'active': open}" title="Spaltenoptionen">
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="5" r="1.8"/><circle cx="12" cy="12" r="1.8"/><circle cx="12" cy="19" r="1.8"/></svg>
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" stroke="none"><use href="#icon-menu-dots"></use></svg>
               </button>
               <div class="table-ctx-dropdown table-ctx-dropdown--col" x-show="open" :style="'top:'+pos.top+'px;right:'+pos.right+'px'" @click="open = false">
                 <button type="button" class="ctx-menu-item" onclick="resetColSettings('{{ module }}')">
-                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/></svg>
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" stroke="none"><use href="#icon-refresh"></use></svg>
                   Spalten zurücksetzen
                 </button>
               </div>
@@ -211,7 +206,7 @@
                    x-data="{open: false, pos: {top:0, right:0}, toggle(btn){ const r=btn.getBoundingClientRect(); this.pos={top: r.bottom+2, right: window.innerWidth-r.right}; this.open=!this.open; }}"
                    @click.outside="open = false">
                 <button type="button" class="btn-icon" @click="toggle($el)" title="Weitere Aktionen" :class="{'active': open}">
-                  <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="5" r="1.8"/><circle cx="12" cy="12" r="1.8"/><circle cx="12" cy="19" r="1.8"/></svg>
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" stroke="none"><use href="#icon-menu-dots"></use></svg>
                 </button>
                 <div class="table-ctx-dropdown" data-debug-label="table-ctx-dropdown" x-show="open" :style="'top:'+pos.top+'px;right:'+pos.right+'px'" @click="open = false">
                   {% for action in _card_actions %}{{ ui.card_action_button(action, item_name, item_data, container_id, loading_id) }}{% endfor %}
@@ -232,12 +227,7 @@
   </table>
 {% else %}
   <div class="empty-state">
-    <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1">
-      <rect x="3" y="3" width="18" height="18" rx="2"/>
-      <line x1="9" y1="9" x2="15" y2="9"/>
-      <line x1="9" y1="12" x2="15" y2="12"/>
-      <line x1="9" y1="15" x2="12" y2="15"/>
-    </svg>
+    <svg width="40" height="40" viewBox="0 0 24 24" fill="currentColor" stroke="none"><use href="#icon-file-text"></use></svg>
     <div class="empty-state-title">Keine Einträge vorhanden</div>
     <div class="empty-state-sub">Erstelle den ersten Eintrag mit „Neu"</div>
   </div>
@@ -250,7 +240,7 @@
   <div class="pagination-controls">
     <button class="btn-icon pagination-btn"
             {% if pagination.has_prev %}hx-get="{{ pagination.prev_url }}" hx-target="#{{ container_id }}" hx-swap="innerHTML"{% else %}disabled{% endif %}>
-      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" stroke="none"><use href="#icon-chevron-left"></use></svg>
     </button>
     {% for p in pagination.pages %}
       {% if p.num == "…" %}
@@ -264,7 +254,7 @@
     {% endfor %}
     <button class="btn-icon pagination-btn"
             {% if pagination.has_next %}hx-get="{{ pagination.next_url }}" hx-target="#{{ container_id }}" hx-swap="innerHTML"{% else %}disabled{% endif %}>
-      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" stroke="none"><use href="#icon-chevron-right"></use></svg>
     </button>
   </div>
 </div>

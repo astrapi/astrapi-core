@@ -30,3 +30,6 @@ apispec>=6.0            # OpenAPI-Spec-Generierung (swagger_utils.py)
 pytest>=8.0
 httpx>=0.27
 playwright>=1.51
+
+# ── Entwicklungstools ─────────────────────────────────────────────
+ruff>=0.4                # Linter + Formatter (ersetzt flake8, isort, black)

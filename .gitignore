@@ -22,9 +22,6 @@ htmlcov/
 app/data/*.db
 app/data/*.db-shm
 app/data/*.db-wal
-dev_app/data/*.db
-dev_app/data/*.db-shm
-dev_app/data/*.db-wal
 
 # Logs
 *.log

@@ -17,12 +17,9 @@
                      width:100%; background:none; border:none; padding:0;
                      cursor:pointer; font-weight:600; color:inherit; font-size:inherit;">
         <span>{{ mod.label }}</span>
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none"
-             stroke="currentColor" stroke-width="2" stroke-linecap="round"
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" stroke="none"
              style="transition:transform .2s; flex-shrink:0;"
-             :style="open ? 'transform:rotate(180deg)' : ''">
-          <polyline points="6 9 12 15 18 9"/>
-        </svg>
+             :style="open ? 'transform:rotate(180deg)' : ''"><use href="#icon-chevron-down"></use></svg>
       </button>
 
       <div x-show="open"
@@ -105,8 +102,7 @@
                          style="flex:1;{% if field.get('mono') %}font-family:var(--font-mono);{% endif %}font-size:13px;">
                   <button type="button" @click="remove(i)"
                           class="btn-icon btn-icon-danger" title="Entfernen">
-                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none"
-                         stroke="currentColor" stroke-width="2">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" stroke="none">
                       <use href="#icon-minus"></use>
                     </svg>
                   </button>

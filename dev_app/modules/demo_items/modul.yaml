@@ -1,6 +1,0 @@
-# dev_app/modules/demo_items/modul.yaml
-
-label:       Demo Items
-icon:        list
-nav_group:   Demo
-nav_default: true

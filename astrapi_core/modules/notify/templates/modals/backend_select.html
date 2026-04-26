@@ -107,20 +107,11 @@
       >
         <div class="bk-icon-wrap">
           {% if bk_key == 'ntfy' %}
-          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <path d="M18 8A6 6 0 006 8c0 7-3 9-3 9h18s-3-2-3-9"/>
-            <path d="M13.73 21a2 2 0 01-3.46 0"/>
-          </svg>
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor" stroke="none"><use href="#icon-bell"></use></svg>
           {% elif bk_key == 'email' %}
-          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <rect x="2" y="4" width="20" height="16" rx="2"/>
-            <path d="M2 7l10 7 10-7"/>
-          </svg>
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor" stroke="none"><use href="#icon-email-outline"></use></svg>
           {% else %}
-          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <circle cx="12" cy="12" r="3"/>
-            <path d="M19.07 4.93a10 10 0 010 14.14M4.93 4.93a10 10 0 000 14.14"/>
-          </svg>
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor" stroke="none"><use href="#icon-webhook"></use></svg>
           {% endif %}
         </div>
         <span class="bk-label">{{ bk_label }}</span>
@@ -147,30 +138,18 @@
       >
         <div class="bk-icon-wrap" style="flex-shrink:0;">
           {% if bk_key == 'ntfy' %}
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <path d="M18 8A6 6 0 006 8c0 7-3 9-3 9h18s-3-2-3-9"/>
-            <path d="M13.73 21a2 2 0 01-3.46 0"/>
-          </svg>
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor" stroke="none"><use href="#icon-bell"></use></svg>
           {% elif bk_key == 'email' %}
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <rect x="2" y="4" width="20" height="16" rx="2"/>
-            <path d="M2 7l10 7 10-7"/>
-          </svg>
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor" stroke="none"><use href="#icon-email-outline"></use></svg>
           {% else %}
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <circle cx="12" cy="12" r="3"/>
-            <path d="M19.07 4.93a10 10 0 010 14.14M4.93 4.93a10 10 0 000 14.14"/>
-          </svg>
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor" stroke="none"><use href="#icon-webhook"></use></svg>
           {% endif %}
         </div>
         <div style="display:flex; flex-direction:column; gap:2px; min-width:0;">
           <span class="bk-label" style="text-align:left;">{{ bk_label }}</span>
           <span class="bk-desc" style="text-align:left;">{{ bk_desc }}</span>
         </div>
-        <svg style="flex-shrink:0; margin-left:auto; color:var(--text-3);"
-             width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-          <polyline points="9,18 15,12 9,6"/>
-        </svg>
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" stroke="none" style="flex-shrink:0; margin-left:auto; color:var(--text-3);"><use href="#icon-chevron-right"></use></svg>
       </button>
       {% endfor %}
 
@@ -185,19 +164,13 @@
         hx-on::after-request="this.closest('.ds-modal-backdrop').remove()"
       >
         <div class="bk-icon-wrap" style="flex-shrink:0;">
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <circle cx="12" cy="12" r="3"/>
-            <path d="M19.07 4.93a10 10 0 010 14.14M4.93 4.93a10 10 0 000 14.14"/>
-          </svg>
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor" stroke="none"><use href="#icon-webhook"></use></svg>
         </div>
         <div style="display:flex; flex-direction:column; gap:2px; min-width:0;">
           <span class="bk-label" style="text-align:left;">{{ bk_key }}</span>
           <span class="bk-desc" style="text-align:left;">Benutzerdefiniertes Backend</span>
         </div>
-        <svg style="flex-shrink:0; margin-left:auto; color:var(--text-3);"
-             width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-          <polyline points="9,18 15,12 9,6"/>
-        </svg>
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" stroke="none" style="flex-shrink:0; margin-left:auto; color:var(--text-3);"><use href="#icon-chevron-right"></use></svg>
       </button>
       {% endfor %}
 
