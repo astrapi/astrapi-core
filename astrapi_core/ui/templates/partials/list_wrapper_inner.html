@@ -35,7 +35,7 @@
   {%- set _ui_content = _mod_obj.ui_content if _mod_obj else none -%}
 {%- endif -%}
 {%- set _ui_cols = _ui_content.columns if (_ui_content and _ui_content.type == 'table') else [] -%}
-{%- set _item_url_prefix = (_col_obj.item_url_prefix if (_col_obj is defined and _col_obj) else '') -%}
+{%- set _item_url_prefix = (_col_obj.item_url_prefix if (_col_obj is defined and _col_obj) else (_ui_content.item_url_prefix if (_ui_content and _ui_content.item_url_prefix) else '')) -%}
 
 {# Überschreibe has_run_buttons / has_edit / has_delete aus ui_content wenn gesetzt #}
 {%- if _ui_content -%}
@@ -57,7 +57,8 @@
 <div class="content-items--table" data-debug-label="content-item">
 {% if cfg %}
   {%- set _col_card_actions = (_col_obj.card_actions if (_col_obj is defined and _col_obj and _col_obj.card_actions) else []) -%}
-  {%- set _card_actions = (_col_card_actions if _col_card_actions else module_card_actions(module)) -%}
+  {%- set _ui_card_actions = (_ui_content.card_actions if (_ui_content and _ui_content.card_actions) else []) -%}
+  {%- set _card_actions = (_col_card_actions or _ui_card_actions or module_card_actions(module)) -%}
   {% set _name_fixed = {'rsync': false} %}
   <table class="ds-list-table" data-module="{{ module }}" data-col-widths="{{ col_widths(module) | e }}">
     <thead>

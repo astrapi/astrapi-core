@@ -36,13 +36,6 @@ _scheduler_table = ContentTable(
             "hx_swap": "innerHTML",
             "disabled_if_off": True,
         },
-        {
-            "title": "Aktivieren / Deaktivieren",
-            "icon": "circle",
-            "hx_get": "/ui/scheduler/job/{item}/toggle",
-            "hx_target": "body",
-            "hx_swap": "beforeend",
-        },
     ],
 )
 
