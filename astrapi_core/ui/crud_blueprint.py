@@ -45,6 +45,7 @@ def resolve_filters_for_request(module: str, request: Request, items: dict) -> t
     Gibt (gefilterte items, extra_ctx) zurück; extra_ctx enthält filter_defs.
     """
     import re
+
     filters = _module_filters.get(module, [])
     if not filters:
         return items, {}
@@ -56,13 +57,15 @@ def resolve_filters_for_request(module: str, request: Request, items: dict) -> t
             val = request.cookies.get(cookie_name, "")
         if val:
             items = {k: v for k, v in items.items() if str(v.get(f["param"], "")) == val}
-        resolved.append({
-            "param":     f["param"],
-            "label":     f["label"],
-            "all_label": f.get("all_label", "Alle"),
-            "active":    val,
-            "options":   f["options_fn"](),
-        })
+        resolved.append(
+            {
+                "param": f["param"],
+                "label": f["label"],
+                "all_label": f.get("all_label", "Alle"),
+                "active": val,
+                "options": f["options_fn"](),
+            }
+        )
     return items, {"filter_defs": resolved}
 
 
@@ -82,6 +85,7 @@ def make_crud_router(
     running_fn: Callable[[], dict] | None = None,
     filters: list[dict] | None = None,
     create_defaults: dict | None = None,
+    extra_buttons: list[dict] | None = None,
 ) -> APIRouter:
     """Erstellt einen generischen CRUD-APIRouter.
 
@@ -103,10 +107,10 @@ def make_crud_router(
     """
     from astrapi_core.ui.render import render
 
-    _label  = label or key.capitalize()
-    _c_id   = f"tab-{key}"
-    _l_id   = f"{key}-loading"
-    schema  = load_schema(schema_path)
+    _label = label or key.capitalize()
+    _c_id = f"mod-{key}"
+    _l_id = f"{key}-loading"
+    schema = load_schema(schema_path)
     _module_filters[key] = filters or []
 
     router = APIRouter()
@@ -126,6 +130,8 @@ def make_crud_router(
             ctx["extra_page_actions_template"] = extra_page_actions_template
         if extra_actions_template:
             ctx["extra_actions_template"] = extra_actions_template
+        if extra_buttons:
+            ctx["extra_buttons"] = extra_buttons
         ctx.update(extra)
         return ctx
 
@@ -155,7 +161,9 @@ def make_crud_router(
         return data
 
     def _paginate(request: Request, items: dict) -> tuple[dict, dict]:
-        page_size = 15
+        from astrapi_core.ui.settings_registry import get_page_size
+
+        page_size = get_page_size()
         total = len(items)
         try:
             page = max(1, int(request.query_params.get("page", 1)))
@@ -188,17 +196,20 @@ def make_crud_router(
             return pages
 
         pagination = {
-            "page":        page,
-            "page_size":   page_size,
-            "total":       total,
+            "page": page,
+            "page_size": page_size,
+            "total": total,
             "total_pages": total_pages,
-            "has_prev":    page > 1,
-            "has_next":    page < total_pages,
-            "prev_url":    _url(page - 1),
-            "next_url":    _url(page + 1),
-            "pages":       [{"num": p, "url": _url(p) if p != "…" else "#", "active": p == page} for p in _page_range(page, total_pages)],
-            "start":       (page - 1) * page_size + 1,
-            "end":         min(page * page_size, total),
+            "has_prev": page > 1,
+            "has_next": page < total_pages,
+            "prev_url": _url(page - 1),
+            "next_url": _url(page + 1),
+            "pages": [
+                {"num": p, "url": _url(p) if p != "…" else "#", "active": p == page}
+                for p in _page_range(page, total_pages)
+            ],
+            "start": (page - 1) * page_size + 1,
+            "end": min(page * page_size, total),
         }
         return paged, pagination
 
@@ -214,75 +225,94 @@ def make_crud_router(
     # Shell-Handler kann Content serverseitig rendern (kein zweiter HTTP-Request)
     def _content_string(request: Request) -> str:
         from astrapi_core.ui.render import render_string
+
         return render_string(request, "content.html", _content_ctx(request))
 
     from astrapi_core.ui.page_factory import register_content_renderer
+
     register_content_renderer(key, _content_string)
 
     @router.get(f"/ui/{key}/create", response_class=HTMLResponse)
     def create_modal(request: Request):
-        return render(request, "partials/create_edit/create_edit_modal.html", dict(
-            schema=_resolved_fields(),
-            id_field=schema["id_field"],
-            modal_width=schema["modal_width"],
-            item=None,
-            item_id=None,
-            submit_url=f"/ui/{key}/",
-            method="post",
-            title=f"Neuer {_label}",
-            reload_url=f"/ui/{key}/content",
-            container_id=request.query_params.get("container_id", _c_id),
-            loading_id=request.query_params.get("loading_id", _l_id),
-            prefill_template=prefill_template,
-        ))
+        return render(
+            request,
+            "partials/create_edit/create_edit_modal.html",
+            dict(
+                schema=_resolved_fields(),
+                id_field=schema["id_field"],
+                modal_width=schema["modal_width"],
+                item=None,
+                item_id=None,
+                submit_url=f"/ui/{key}/",
+                method="post",
+                title=f"Neuer {_label}",
+                reload_url=f"/ui/{key}/content",
+                container_id=request.query_params.get("container_id", _c_id),
+                loading_id=request.query_params.get("loading_id", _l_id),
+                prefill_template=prefill_template,
+            ),
+        )
 
     @router.get(f"/ui/{key}/{{item_id}}/edit", response_class=HTMLResponse)
     def edit_modal(item_id: str, request: Request):
         item = store.get(item_id)
         if item is None:
             return HTMLResponse(f"{_label} nicht gefunden", status_code=404)
-        return render(request, "partials/create_edit/create_edit_modal.html", dict(
-            schema=_resolved_fields(),
-            id_field=schema["id_field"],
-            modal_width=schema["modal_width"],
-            item=item,
-            item_id=item_id,
-            submit_url=f"/ui/{key}/{item_id}/update",
-            method="post",
-            title=f"{_label} bearbeiten",
-            reload_url=f"/ui/{key}/content",
-            container_id=request.query_params.get("container_id", _c_id),
-            loading_id=request.query_params.get("loading_id", _l_id),
-        ))
+        return render(
+            request,
+            "partials/create_edit/create_edit_modal.html",
+            dict(
+                schema=_resolved_fields(),
+                id_field=schema["id_field"],
+                modal_width=schema["modal_width"],
+                item=item,
+                item_id=item_id,
+                submit_url=f"/ui/{key}/{item_id}/update",
+                method="post",
+                title=f"{_label} bearbeiten",
+                reload_url=f"/ui/{key}/content",
+                container_id=request.query_params.get("container_id", _c_id),
+                loading_id=request.query_params.get("loading_id", _l_id),
+            ),
+        )
 
     @router.get(f"/ui/{key}/{{item_id}}/delete", response_class=HTMLResponse)
     def delete_modal(item_id: str, request: Request):
         item = store.get(item_id) or {}
-        return render(request, "partials/confirm_modal.html", dict(
-            description=item.get(description_field, item_id),
-            verb="löschen",
-            confirm_url=f"/api/{key}/{item_id}/delete",
-            method="delete",
-            reload_url=f"/ui/{key}/content",
-            container_id=request.query_params.get("container_id", _c_id),
-            loading_id=request.query_params.get("loading_id", _l_id),
-        ))
-
-    if has_toggle:
-        @router.get(f"/ui/{key}/{{item_id}}/toggle", response_class=HTMLResponse)
-        def toggle_modal(item_id: str, request: Request):
-            item    = store.get(item_id) or {}
-            enabled = request.query_params.get("enabled", "True")
-            verb    = "deaktivieren" if enabled == "True" else "aktivieren"
-            return render(request, "partials/confirm_modal.html", dict(
+        return render(
+            request,
+            "partials/confirm_modal.html",
+            dict(
                 description=item.get(description_field, item_id),
-                verb=verb,
-                confirm_url=f"/api/{key}/{item_id}/toggle",
-                method="patch",
+                verb="löschen",
+                confirm_url=f"/api/{key}/{item_id}",
+                method="delete",
                 reload_url=f"/ui/{key}/content",
                 container_id=request.query_params.get("container_id", _c_id),
                 loading_id=request.query_params.get("loading_id", _l_id),
-            ))
+            ),
+        )
+
+    if has_toggle:
+
+        @router.get(f"/ui/{key}/{{item_id}}/toggle", response_class=HTMLResponse)
+        def toggle_modal(item_id: str, request: Request):
+            item = store.get(item_id) or {}
+            enabled = request.query_params.get("enabled", "True")
+            verb = "deaktivieren" if enabled == "True" else "aktivieren"
+            return render(
+                request,
+                "partials/confirm_modal.html",
+                dict(
+                    description=item.get(description_field, item_id),
+                    verb=verb,
+                    confirm_url=f"/api/{key}/{item_id}/toggle",
+                    method="patch",
+                    reload_url=f"/ui/{key}/content",
+                    container_id=request.query_params.get("container_id", _c_id),
+                    loading_id=request.query_params.get("loading_id", _l_id),
+                ),
+            )
 
     @router.post(f"/ui/{key}/", response_class=HTMLResponse)
     async def create_apply(request: Request):

@@ -21,9 +21,8 @@
 <div
   id="create-edit-modal"
   class="ds-modal-backdrop"
-  data-debug-label="ds-modal-backdrop"
 >
-  <div class="ds-modal" style="max-width:{{ modal_width | default(620) }}px; padding:20px 24px;" data-debug-label="ds-modal">
+  <div class="ds-modal" style="max-width:{{ modal_width | default(620) }}px; padding:20px 24px;">
 
     {{ modal_title(is_edit=item is not none, title=title) }}
 

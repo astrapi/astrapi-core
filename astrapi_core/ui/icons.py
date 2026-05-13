@@ -59,8 +59,15 @@ def build_sprite(modules: list, extra_dirs: list[Path] | None = None) -> str:
         root = getattr(mod, "module_root", None)
         if not root:
             continue
-        _add(f"icon-{mod.key}", root / "icon.svg")
-        _add(f"icon-{mod.key}-outline", root / "icon-outline.svg")
+        # Neue Struktur: icons/ Unterordner; Fallback: Modul-Root
+        _icon = root / "icons" / "icon.svg"
+        if not _icon.exists():
+            _icon = root / "icon.svg"
+        _outline = root / "icons" / "icon-outline.svg"
+        if not _outline.exists():
+            _outline = root / "icon-outline.svg"
+        _add(f"icon-{mod.key}", _icon)
+        _add(f"icon-{mod.key}-outline", _outline)
 
     # ── 2. Generische Icons aus extra_dirs ────────────────────────────────────
     for d in extra_dirs or []:

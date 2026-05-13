@@ -8,7 +8,7 @@ import threading
 from pathlib import Path
 
 _db_path: Path | None = None
-_local   = threading.local()
+_local = threading.local()
 
 
 def configure(db_path: Path | str) -> None:
@@ -17,18 +17,20 @@ def configure(db_path: Path | str) -> None:
     _db_path = Path(db_path)
     try:
         import os
+
         from astrapi_core.system.secrets import configure as _secrets_configure
+
         data_dir = _db_path.parent
         external = os.environ.get("ASTRAPI_SECRET_KEY_PATH")
         if external:
             _secrets_configure(
-                key_path     = Path(external),
-                dev_key_path = data_dir / ".secret.key",
+                key_path=Path(external),
+                dev_key_path=data_dir / ".secret.key",
             )
         else:
             _secrets_configure(
-                key_path     = data_dir / ".secret.key",
-                dev_key_path = data_dir / ".secret.key",
+                key_path=data_dir / ".secret.key",
+                dev_key_path=data_dir / ".secret.key",
             )
     except Exception:
         pass
@@ -54,9 +56,9 @@ _TABLE_CONFIG: dict = {}  # key → {ddl, list_fields, col_in, col_out}
 def register_table(
     key: str,
     ddl: str,
-    list_fields:   list | None = None,
-    col_in:        dict | None = None,
-    col_out:       dict | None = None,
+    list_fields: list | None = None,
+    col_in: dict | None = None,
+    col_out: dict | None = None,
     secret_fields: list | None = None,
 ) -> None:
     """Registriert eine Tabelle für generisches CRUD.
@@ -69,10 +71,10 @@ def register_table(
     secret_fields: DB-Spaltennamen die Fernet-verschlüsselt gespeichert werden
     """
     _TABLE_CONFIG[key] = {
-        "ddl":           ddl,
-        "list_fields":   list_fields   or [],
-        "col_in":        col_in        or {},
-        "col_out":       col_out       or {},
+        "ddl": ddl,
+        "list_fields": list_fields or [],
+        "col_in": col_in or {},
+        "col_out": col_out or {},
         "secret_fields": secret_fields or [],
     }
 
@@ -112,6 +114,7 @@ def _row_to_dict(key: str, row) -> dict:
     for field in cfg.get("secret_fields", []):
         if d.get(field):
             from astrapi_core.system.secrets import decrypt
+
             d[field] = decrypt(d[field], default=d[field])
     for db_col, py_key in cfg.get("col_in", {}).items():
         if db_col in d:
@@ -132,6 +135,7 @@ def _dict_to_params(key: str, item: dict) -> dict:
         if field in p:
             if p[field]:
                 from astrapi_core.system.secrets import encrypt
+
                 p[field] = encrypt(p[field])
             else:
                 del p[field]  # leer → nicht überschreiben
@@ -140,6 +144,7 @@ def _dict_to_params(key: str, item: dict) -> dict:
 
 
 # ── Öffentliche generische CRUD-API ──────────────────────────────
+
 
 def load_config(key: str) -> dict:
     """Gibt {str(id): item_dict} zurück."""
@@ -173,15 +178,27 @@ def save_item(key: str, item_id, item: dict) -> None:
     if iid:
         existing = con.execute(f"SELECT id FROM {key} WHERE id=?", (iid,)).fetchone()
         if existing:
-            sets   = ", ".join(f"{k}=?" for k in p)
+            sets = ", ".join(f"{k}=?" for k in p)
             values = list(p.values()) + [iid]
             con.execute(f"UPDATE {key} SET {sets} WHERE id=?", values)
             con.commit()
             return
-    cols         = ", ".join(p.keys())
+    cols = ", ".join(p.keys())
     placeholders = ", ".join("?" * len(p))
     con.execute(f"INSERT INTO {key} ({cols}) VALUES ({placeholders})", list(p.values()))
     con.commit()
+
+
+def create_item(key: str, item: dict) -> int:
+    """Legt einen neuen Eintrag an und gibt die neue Integer-ID zurück."""
+    _ensure_table(key)
+    p = _dict_to_params(key, item)
+    cols = ", ".join(p.keys())
+    placeholders = ", ".join("?" * len(p))
+    con = _conn()
+    cur = con.execute(f"INSERT INTO {key} ({cols}) VALUES ({placeholders})", list(p.values()))
+    con.commit()
+    return cur.lastrowid
 
 
 def delete_item(key: str, item_id) -> bool:
@@ -196,9 +213,7 @@ def delete_item(key: str, item_id) -> bool:
 
 def next_item_id(key: str) -> str:
     """Nächste freie ID (für Formulare die eine neue ID brauchen)."""
-    row = _conn().execute(
-        f"SELECT COALESCE(MAX(id), 0) + 1 AS next FROM {key}"
-    ).fetchone()
+    row = _conn().execute(f"SELECT COALESCE(MAX(id), 0) + 1 AS next FROM {key}").fetchone()
     return str(row["next"])
 
 
@@ -210,7 +225,7 @@ def patch_item(key: str, item_id, **fields) -> None:
         return
     if not fields:
         return
-    sets   = ", ".join(f"{k}=?" for k in fields)
+    sets = ", ".join(f"{k}=?" for k in fields)
     values = list(fields.values()) + [iid]
     _conn().execute(f"UPDATE {key} SET {sets} WHERE id=?", values)
     _conn().commit()
@@ -251,10 +266,14 @@ def _init_kvstore() -> None:
 
 def kv_get(collection: str, key: str) -> str | None:
     _init_kvstore()
-    row = _conn().execute(
-        "SELECT value FROM kvstore WHERE collection=? AND key=?",
-        (collection, key),
-    ).fetchone()
+    row = (
+        _conn()
+        .execute(
+            "SELECT value FROM kvstore WHERE collection=? AND key=?",
+            (collection, key),
+        )
+        .fetchone()
+    )
     return row["value"] if row else None
 
 
@@ -270,19 +289,21 @@ def kv_set(collection: str, key: str, value: str) -> None:
 
 def kv_delete(collection: str, key: str) -> None:
     _init_kvstore()
-    _conn().execute(
-        "DELETE FROM kvstore WHERE collection=? AND key=?", (collection, key)
-    )
+    _conn().execute("DELETE FROM kvstore WHERE collection=? AND key=?", (collection, key))
     _conn().commit()
 
 
 def kv_list(collection: str) -> dict[str, str]:
     """Gibt alle Einträge einer Collection als {key: raw_value_str} zurück."""
     _init_kvstore()
-    rows = _conn().execute(
-        "SELECT key, value FROM kvstore WHERE collection=? ORDER BY key",
-        (collection,),
-    ).fetchall()
+    rows = (
+        _conn()
+        .execute(
+            "SELECT key, value FROM kvstore WHERE collection=? ORDER BY key",
+            (collection,),
+        )
+        .fetchall()
+    )
     return {row["key"]: row["value"] for row in rows}
 
 

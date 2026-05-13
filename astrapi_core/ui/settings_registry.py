@@ -53,11 +53,14 @@ class SettingsRegistry:
         """Migriert alte settings-Tabelle (≤v26.4.19) → kvstore._settings."""
         try:
             from astrapi_core.system.db import _conn, kv_list, kv_set_many
+
             if kv_list(_COLLECTION):
                 return
-            cur = _conn().execute(
-                "SELECT name FROM sqlite_master WHERE type='table' AND name='settings'"
-            ).fetchone()
+            cur = (
+                _conn()
+                .execute("SELECT name FROM sqlite_master WHERE type='table' AND name='settings'")
+                .fetchone()
+            )
             if not cur:
                 return
             rows = _conn().execute("SELECT key, value FROM settings").fetchall()
@@ -77,6 +80,7 @@ class SettingsRegistry:
             return
         try:
             from astrapi_core.system.db import kv_list
+
             if kv_list(_COLLECTION):
                 yaml_path.rename(yaml_path.with_suffix(".yaml.migrated"))
                 return
@@ -87,6 +91,7 @@ class SettingsRegistry:
 
             class _SafeLoader(yaml.SafeLoader):
                 pass
+
             _SafeLoader.add_multi_constructor(
                 "tag:yaml.org,2002:python/",
                 lambda loader, suffix, node: None,
@@ -94,6 +99,7 @@ class SettingsRegistry:
             raw = _yaml.load(yaml_path.read_text(encoding="utf-8"), Loader=_SafeLoader) or {}
             if raw:
                 from astrapi_core.system.db import kv_set_many
+
                 kv_set_many(_COLLECTION, {k: json.dumps(v) for k, v in raw.items()})
             yaml_path.rename(yaml_path.with_suffix(".yaml.migrated"))
             print(f"[settings] Migriert: {len(raw)} Einstellungen → SQLite")
@@ -105,6 +111,7 @@ class SettingsRegistry:
     def _load(self) -> dict:
         try:
             from astrapi_core.system.db import kv_list
+
             return {k: json.loads(v) for k, v in kv_list(_COLLECTION).items()}
         except Exception:
             return {}
@@ -112,6 +119,7 @@ class SettingsRegistry:
     def _save_one(self, key: str, value: Any) -> None:
         try:
             from astrapi_core.system.db import kv_set
+
             kv_set(_COLLECTION, key, json.dumps(value))
         except Exception:
             pass
@@ -119,6 +127,7 @@ class SettingsRegistry:
     def _save_many(self, items: dict) -> None:
         try:
             from astrapi_core.system.db import kv_set_many
+
             kv_set_many(_COLLECTION, {k: json.dumps(v) for k, v in items.items()})
         except Exception:
             pass
@@ -126,6 +135,7 @@ class SettingsRegistry:
     def _delete_one(self, key: str) -> None:
         try:
             from astrapi_core.system.db import kv_delete
+
             kv_delete(_COLLECTION, key)
         except Exception:
             pass
@@ -189,7 +199,8 @@ class SettingsRegistry:
             # Verwaiste Modul-Keys entfernen – fehlgeschlagene Module ausnehmen
             known = {mod.key for mod in modules}
             orphaned = [
-                k for k in current
+                k
+                for k in current
                 if k.startswith("module.")
                 and k.split(".")[1] not in known
                 and k.split(".")[1] not in protected
@@ -204,3 +215,11 @@ _registry = SettingsRegistry()
 
 def __getattr__(name: str):
     return getattr(_registry, name)
+
+
+def get_page_size() -> int:
+    """Gibt die konfigurierte Pagination-Seitengröße zurück (Default: 15)."""
+    try:
+        return int(_registry.get("PAGINATION_PAGE_SIZE", 15))
+    except (TypeError, ValueError):
+        return 15

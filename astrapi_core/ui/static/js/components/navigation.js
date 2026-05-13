@@ -1,4 +1,4 @@
-// Mobile sidebar management
+/* MOBILE: Mobile sidebar management
 
 function toggleSidebar() {
   var sidebar = document.getElementById('sidebar');
@@ -32,3 +32,4 @@ document.addEventListener('htmx:afterSwap', function(e) {
 document.addEventListener('keydown', function(e) {
   if (e.key === 'Escape') closeSidebar();
 });
+*/

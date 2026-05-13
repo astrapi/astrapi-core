@@ -5,18 +5,41 @@ function applyLightMode(value) {
     document.documentElement.classList.toggle('light-mode', value === '1' || value === true);
 }
 
-// Active Nav
+function _updateThemeIcon() {
+    var use = document.getElementById('theme-toggle-icon');
+    if (use) use.setAttribute('href', document.documentElement.classList.contains('light-mode') ? '#icon-sun' : '#icon-moon');
+}
+
+window.toggleDarkMode = function () {
+    document.documentElement.classList.toggle('light-mode');
+    localStorage.setItem('lightMode', document.documentElement.classList.contains('light-mode') ? '1' : '0');
+    _updateThemeIcon();
+};
+
+// ── Aktive Navigation + Icon-Update ──────────────────────────────────────────
 function updateActiveNav() {
     const path = window.location.pathname.replace(/^\/+/, "") || "overview";
     document.querySelectorAll(".nav-item").forEach(btn => {
         const key = btn.id.replace("nav-", "");
-        if (key) {
-            btn.classList.toggle("active", path === key);
+        const active = !!key && path === key;
+        btn.classList.toggle("active", active);
+        const svg = btn.querySelector(".nav-icon");
+        const use = svg && svg.querySelector("use");
+        if (use && svg.dataset.icon) {
+            use.setAttribute("href", active ? "#icon-" + svg.dataset.icon : "#icon-" + svg.dataset.icon + "-outline");
         }
     });
 }
 
+document.getElementById("sidebar")?.addEventListener("click", function (e) {
+    const navItem = e.target.closest(".nav-item");
+    if (!navItem) return;
+    const mobileTitle = document.getElementById("mobile-title");
+    /* MOBILE: if (mobileTitle) mobileTitle.textContent = navItem.querySelector("span")?.textContent?.trim() || ""; */
+});
+
 document.addEventListener('DOMContentLoaded', function() {
+    _updateThemeIcon();
     updateActiveNav();
 });
 
@@ -176,22 +199,6 @@ function moduleFilter(key) {
                 document.cookie = _cn + '=' + encodeURIComponent(val) + '; path=/; SameSite=Lax; max-age=2592000';
             else
                 document.cookie = _cn + '=; path=/; max-age=0';
-        },
-    };
-}
-
-// ── Karten-/Listenansicht Toggle ─────────────────────────────────────────────
-function viewToggle(_module) {
-    const mq = window.matchMedia('(max-width: 767px)');
-    return {
-        view: mq.matches ? 'card' : 'list',
-        _mq: mq,
-        init() {
-            this._mqHandler = (e) => { this.view = e.matches ? 'card' : 'list'; };
-            this._mq.addEventListener('change', this._mqHandler);
-        },
-        destroy() {
-            this._mq.removeEventListener('change', this._mqHandler);
         },
     };
 }

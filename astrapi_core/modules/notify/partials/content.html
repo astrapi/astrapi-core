@@ -1,0 +1,100 @@
+{% import 'partials/components/ui_macros.html' as ui %}
+<div class="content-columns">
+
+{# ── Kanäle ───────────────────────────────────────────────────────────────── #}
+<div class="content-item on">
+  <div class="sysinfo-card-header">Kanäle</div>
+  <div style="padding:0 16px 12px;" data-debug-label="content-subitem">
+  {% if channels %}
+  <table class="ds-list-table">
+    <tbody>
+      {% for ch_id, ch in channels.items() %}
+      <tr class="on">
+        <td><code class="mono">{{ ch.backend }}</code></td>
+        <td class="col-trunc" title="{{ ch.ntfy_url or ch.mail_smtp_host or ch_id }}">
+          {{ ch.label or ch_id }}
+        </td>
+        <td class="col-actions">
+          <div class="table-actions">
+            <div class="table-ctx-menu"
+                 x-data="{open: false, pos: {top:0, right:0}, toggle(btn){ const r=btn.getBoundingClientRect(); this.pos={top: r.bottom+2, right: window.innerWidth-r.right}; this.open=!this.open; }}"
+                 @click.outside="open = false">
+              <button type="button" class="btn-icon" @click="toggle($el)" title="Weitere Aktionen" :class="{'active': open}">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" stroke="none"><use href="#icon-menu-dots"></use></svg>
+              </button>
+              <div class="table-ctx-dropdown" x-show="open" :style="'top:'+pos.top+'px;right:'+pos.right+'px'" @click="open = false">
+                <button class="btn-icon btn-icon-log"
+                        hx-post="/ui/{{ module }}/{{ ch_id }}/test"
+                        hx-target="body" hx-swap="beforeend"
+                        title="Test senden">
+                  {{ ui.icon("send") }}
+                </button>
+                {{ ui.edit_button(module=module, item=ch_id, container_id=container_id, loading_id=loading_id) }}
+                {{ ui.delete_button(module=module, item=ch_id, container_id=container_id, loading_id=loading_id, description=ch.label or ch_id) }}
+              </div>
+            </div>
+          </div>
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  {% else %}
+  <div class="empty-state">
+    <svg width="40" height="40" viewBox="0 0 24 24" fill="currentColor" stroke="none"><use href="#icon-file-text"></use></svg>
+    <div class="empty-state-title">Keine Kanäle konfiguriert</div>
+    <div class="empty-state-sub">Erstelle einen Kanal mit „Neuer Kanal".</div>
+  </div>
+  {% endif %}
+  </div>
+</div>
+
+{# ── Notify-Jobs ──────────────────────────────────────────────────────────── #}
+<div class="content-item on">
+  <div class="sysinfo-card-header">Notify-Jobs</div>
+  <div style="padding:0 16px 12px;" data-debug-label="content-subitem">
+  {% if jobs %}
+  <table class="ds-list-table">
+    <tbody>
+      {% for job_id, job in jobs.items() %}
+      <tr class="on">
+        <td><code class="mono">{{ job.channel_id }}</code></td>
+        <td class="col-trunc" title="{{ job.events | join(', ') if job.events else '' }}">
+          {{ job.label or job_id }}
+        </td>
+        <td class="col-actions">
+          <div class="table-actions">
+            <div class="table-ctx-menu"
+                 x-data="{open: false, pos: {top:0, right:0}, toggle(btn){ const r=btn.getBoundingClientRect(); this.pos={top: r.bottom+2, right: window.innerWidth-r.right}; this.open=!this.open; }}"
+                 @click.outside="open = false">
+              <button type="button" class="btn-icon" @click="toggle($el)" title="Weitere Aktionen" :class="{'active': open}">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" stroke="none"><use href="#icon-menu-dots"></use></svg>
+              </button>
+              <div class="table-ctx-dropdown" x-show="open" :style="'top:'+pos.top+'px;right:'+pos.right+'px'" @click="open = false">
+                <button class="btn-icon btn-icon-log"
+                        hx-post="/ui/{{ module }}/jobs/{{ job_id }}/test"
+                        hx-target="body" hx-swap="beforeend"
+                        title="Test senden">
+                  {{ ui.icon("send") }}
+                </button>
+                {{ ui.edit_button(module=module, item=job_id, container_id=container_id, loading_id=loading_id, item_prefix="jobs/") }}
+                {{ ui.delete_button(module=module, item=job_id, container_id=container_id, loading_id=loading_id, description=job.label or job_id, item_prefix="jobs/") }}
+              </div>
+            </div>
+          </div>
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  {% else %}
+  <div class="empty-state">
+    <svg width="40" height="40" viewBox="0 0 24 24" fill="currentColor" stroke="none"><use href="#icon-file-text"></use></svg>
+    <div class="empty-state-title">Keine Notify-Jobs konfiguriert</div>
+    <div class="empty-state-sub">Erstelle einen Job mit „Neuer Job".</div>
+  </div>
+  {% endif %}
+  </div>
+</div>
+
+</div>{# /content-columns #}

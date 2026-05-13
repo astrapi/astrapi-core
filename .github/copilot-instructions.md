@@ -88,28 +88,55 @@ from astrapi.core.ui.module_loader import load_modul
 
 ---
 
-## Modul-Konvention
+## Modul-Konvention (verbindlicher Standard)
 
-Jedes Modul unter `{app}/modules/<key>/` oder `core/modules/<key>/`:
+Jedes Modul unter `{app}/modules/<key>/` oder `core/modules/<key>/` folgt exakt dieser Struktur:
 
-| Datei | Inhalt |
-|---|---|
-| `__init__.py` | Erstellt `Module`-Instanz, registriert Scheduler-Actions |
-| `modul.yaml` | `label`, `icon`, `nav_group`, `card_actions` |
-| `settings.yaml` | Einstellungsfelder (Typ text/password/select, …) |
-| `schema.yaml` | Formularfelder für CRUD-Modal |
-| `api.py` | FastAPI-Router (`make_crud_router` o. manuell) |
-| `ui.py` | FastAPI-Router (`make_crud_router` + Zusatz-Routen) |
-| `engine.py` | Business-Logik |
-| `storage.py` | `store = SqliteStorage(KEY)` |
-| `templates/content.html` | Vollständiger Modul-Inhalt (page-header + Listenbereich) |
-| `templates/partials/card_body.html` | Card-Body-Snippet (meta-grid), eingebunden per `content_template` |
-| `templates/partials/list_header.html` | Tabellen-Header-Spalten (optional) |
-| `templates/partials/list_row.html` | Tabellen-Zeilen-Spalten (optional) |
-| `templates/partials/` | Weitere kleine HTMX-Fragmente (rows, metrics, …) |
-| `templates/modals/` | Eigenständige Modal-Dialoge (edit.html, log.html, …) |
+```
+modules/<key>/
+├── __init__.py              # Pflicht
+├── jobs.py                  # Pflicht
+├── engine.py                # nur wenn Kernlogik umfangreich (z.B. Konfig-Generierung, Validierung)
+├── config/
+│   ├── modul.yaml           # Pflicht
+│   ├── schema.yaml          # Pflicht (außer Static-Module ohne DB-Items)
+│   └── settings.yaml        # wenn das Modul konfigurierbar ist
+├── icons/
+│   ├── icon.svg             # Pflicht – filled SVG, currentColor
+│   └── icon-outline.svg     # Pflicht – outline SVG, currentColor
+├── dialogs/                 # wenn eigene Dialoge nötig
+│   └── <typ>/
+│       └── modal.html       # ein Unterordner pro Dialog-Typ
+└── ui/
+    ├── __init__.py          # Pflicht – exportiert router
+    └── crud.py              # Pflicht – UI-Router
+```
 
-**Card-Action-Typen:** `run`, `run_debug`, `log`, `search`, `bar-chart`, `power-on`, `power-off`, `scan-host-key`, `preview`, `archives`, `stats`
+### Regeln
+
+**`__init__.py`**
+- `_KEY = Path(__file__).parent.name` – Key immer aus dem Verzeichnisnamen ableiten
+- `store = YamlStorage(_KEY)` – kein `register_table` + DDL-String
+- `load_modul(Path(__file__).parent, _KEY, router, ui_router)`
+- `register_action(f"{_KEY}.run", ...)` wenn das Modul ausführbar ist
+
+**`config/modul.yaml`**
+- `card_actions` ausschließlich als Type-Kürzel (`type: run`, `type: log`, `type: preview`, …)
+- Kein HTMX-expliziter Stil (`hx_post`, `hx_target` direkt in modul.yaml)
+- Verfügbare Typen: `run`, `run_debug`, `log`, `preview`, `archives`, `stats`, `power-on`, `power-off`, `scan-host-key`
+
+**`ui/crud.py`**
+- `make_crud_router(store, KEY, schema_path=..., ...)` aus `astrapi_core.ui.crud_blueprint`
+- Kein getrenntes `api_router` + `ui_router` – ein UI-Router, ein JSON-Router
+
+**`jobs.py`**
+- Ausführbare Module: `run_single(item_id)`, `run()`, `preview(item_id)`
+- Async-Pattern: `def fn_async(): threading.Thread(target=fn, daemon=True).start()`
+- Umfangreiche Kernlogik → in `engine.py` auslagern
+
+**Status-Felder** (alle ausführbaren Module)
+- `last_status`: `"ok"` / `"error"` / `"running"` / `"neu"`
+- `last_run`: ISO-Timestamp
 
 ---
 

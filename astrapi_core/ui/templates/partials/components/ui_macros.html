@@ -8,15 +8,15 @@
     Logs:    GET  /api/{module}/{item}/logs
 #}
 
-{% macro edit_button(module=None, item=None, container_id=None, loading_id=None) %}
-  <button hx-get="/ui/{{ module }}/{{ item }}/edit?container_id={{ container_id }}&loading_id={{ loading_id }}"
+{% macro edit_button(module=None, item=None, container_id=None, loading_id=None, item_prefix='') %}
+  <button hx-get="/ui/{{ module }}/{{ item_prefix }}{{ item }}/edit?container_id={{ container_id }}&loading_id={{ loading_id }}"
     hx-target="body" hx-swap="beforeend" class="btn-icon" title="Bearbeiten">
     <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" stroke="none"><use href="#icon-edit"></use></svg>
   </button>
 {% endmacro %}
 
-{% macro delete_button(module=None, item=None, container_id=None, loading_id=None, description=None) %}
-  <button hx-get="/ui/{{ module }}/{{ item }}/delete?container_id={{ container_id }}&loading_id={{ loading_id }}&description={{ description }}"
+{% macro delete_button(module=None, item=None, container_id=None, loading_id=None, description=None, item_prefix='') %}
+  <button hx-get="/ui/{{ module }}/{{ item_prefix }}{{ item }}/delete?container_id={{ container_id }}&loading_id={{ loading_id }}&description={{ description }}"
     hx-target="body" hx-swap="beforeend" class="btn-icon btn-icon-danger" title="Löschen">
     <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" stroke="none"><use href="#icon-trash"></use></svg>
   </button>
@@ -42,6 +42,18 @@
     class="btn btn-primary btn-sm" title="Neu"
   >
     Neu
+  </button>
+{% endmacro %}
+
+{% macro action_button(label, url, title=None, css_class="btn-ghost btn-sm", target="body", swap="beforeend") %}
+  <button
+    hx-get="{{ url }}"
+    hx-target="{{ target }}"
+    hx-swap="{{ swap }}"
+    class="btn {{ css_class }}"
+    {% if title %}title="{{ title }}"{% endif %}
+  >
+    {{ label }}
   </button>
 {% endmacro %}
 
@@ -264,6 +276,7 @@
 #}
 {% macro card_action_button(action, item, item_data={}, container_id='', loading_id='') %}
 {%- if not action.show_if_field or item_data.get(action.show_if_field) -%}
+{%- if not action.hide_if_field_value or item_data.get(action.hide_if_field_value.field) != action.hide_if_field_value.value -%}
 {%- set _subs = [
     ('{item}',         item | string),
     ('{description}',  item_data.description | default(item | string)),
@@ -275,6 +288,14 @@
   {%- for k, v in _subs %}{%- set ns.v = ns.v | replace(k, v) -%}{%- endfor -%}
   {{- ns.v -}}
 {%- endmacro -%}
+{%- if action.href -%}
+<a class="btn-icon{% if action.style %} btn-icon-{{ action.style }}{% endif %}"
+   href="{{ _sub(action.href) }}"
+   target="_blank" rel="noopener"
+   title="{{ action.title }}">
+  {{ icon(action.icon) }}
+</a>
+{%- else -%}
 <button class="btn-icon{% if action.style %} btn-icon-{{ action.style }}{% endif %}"
         title="{{ action.title }}"
         {% if action.hx_get  %}hx-get="{{  _sub(action.hx_get)  }}"{% endif %}
@@ -285,6 +306,120 @@
         {% if action.hx_push_url %}hx-push-url="{{ _sub(action.hx_push_url) }}"{% endif %}
         {% if action.disabled_if_off and not item_data.enabled %}disabled{% endif %}>
   {{ icon(action.icon) }}
+</button>
+{%- endif -%}
+{%- endif -%}
+{%- endif %}
+{% endmacro %}
+
+
+{# ═══════════════════════════════════════════════════════════════════════════ #}
+{# Deklaratives UI-System – Render-Makros für controls.py-Dataklassen        #}
+{# ═══════════════════════════════════════════════════════════════════════════ #}
+
+{#
+  col_header(col)
+  Rendert ein <th>-Element für eine Col-Instanz aus controls.py.
+#}
+{% macro col_header(col) %}<th class="{{ col.cls }}{{ ' sortable' if col.sortable else '' }}">{{ col.label }}</th>
+{% endmacro %}
+
+{#
+  col_cell(col, item_name, item_data)
+  Rendert ein <td>-Element für eine Col-Instanz.
+    col        – controls.Col-Instanz
+    item_name  – String-Key des Eintrags
+    item_data  – Dict mit den Eintragsdaten
+#}
+{% macro col_cell(col, item_name, item_data) %}
+{%- set _val = item_data.get(col.key) if item_data is mapping else none -%}
+{%- if col.type == 'text' -%}
+<td class="{{ col.cls }}">{{ _val or '—' }}</td>
+{%- elif col.type == 'trunc' -%}
+<td class="{{ col.cls }}" title="{{ _val or '' }}">{{ _val or '—' }}</td>
+{%- elif col.type == 'remote_path' -%}
+{%- set _rhost = resolve_remote_host(item_data.get(col.remote_key)) if item_data.get(col.remote_key) else '—' -%}
+{%- set _rlabel = 'Lokal' if _rhost == '—' else _rhost -%}
+<td class="{{ col.cls }}" title="{{ _rlabel }}:{{ item_data.get(col.path_key) or '' }}">{{ _rlabel }}:{{ item_data.get(col.path_key) or '—' }}</td>
+{%- elif col.type == 'remote_host' -%}
+{%- set _rhost = resolve_remote_host(item_data.get(col.remote_key)) if item_data.get(col.remote_key) else '—' -%}
+<td class="{{ col.cls }}">{{ 'Lokal' if _rhost == '—' else _rhost }}</td>
+{%- elif col.type == 'join' -%}
+{%- set _list = _val if (_val is iterable and _val is not string) else [] -%}
+<td class="{{ col.cls }}">{{ _list | join(col.sep) or '—' }}</td>
+{%- elif col.type == 'mono' -%}
+<td class="{{ col.cls }}">{{ _val or '—' }}</td>
+{%- elif col.type == 'badge_enum' -%}
+{%- set _bd = col.values.get(_val | string, {}) if col.values and _val else {} -%}
+<td class="{{ col.cls }}">
+  {%- if _bd %}<span class="badge-pill {{ _bd.cls | default('badge-muted') }}">{{ _bd.label | default(_val) }}</span>
+  {%- elif _val %}<span class="badge-pill badge-muted">{{ _val }}</span>
+  {%- else %}—{% endif -%}
+</td>
+{%- elif col.type == 'badge_list' -%}
+{%- set _list = _val if (_val is iterable and _val is not string) else [] -%}
+<td class="{{ col.cls }}">
+  {%- if _list -%}
+  <div style="display:flex;flex-wrap:wrap;gap:3px;">
+    {%- for v in _list -%}
+    {%- set _bd = col.values.get(v | string, {}) if col.values else {} -%}
+    <span class="badge-pill {{ _bd.cls | default('badge-muted') }}">{{ _bd.label | default(v) }}</span>
+    {%- endfor -%}
+  </div>
+  {%- else %}—{% endif -%}
+</td>
+{%- elif col.type == 'link' -%}
+<td class="{{ col.cls }}">
+  {%- if _val %}<a href="{{ _val }}" target="_blank" rel="noopener">{{ _val }}</a>
+  {%- else %}—{% endif -%}
+</td>
+{%- elif col.type == 'composed' -%}
+{%- set _composed = col.template | replace('{item_name}', item_name | string) | replace('{key}', _val | string) -%}
+<td class="{{ col.cls }}">{{ _composed if _val else '—' }}</td>
+{%- else -%}
+<td>{{ _val or '—' }}</td>
+{%- endif %}
+{% endmacro %}
+
+{#
+  header_control(ctrl, module, container_id, loading_id)
+  Rendert ein einzelnes Header-Control (filter_select oder action_button).
+    ctrl         – controls.HeaderControl-Instanz
+    module       – Modul-Key (String)
+    container_id – Container-ID für Standard-HTMX-Target
+    loading_id   – Loading-Indicator-ID
+#}
+{% macro header_control(ctrl, module, container_id, loading_id='') %}
+{%- if ctrl.type == 'filter_select' -%}
+{%- set _hx_get     = ctrl.hx_get     or ('/ui/' ~ module ~ '/content') -%}
+{%- set _hx_target  = ctrl.hx_target  or ('#' ~ container_id) -%}
+{%- set _hx_swap    = ctrl.hx_swap    or 'innerHTML' -%}
+{%- set _hx_include = ctrl.hx_include or ('[data-filter-for=\'' ~ module ~ '\']') -%}
+{%- set _data_key   = ctrl.data_attr  or ('data-filter-for="' ~ module ~ '"') -%}
+{%- set _opts = ctrl.options if ctrl.options else [] -%}
+{%- if not _opts and ctrl.options_fn -%}{%- set _opts = ctrl.options_fn() -%}{%- endif -%}
+<select class="form-select table-filter-select"
+        name="{{ ctrl.name }}"
+        {{ _data_key }}
+        hx-get="{{ _hx_get }}"
+        hx-target="{{ _hx_target }}"
+        hx-swap="{{ _hx_swap }}"
+        hx-trigger="change"
+        hx-include="{{ _hx_include }}">
+  <option value="">{{ ctrl.all_label or 'Alle' }}</option>
+  {%- for opt in _opts -%}
+  <option value="{{ opt.value }}"{{ ' selected' if opt.default else '' }}>{{ opt.label }}</option>
+  {%- endfor -%}
+</select>
+{%- elif ctrl.type == 'action_button' -%}
+<button class="btn btn-{{ ctrl.style or 'primary' }} btn-sm"
+        {%- if ctrl.hx_get %} hx-get="{{ ctrl.hx_get }}"{% endif %}
+        {%- if ctrl.hx_post %} hx-post="{{ ctrl.hx_post }}"{% endif %}
+        {%- if ctrl.hx_get or ctrl.hx_post %}
+        hx-target="{{ ctrl.hx_target or 'body' }}"
+        hx-swap="{{ ctrl.hx_swap or 'beforeend' }}"
+        {%- endif %}>
+  {{ ctrl.label }}
 </button>
 {%- endif %}
 {% endmacro %}

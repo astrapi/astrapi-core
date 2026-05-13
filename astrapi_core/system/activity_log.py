@@ -8,7 +8,6 @@ from datetime import datetime
 
 from astrapi_core.system.db import _conn
 
-
 # ── Activity Log ──────────────────────────────────────────────────
 
 _ACTIVITY_LOG_DDL = """
@@ -71,7 +70,7 @@ _LOG_LINES_DDL = """
 
 def _init_activity_log() -> None:
     _conn().execute(_ACTIVITY_LOG_DDL)
-    for stmt in _ACTIVITY_LOG_INDICES.strip().split(';'):
+    for stmt in _ACTIVITY_LOG_INDICES.strip().split(";"):
         if stmt.strip():
             _conn().execute(stmt)
     _conn().commit()
@@ -85,12 +84,11 @@ def _init_log_lines() -> None:
     _conn().commit()
 
 
-
 def log_activity(
     log_type: str,
     module: str,
     description: str,
-    status: str = 'info',
+    status: str = "info",
     severity: str = None,
     item_id: str = None,
     started_at: str = None,
@@ -112,7 +110,8 @@ def log_activity(
     """Schreibt einen neuen Activity-Log-Eintrag. Gibt die Log-ID zurück."""
     _init_activity_log()
     now = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-    cur = _conn().execute("""
+    cur = _conn().execute(
+        """
         INSERT INTO activity_log (
             created_at, started_at, finished_at,
             log_type, module, item_id, description,
@@ -122,18 +121,32 @@ def log_activity(
             metadata, parent_log_id,
             scheduler_job_id, next_run
         ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-    """, (
-        now,
-        started_at or now,
-        finished_at,
-        log_type, module, item_id, description,
-        status, severity, mode, duration_s,
-        error_message, error_code, error_traceback,
-        full_log, bytes_processed, items_count, changed_count,
-        json.dumps(metadata) if metadata else None,
-        parent_log_id,
-        scheduler_job_id, next_run,
-    ))
+    """,
+        (
+            now,
+            started_at or now,
+            finished_at,
+            log_type,
+            module,
+            item_id,
+            description,
+            status,
+            severity,
+            mode,
+            duration_s,
+            error_message,
+            error_code,
+            error_traceback,
+            full_log,
+            bytes_processed,
+            items_count,
+            changed_count,
+            json.dumps(metadata) if metadata else None,
+            parent_log_id,
+            scheduler_job_id,
+            next_run,
+        ),
+    )
     _conn().commit()
     return cur.lastrowid
 
@@ -157,27 +170,38 @@ def update_activity_log(
     updates, params = [], []
 
     if status is not None:
-        updates.append("status = ?"); params.append(status)
+        updates.append("status = ?")
+        params.append(status)
     if finished_at is not None:
-        updates.append("finished_at = ?"); params.append(finished_at)
+        updates.append("finished_at = ?")
+        params.append(finished_at)
     if duration_s is not None:
-        updates.append("duration_s = ?"); params.append(duration_s)
+        updates.append("duration_s = ?")
+        params.append(duration_s)
     if error_message is not None:
-        updates.append("error_message = ?"); params.append(error_message)
+        updates.append("error_message = ?")
+        params.append(error_message)
     if error_code is not None:
-        updates.append("error_code = ?"); params.append(error_code)
+        updates.append("error_code = ?")
+        params.append(error_code)
     if error_traceback is not None:
-        updates.append("error_traceback = ?"); params.append(error_traceback)
+        updates.append("error_traceback = ?")
+        params.append(error_traceback)
     if full_log is not None:
-        updates.append("full_log = ?"); params.append(full_log)
+        updates.append("full_log = ?")
+        params.append(full_log)
     if bytes_processed is not None:
-        updates.append("bytes_processed = ?"); params.append(bytes_processed)
+        updates.append("bytes_processed = ?")
+        params.append(bytes_processed)
     if items_count is not None:
-        updates.append("items_count = ?"); params.append(items_count)
+        updates.append("items_count = ?")
+        params.append(items_count)
     if changed_count is not None:
-        updates.append("changed_count = ?"); params.append(changed_count)
+        updates.append("changed_count = ?")
+        params.append(changed_count)
     if metadata is not None:
-        updates.append("metadata = ?"); params.append(json.dumps(metadata))
+        updates.append("metadata = ?")
+        params.append(json.dumps(metadata))
 
     if not updates:
         return
@@ -188,6 +212,7 @@ def update_activity_log(
 
 def list_activity(
     limit: int = 200,
+    offset: int = 0,
     log_type: str = None,
     module: str = None,
     status: str = None,
@@ -200,28 +225,66 @@ def list_activity(
     query = "SELECT * FROM activity_log WHERE archived_at IS NULL"
     params = []
     if log_type:
-        query += " AND log_type = ?"; params.append(log_type)
+        query += " AND log_type = ?"
+        params.append(log_type)
     if module:
-        query += " AND module = ?"; params.append(module)
+        query += " AND module = ?"
+        params.append(module)
     if status:
-        query += " AND status = ?"; params.append(status)
+        query += " AND status = ?"
+        params.append(status)
     if date_from:
-        query += " AND DATE(created_at) >= ?"; params.append(date_from)
+        query += " AND DATE(created_at) >= ?"
+        params.append(date_from)
     if search:
-        query += " AND description LIKE ?"; params.append(f"%{search}%")
+        query += " AND description LIKE ?"
+        params.append(f"%{search}%")
     if item_id:
-        query += " AND item_id = ?"; params.append(item_id)
-    query += " ORDER BY created_at DESC LIMIT ?"
+        query += " AND item_id = ?"
+        params.append(item_id)
+    query += " ORDER BY created_at DESC LIMIT ? OFFSET ?"
     params.append(limit)
+    params.append(offset)
     return [dict(r) for r in _conn().execute(query, params).fetchall()]
+
+
+def count_activity(
+    log_type: str = None,
+    module: str = None,
+    status: str = None,
+    date_from: str = None,
+    search: str = None,
+    item_id: str = None,
+) -> int:
+    """Zählt Activity-Log-Einträge mit optionalen Filtern."""
+    _init_activity_log()
+    query = "SELECT COUNT(*) FROM activity_log WHERE archived_at IS NULL"
+    params = []
+    if log_type:
+        query += " AND log_type = ?"
+        params.append(log_type)
+    if module:
+        query += " AND module = ?"
+        params.append(module)
+    if status:
+        query += " AND status = ?"
+        params.append(status)
+    if date_from:
+        query += " AND DATE(created_at) >= ?"
+        params.append(date_from)
+    if search:
+        query += " AND description LIKE ?"
+        params.append(f"%{search}%")
+    if item_id:
+        query += " AND item_id = ?"
+        params.append(item_id)
+    return _conn().execute(query, params).fetchone()[0]
 
 
 def get_activity_log(log_id: int) -> dict | None:
     """Liest einen einzelnen Activity-Log-Eintrag."""
     _init_activity_log()
-    row = _conn().execute(
-        "SELECT * FROM activity_log WHERE id = ?", (log_id,)
-    ).fetchone()
+    row = _conn().execute("SELECT * FROM activity_log WHERE id = ?", (log_id,)).fetchone()
     return dict(row) if row else None
 
 
@@ -232,7 +295,9 @@ def clear_activity_log() -> int:
     count = _conn().execute("SELECT COUNT(*) FROM activity_log").fetchone()[0]
     _conn().execute("DELETE FROM activity_log_lines")
     _conn().execute("DELETE FROM activity_log")
-    _conn().execute("DELETE FROM sqlite_sequence WHERE name IN ('activity_log','activity_log_lines')")
+    _conn().execute(
+        "DELETE FROM sqlite_sequence WHERE name IN ('activity_log','activity_log_lines')"
+    )
     _conn().commit()
     return count
 
@@ -240,34 +305,43 @@ def clear_activity_log() -> int:
 def get_latest_activity_log_id(module: str, item_id: str) -> int | None:
     """Gibt die ID des aktuellsten activity_log-Eintrags für (module, item_id) zurück."""
     _init_activity_log()
-    row = _conn().execute(
-        "SELECT id FROM activity_log WHERE module = ? AND item_id = ? ORDER BY created_at DESC LIMIT 1",
-        (module, str(item_id)),
-    ).fetchone()
+    row = (
+        _conn()
+        .execute(
+            "SELECT id FROM activity_log WHERE module = ? AND item_id = ? ORDER BY created_at DESC LIMIT 1",
+            (module, str(item_id)),
+        )
+        .fetchone()
+    )
     return row["id"] if row else None
 
 
 def list_runs_for_item(module: str, item_id: str, limit: int = 30) -> list:
     """Gibt alle Runs für (module, item_id) zurück, neueste zuerst."""
     _init_activity_log()
-    rows = _conn().execute(
-        "SELECT id, started_at, status FROM activity_log "
-        "WHERE module = ? AND item_id = ? ORDER BY created_at DESC LIMIT ?",
-        (module, str(item_id), limit),
-    ).fetchall()
+    rows = (
+        _conn()
+        .execute(
+            "SELECT id, started_at, status FROM activity_log "
+            "WHERE module = ? AND item_id = ? ORDER BY created_at DESC LIMIT ?",
+            (module, str(item_id), limit),
+        )
+        .fetchall()
+    )
     return [dict(r) for r in rows]
 
 
 # ── Job-History-Wrappers ──────────────────────────────────────────
 
+
 def history_start(module: str, item_id: str, description: str, mode: str = "run") -> int:
     """Schreibt einen neuen Job-Eintrag in activity_log. Gibt die ID zurück."""
     return log_activity(
-        log_type='job',
+        log_type="job",
         module=module,
         item_id=item_id,
         description=description,
-        status='running',
+        status="running",
         mode=mode,
         started_at=datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
     )
@@ -285,12 +359,13 @@ def history_finish(history_id: int, status: str, duration_s: int) -> None:
 
 def list_history(limit: int = 100, module: str = None) -> list:
     """Kompatibilitäts-Wrapper: liest Jobs aus activity_log."""
-    return list_activity(limit=limit, module=module, log_type='job')
+    return list_activity(limit=limit, module=module, log_type="job")
 
 
 # ── Log Lines ─────────────────────────────────────────────────────
 
-def append_log_line(log_id: int, line: str, level: str = 'INFO') -> None:
+
+def append_log_line(log_id: int, line: str, level: str = "INFO") -> None:
     """Schreibt eine Log-Zeile in die DB."""
     _init_log_lines()
     _conn().execute(
@@ -303,8 +378,12 @@ def append_log_line(log_id: int, line: str, level: str = 'INFO') -> None:
 def get_log_lines(log_id: int, after_id: int = 0) -> list:
     """Gibt neue Zeilen zurück (für SSE-Polling: after_id = letzte bekannte ID)."""
     _init_log_lines()
-    rows = _conn().execute(
-        "SELECT id, line, level FROM activity_log_lines WHERE log_id = ? AND id > ? ORDER BY id",
-        (log_id, after_id),
-    ).fetchall()
+    rows = (
+        _conn()
+        .execute(
+            "SELECT id, line, level FROM activity_log_lines WHERE log_id = ? AND id > ? ORDER BY id",
+            (log_id, after_id),
+        )
+        .fetchall()
+    )
     return [dict(r) for r in rows]

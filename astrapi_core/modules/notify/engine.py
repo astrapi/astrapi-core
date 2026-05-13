@@ -41,29 +41,39 @@ from astrapi_core.ui.storage import SqliteStorage
 
 log = logging.getLogger(__name__)
 
-KEY       = "notify"
-store     = SqliteStorage("notify_channels")
+KEY = "notify"
+store = SqliteStorage("notify_channels")
 job_store = SqliteStorage("notify_jobs")
 
 # Ereignis-Konstanten
 
 SUCCESS = "success"
-ERROR   = "error"
+ERROR = "error"
 WARNING = "warning"
-INFO    = "info"
+INFO = "info"
 
 _PRIORITY_MAP: dict[str, str] = {
     SUCCESS: "default",
-    INFO:    "low",
+    INFO: "low",
     WARNING: "high",
-    ERROR:   "urgent",
+    ERROR: "urgent",
 }
+
+# Ereignistypen: (key, label, farbe)
+ALL_EVENTS: list[tuple[str, str, str]] = [
+    (ERROR, "Fehler", "#f87171"),
+    (WARNING, "Warnungen", "#fbbf24"),
+    (SUCCESS, "Erfolge", "#4ade80"),
+    (INFO, "Info", "#60a5fa"),
+]
+EVENT_COLORS: dict[str, str] = {k: c for k, _, c in ALL_EVENTS}
+EVENT_LABELS: dict[str, str] = {k: l for k, l, _ in ALL_EVENTS}
 
 _TAG_MAP: dict[str, list[str]] = {
     SUCCESS: ["white_check_mark"],
-    INFO:    ["information_source"],
+    INFO: ["information_source"],
     WARNING: ["warning"],
-    ERROR:   ["rotating_light"],
+    ERROR: ["rotating_light"],
 }
 
 
@@ -73,10 +83,10 @@ class BaseNotifier(ABC):
     @abstractmethod
     def send(
         self,
-        title:    str,
-        message:  str,
-        priority: str       = "default",
-        tags:     list[str] = None,
+        title: str,
+        message: str,
+        priority: str = "default",
+        tags: list[str] = None,
     ) -> bool:
         """Sendet eine Benachrichtigung. Returns True bei Erfolg."""
         ...
@@ -175,24 +185,26 @@ class NotifyEngine:
 
         if backend_key == "ntfy":
             from .backends.ntfy import NtfyNotifier
+
             return NtfyNotifier(
-                url        = channel.get("ntfy_url",   "https://ntfy.sh") or "https://ntfy.sh",
-                topic      = channel.get("ntfy_topic", "") or "",
-                token      = channel.get("ntfy_token") or None,
-                verify_ssl = bool(channel.get("ntfy_verify_ssl", True)),
+                url=channel.get("ntfy_url", "https://ntfy.sh") or "https://ntfy.sh",
+                topic=channel.get("ntfy_topic", "") or "",
+                token=channel.get("ntfy_token") or None,
+                verify_ssl=bool(channel.get("ntfy_verify_ssl", True)),
             )
 
         if backend_key == "email":
             from .backends.email import EmailNotifier
+
             return EmailNotifier(
-                smtp_host            = channel.get("mail_smtp_host", "localhost") or "localhost",
-                smtp_port            = int(channel.get("mail_smtp_port") or 587),
-                smtp_user            = channel.get("mail_smtp_user", "") or "",
-                smtp_password        = channel.get("mail_smtp_password", "") or "",
-                smtp_tls             = bool(channel.get("mail_smtp_tls", True)),
-                mail_from            = channel.get("mail_from", "") or "",
-                mail_to              = channel.get("mail_to", "") or "",
-                mail_subject_prefix  = channel.get("mail_subject_prefix", "[Notify]") or "[Notify]",
+                smtp_host=channel.get("mail_smtp_host", "localhost") or "localhost",
+                smtp_port=int(channel.get("mail_smtp_port") or 587),
+                smtp_user=channel.get("mail_smtp_user", "") or "",
+                smtp_password=channel.get("mail_smtp_password", "") or "",
+                smtp_tls=bool(channel.get("mail_smtp_tls", True)),
+                mail_from=channel.get("mail_from", "") or "",
+                mail_to=channel.get("mail_to", "") or "",
+                mail_subject_prefix=channel.get("mail_subject_prefix", "[Notify]") or "[Notify]",
             )
 
         log.warning("notify: Unbekanntes Backend '%s' - Kanal wird uebersprungen", backend_key)
@@ -200,23 +212,23 @@ class NotifyEngine:
 
     def send(
         self,
-        title:    str,
-        message:  str,
-        event:    str           = INFO,
-        source:   Optional[str] = None,
-        tags:     list[str]     = None,
+        title: str,
+        message: str,
+        event: str = INFO,
+        source: Optional[str] = None,
+        tags: list[str] = None,
         priority: Optional[str] = None,
     ) -> int:
         """Sendet ueber alle aktiven Jobs, die zum Ereignistyp und zur Quelle passen."""
         channels = store.list()
-        jobs     = job_store.list()
+        jobs = job_store.list()
 
         if not jobs:
             return 0
 
         eff_priority = priority or _PRIORITY_MAP.get(event, "default")
-        eff_tags     = list(tags or []) + _TAG_MAP.get(event, [])
-        sent         = 0
+        eff_tags = list(tags or []) + _TAG_MAP.get(event, [])
+        sent = 0
 
         for job_id, job in jobs.items():
             if not job.get("enabled", False):
@@ -229,9 +241,11 @@ class NotifyEngine:
                 continue
 
             channel_id = job.get("channel_id", "")
-            channel    = channels.get(channel_id)
+            channel = channels.get(channel_id)
             if channel is None:
-                log.warning("notify: Job '%s' verweist auf unbekannten Kanal '%s'", job_id, channel_id)
+                log.warning(
+                    "notify: Job '%s' verweist auf unbekannten Kanal '%s'", job_id, channel_id
+                )
                 continue
             if not channel.get("enabled", False):
                 continue
@@ -244,11 +258,20 @@ class NotifyEngine:
                 ok = notifier.send(title, message, eff_priority, eff_tags)
                 if ok:
                     sent += 1
-                    log.debug("notify: '%s' via Job '%s' (Kanal '%s') gesendet", title, job_id, channel_id)
+                    log.debug(
+                        "notify: '%s' via Job '%s' (Kanal '%s') gesendet", title, job_id, channel_id
+                    )
                 else:
-                    log.warning("notify: Job '%s' (Kanal '%s') lieferte Fehler fuer '%s'", job_id, channel_id, title)
+                    log.warning(
+                        "notify: Job '%s' (Kanal '%s') lieferte Fehler fuer '%s'",
+                        job_id,
+                        channel_id,
+                        title,
+                    )
             except Exception as e:
-                log.error("notify: Job '%s' (Kanal '%s') Fehler beim Senden: %s", job_id, channel_id, e)
+                log.error(
+                    "notify: Job '%s' (Kanal '%s') Fehler beim Senden: %s", job_id, channel_id, e
+                )
 
         return sent
 
@@ -264,10 +287,10 @@ class NotifyEngine:
 
         try:
             ok = notifier.send(
-                title    = "Testbenachrichtigung",
-                message  = "Benachrichtigungen sind korrekt konfiguriert",
-                priority = "default",
-                tags     = ["bell"],
+                title="Testbenachrichtigung",
+                message="Benachrichtigungen sind korrekt konfiguriert",
+                priority="default",
+                tags=["bell"],
             )
             if ok:
                 return True, "Testbenachrichtigung erfolgreich gesendet."
@@ -281,7 +304,7 @@ class NotifyEngine:
         if job is None:
             return False, f"Job '{job_id}' nicht gefunden."
         channel_id = job.get("channel_id", "")
-        channel    = store.get(channel_id)
+        channel = store.get(channel_id)
         if channel is None:
             return False, f"Kanal '{channel_id}' nicht gefunden (Job '{job_id}')."
 
@@ -291,10 +314,10 @@ class NotifyEngine:
 
         try:
             ok = notifier.send(
-                title    = "Testbenachrichtigung",
-                message  = f"Job '{job.get('label', job_id)}' ist korrekt konfiguriert",
-                priority = "default",
-                tags     = ["bell"],
+                title="Testbenachrichtigung",
+                message=f"Job '{job.get('label', job_id)}' ist korrekt konfiguriert",
+                priority="default",
+                tags=["bell"],
             )
             if ok:
                 return True, "Testbenachrichtigung erfolgreich gesendet."
@@ -317,12 +340,13 @@ def send_simple(message: str, priority: str | None = None) -> None:
         return
     try:
         from astrapi_core.modules.settings.engine import get_app_name
+
         _engine.send(
-            title    = get_app_name(),
-            message  = message,
-            event    = INFO,
-            source   = "app",
-            tags     = ([f"priority:{priority}"] if priority else []),
+            title=get_app_name(),
+            message=message,
+            event=INFO,
+            source="app",
+            tags=([f"priority:{priority}"] if priority else []),
         )
     except Exception as e:
         log.error("notify: send_simple fehlgeschlagen: %s", e)

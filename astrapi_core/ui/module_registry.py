@@ -17,7 +17,7 @@ import sys
 import warnings
 from pathlib import Path
 
-CORE_ROOT    = Path(__file__).resolve().parent           # core/ui/  (templates, static)
+CORE_ROOT = Path(__file__).resolve().parent  # core/ui/  (templates, static)
 CORE_MOD_DIR = Path(__file__).resolve().parents[1] / "modules"  # core/modules/
 CORE_NAV_YAML = Path(__file__).resolve().parents[1] / "navigation.yaml"  # core/navigation.yaml
 
@@ -64,6 +64,7 @@ _mod_registry: dict = _instance._registry
 
 # ── Laden ─────────────────────────────────────────────────────────────────────
 
+
 def _load_from_dir(modules_dir: Path, pkg_prefix: str) -> tuple[dict, set[str]]:
     """Lädt alle Module-Instanzen aus einem Verzeichnis.
 
@@ -76,6 +77,19 @@ def _load_from_dir(modules_dir: Path, pkg_prefix: str) -> tuple[dict, set[str]]:
     failed: set[str] = set()
     if not modules_dir.exists():
         return found, failed
+
+    # Stub-Pakete für pkg_prefix in sys.modules anlegen, damit relative Imports
+    # in Subpackages (z.B. borg/ui/__init__.py → "from .crud import ...") funktionieren.
+    import sys as _sys
+    import types as _types
+
+    _parts = pkg_prefix.split(".")
+    for _i in range(1, len(_parts) + 1):
+        _partial = ".".join(_parts[:_i])
+        if _partial not in _sys.modules:
+            _stub = _types.ModuleType(_partial)
+            _stub.__path__ = []  # Namespace-Package-Stub
+            _sys.modules[_partial] = _stub
 
     for entry in sorted(modules_dir.iterdir()):
         if entry.name.startswith("_"):
@@ -96,9 +110,7 @@ def _load_from_dir(modules_dir: Path, pkg_prefix: str) -> tuple[dict, set[str]]:
             continue
 
         try:
-            spec = importlib.util.spec_from_file_location(
-                f"{pkg_prefix}.{name}", py_file
-            )
+            spec = importlib.util.spec_from_file_location(f"{pkg_prefix}.{name}", py_file)
             mod = importlib.util.module_from_spec(spec)
             sys.modules[f"{pkg_prefix}.{name}"] = mod
             spec.loader.exec_module(mod)
@@ -108,15 +120,20 @@ def _load_from_dir(modules_dir: Path, pkg_prefix: str) -> tuple[dict, set[str]]:
                 failed.add(name)
                 continue
             if mod_root is not None:
-                # module_root nur setzen wenn dieses Verzeichnis Templates hat
-                # oder noch kein module_root gesetzt ist (z.B. app re-exportiert Core-Instanz)
-                if instance.module_root is None or (mod_root / "templates").exists():
+                # module_root setzen wenn kein Root gesetzt ist ODER das Verzeichnis
+                # Templates/Dialogs enthält (Fallback: immer setzen)
+                _has_tpl = (mod_root / "templates").exists() or (mod_root / "dialogs").exists()
+                if instance.module_root is None or _has_tpl:
                     instance.module_root = mod_root
                 # settings.yaml nachladen wenn das Modul es nicht selbst gesetzt hat
+                # Sucht zuerst in config/, dann im Modul-Root (Rückwärtskompatibilität)
                 if not instance.settings_schema:
-                    settings_yaml = mod_root / "settings.yaml"
+                    from astrapi_core.ui.module_loader import _config_file
+
+                    settings_yaml = _config_file(mod_root, "settings.yaml")
                     if settings_yaml.exists():
                         import yaml as _yaml
+
                         with open(settings_yaml, encoding="utf-8") as _f:
                             instance.settings_schema = _yaml.safe_load(_f) or []
             found[instance.key] = instance
@@ -139,17 +156,21 @@ def load_modules(app_root: Path) -> list:
     Core-Module können per Einstellung deaktiviert werden:
       core.module.<key>.enabled = "0"  →  Modul wird nicht geladen
     """
-    import importlib as _il; _il.import_module("astrapi_core.modules")
-    core_mods, core_failed = _load_from_dir(CORE_MOD_DIR,            "astrapi_core.modules")
-    ext_mods,  ext_failed  = _load_from_dir(app_root / "overrides", "app.overrides")
-    app_mods,  app_failed  = _load_from_dir(app_root / "modules",   "app.modules")
-    failed_keys: set[str]  = core_failed | ext_failed | app_failed
+    import importlib as _il
+
+    _il.import_module("astrapi_core.modules")
+    core_mods, core_failed = _load_from_dir(CORE_MOD_DIR, "astrapi_core.modules")
+    ext_mods, ext_failed = _load_from_dir(app_root / "overrides", "app.overrides")
+    app_mods, app_failed = _load_from_dir(app_root / "modules", "app.modules")
+    failed_keys: set[str] = core_failed | ext_failed | app_failed
 
     # Deaktivierte Core-Module herausfiltern (Einstellung: core.module.<key>.enabled != "0")
     try:
         from astrapi_core.ui.settings_registry import get as _settings_get
+
         core_mods = {
-            k: v for k, v in core_mods.items()
+            k: v
+            for k, v in core_mods.items()
             if _settings_get(f"core.module.{k}.enabled", "1") != "0"
         }
     except Exception:
@@ -166,19 +187,22 @@ def load_modules(app_root: Path) -> list:
     _inherit_root(ext_mods, core_mods)
     _inherit_root(app_mods, {**core_mods, **ext_mods})
 
-    merged  = {**core_mods, **ext_mods, **app_mods}
+    merged = {**core_mods, **ext_mods, **app_mods}
     ordered = []
     seen: set = set()
     for key in sorted(core_mods):
-        ordered.append(merged[key]); seen.add(key)
+        ordered.append(merged[key])
+        seen.add(key)
     for key in sorted({**ext_mods, **app_mods}):
         if key not in seen:
-            ordered.append(merged[key]); seen.add(key)
+            ordered.append(merged[key])
+            seen.add(key)
     _instance.update({m.key: m for m in ordered})
     return ordered, failed_keys
 
 
 # ── Registrieren ──────────────────────────────────────────────────────────────
+
 
 def register_ui_modules(fastapi_app, modules: list, jinja_loaders: list) -> None:
     """Registriert Modul-Template-Loader und UI-Router an der FastAPI-App."""
@@ -186,11 +210,15 @@ def register_ui_modules(fastapi_app, modules: list, jinja_loaders: list) -> None
 
     for mod in modules:
         if mod.module_root:
+            from jinja2 import ChoiceLoader
+
+            roots = []
             tpl_dir = mod.module_root / "templates"
             if tpl_dir.exists():
-                jinja_loaders.insert(0, PrefixLoader(
-                    {mod.key: FileSystemLoader(str(tpl_dir))}
-                ))
+                roots.append(FileSystemLoader(str(tpl_dir)))
+            # Modul-Root selbst als Loader: ermöglicht "key/dialogs/..." Templates
+            roots.append(FileSystemLoader(str(mod.module_root)))
+            jinja_loaders.insert(0, PrefixLoader({mod.key: ChoiceLoader(roots)}))
 
         if mod.ui_router is not None:
             try:
@@ -218,6 +246,7 @@ def register_fastapi_modules(fastapi_app, modules: list) -> None:
 
 # ── Navigation ────────────────────────────────────────────────────────────────
 
+
 def _yaml_to_nav_items(yaml_path: "Path | None", modules: dict, raw: list = None) -> list[dict]:
     """Liest Nav-Einträge aus einer items.yaml oder direkt aus einer Liste."""
     import yaml
@@ -236,7 +265,7 @@ def _yaml_to_nav_items(yaml_path: "Path | None", modules: dict, raw: list = None
         if not key:
             continue
 
-        mod   = modules.get(key)
+        mod = modules.get(key)
         # Modul-Einträge ohne explizite URL überspringen wenn Modul nicht geladen
         if mod is None and not entry.get("url"):
             continue
@@ -246,13 +275,16 @@ def _yaml_to_nav_items(yaml_path: "Path | None", modules: dict, raw: list = None
             items.append({"separator": True, "group": group})
             current_group = group
 
-        items.append({
-            "key":       key,
-            "label":     entry.get("label") or (mod.label if mod else key.replace("_", " ").title()),
-            "url":       entry.get("url")   or (mod.nav_url if mod else f"/{key}"),
-            "default":   bool(entry.get("default", False)),
-            "separator": False,
-        })
+        items.append(
+            {
+                "key": key,
+                "label": entry.get("label")
+                or (mod.label if mod else key.replace("_", " ").title()),
+                "url": entry.get("url") or (mod.nav_url if mod else f"/{key}"),
+                "default": bool(entry.get("default", False)),
+                "separator": False,
+            }
+        )
 
     return items
 
@@ -272,19 +304,20 @@ def build_nav_items(modules: list, app_root: Path) -> list[dict]:
     """
     mod_map = {m.key: m for m in modules}
 
-    app_yaml  = app_root / "navigation.yaml"
+    app_yaml = app_root / "navigation.yaml"
     core_yaml = CORE_NAV_YAML
 
-    app_items  = _yaml_to_nav_items(app_yaml,  mod_map)
+    app_items = _yaml_to_nav_items(app_yaml, mod_map)
     core_items = _yaml_to_nav_items(core_yaml, mod_map)
 
     # App-Module die in keiner YAML stehen → automatisch anhängen
-    yaml_keys  = {i["key"] for i in app_items  if not i.get("separator")}
+    yaml_keys = {i["key"] for i in app_items if not i.get("separator")}
     yaml_keys |= {i["key"] for i in core_items if not i.get("separator")}
 
     core_modules_dir = CORE_MOD_DIR
     auto_mods = [
-        m for m in modules
+        m
+        for m in modules
         if m.key not in yaml_keys
         and not (m.module_root and m.module_root.parent == core_modules_dir)
     ]
@@ -321,11 +354,15 @@ def build_nav_items(modules: list, app_root: Path) -> list[dict]:
                 seen_groups.add(group)
             items.append(_auto_nav_item(mod))
         items.append({"separator": True, "group": "System"})
-        items.append({
-            "key": "settings", "label": "Einstellungen",
-            "url": "/ui/settings",
-            "default": False, "separator": False,
-        })
+        items.append(
+            {
+                "key": "settings",
+                "label": "Einstellungen",
+                "url": "/ui/settings",
+                "default": False,
+                "separator": False,
+            }
+        )
 
     _set_default(items)
     return items
@@ -338,10 +375,13 @@ def list_available_core_modules() -> list:
     Settings-Registry (core.module.<key>.enabled != '0' → aktiv).
     """
     import yaml as _yaml
+
     try:
         from astrapi_core.ui.settings_registry import get as _settings_get
     except Exception:
-        def _settings_get(k, d=None): return d
+
+        def _settings_get(k, d=None):
+            return d
 
     result = []
     if not CORE_MOD_DIR.exists():
@@ -357,7 +397,7 @@ def list_available_core_modules() -> list:
         if modul_yaml.exists():
             try:
                 data = _yaml.safe_load(modul_yaml.read_text(encoding="utf-8")) or {}
-                label      = data.get("label", label)
+                label = data.get("label", label)
                 nav_hidden = bool(data.get("nav_hidden", False))
             except Exception:
                 pass

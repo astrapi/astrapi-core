@@ -24,7 +24,7 @@ from __future__ import annotations
 import json
 import threading
 from pathlib import Path
-from typing import Any, Callable
+from typing import Callable
 
 
 class StorageNotInitialized(RuntimeError):
@@ -62,10 +62,12 @@ class SqliteStorage:
             collection = yaml_path.stem
             try:
                 from astrapi_core.system.db import kv_list, kv_set_many
+
                 if kv_list(collection):
                     yaml_path.rename(yaml_path.with_suffix(".yaml.migrated"))
                     continue
                 import yaml as _yaml
+
                 raw = _yaml.safe_load(yaml_path.read_text(encoding="utf-8")) or {}
                 if raw:
                     kv_set_many(collection, {k: json.dumps(v) for k, v in raw.items()})
@@ -81,9 +83,9 @@ class SqliteStorage:
 
     def __init__(self, collection: str, seed_data: dict | None = None):
         self.collection = collection
-        self._seed      = seed_data or {}
-        self._lock      = threading.Lock()
-        self._migrated  = False
+        self._seed = seed_data or {}
+        self._lock = threading.Lock()
+        self._migrated = False
 
     # ── YAML-Migration ────────────────────────────────────────────
 
@@ -100,6 +102,7 @@ class SqliteStorage:
     def _load_all(self) -> dict:
         """Gibt alle Einträge der Collection als dict zurück."""
         from astrapi_core.system.db import kv_list
+
         raw = kv_list(self.collection)
         return {k: json.loads(v) for k, v in raw.items()}
 
@@ -114,6 +117,7 @@ class SqliteStorage:
             data = self._load_all()
             if not data and self._seed:
                 from astrapi_core.system.db import kv_set_many
+
                 kv_set_many(self.collection, {k: json.dumps(v) for k, v in self._seed.items()})
                 data = dict(self._seed)
 
@@ -128,12 +132,14 @@ class SqliteStorage:
     def get(self, key: str) -> dict | None:
         self._maybe_migrate()
         from astrapi_core.system.db import kv_get
+
         raw = kv_get(self.collection, key)
         return json.loads(raw) if raw is not None else None
 
     def exists(self, key: str) -> bool:
         self._maybe_migrate()
         from astrapi_core.system.db import kv_get
+
         return kv_get(self.collection, key) is not None
 
     # ── Schreiben ─────────────────────────────────────────────────
@@ -152,6 +158,7 @@ class SqliteStorage:
         self._maybe_migrate()
         with self._lock:
             from astrapi_core.system.db import kv_get, kv_set
+
             if kv_get(self.collection, key) is not None:
                 raise KeyError(f"'{key}' existiert bereits in '{self.collection}'")
             kv_set(self.collection, key, json.dumps(values))
@@ -161,6 +168,7 @@ class SqliteStorage:
         self._maybe_migrate()
         with self._lock:
             from astrapi_core.system.db import kv_get, kv_set
+
             raw = kv_get(self.collection, key)
             if raw is None:
                 raise KeyError(f"'{key}' nicht gefunden in '{self.collection}'")
@@ -172,6 +180,7 @@ class SqliteStorage:
         self._maybe_migrate()
         with self._lock:
             from astrapi_core.system.db import kv_get, kv_set
+
             raw = kv_get(self.collection, key)
             if raw is not None:
                 existing = json.loads(raw)
@@ -184,7 +193,8 @@ class SqliteStorage:
     def delete(self, key: str) -> bool:
         self._maybe_migrate()
         with self._lock:
-            from astrapi_core.system.db import kv_get, kv_delete
+            from astrapi_core.system.db import kv_delete, kv_get
+
             if kv_get(self.collection, key) is None:
                 raise KeyError(f"'{key}' nicht gefunden in '{self.collection}'")
             kv_delete(self.collection, key)
@@ -194,6 +204,7 @@ class SqliteStorage:
         self._maybe_migrate()
         with self._lock:
             from astrapi_core.system.db import kv_get, kv_set
+
             raw = kv_get(self.collection, key)
             if raw is None:
                 raise KeyError(f"'{key}' nicht gefunden in '{self.collection}'")

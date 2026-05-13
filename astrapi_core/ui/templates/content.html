@@ -5,8 +5,50 @@
   CRUD-Module ohne eigenes content.html nutzen den Default-Block
   (list_wrapper_inner.html). Custom-Module überschreiben {% block inner %}.
 #}
-<div id="{{ container_id }}" class="module-card">
+{% import 'partials/components/ui_macros.html' as ui %}
+{%- set _mod_obj = (module_obj(module) if module_obj is defined else none) -%}
+{%- set _ui_header = _mod_obj.ui_header if _mod_obj else none -%}
+{%- set _ui_content = _mod_obj.ui_content if _mod_obj else none -%}
+<div id="{{ container_id }}" class="content-area" data-debug-label="content-area">
+  <div class="content-header" data-debug-label="content-header">
+    <div class="content-header-title">{{ module_label(module) }}</div>
+    <div class="content-header-actions">
+      {% if _ui_header and _ui_header.controls %}
+        {% for ctrl in _ui_header.controls %}{{ ui.header_control(ctrl, module, container_id, loading_id | default('')) }}{% endfor %}
+      {% else %}
+        {% if filter_defs %}
+        {% for f in filter_defs %}
+        <select
+          class="form-select table-filter-select"
+          x-data="moduleFilter('{{ module }}__{{ f.param }}')"
+          @change="save($el.value)"
+          hx-get="/ui/{{ module }}/content"
+          hx-target="#{{ container_id }}"
+          hx-swap="innerHTML"
+          hx-include="[data-filter-for='{{ module }}']"
+          data-filter-for="{{ module }}">
+          <option value="">{{ f.all_label }}</option>
+          {% for opt in f.options %}
+          <option value="{{ opt.value }}" {% if opt.value | string == f.active | string %}selected{% endif %}>{{ opt.label }}</option>
+          {% endfor %}
+        </select>
+        {% endfor %}
+        {% endif %}
+        {% if extra_buttons %}{% for _btn in extra_buttons %}{{ ui.action_button(**_btn) }}{% endfor %}{% endif %}
+        {% if extra_page_actions_template %}{% include extra_page_actions_template ignore missing %}{% endif %}
+        {% block header_actions %}{% endblock %}
+        {% if has_create | default(True) %}{{ ui.add_button(module=module, container_id=container_id, loading_id=loading_id | default('')) }}{% endif %}
+        {% if module_has_settings(module) %}{{ ui.settings_button(module=module) }}{% endif %}
+      {% endif %}
+    </div>
+  </div>
   {% block inner %}
-    {% include "partials/list_wrapper_inner.html" %}
+    {%- if _ui_content and _ui_content.type == 'custom' and _ui_content.template -%}
+      {% include _ui_content.template %}
+    {%- elif _ui_content and _ui_content.type == 'columns' -%}
+      {% include "partials/content_columns.html" %}
+    {%- else -%}
+      {% include "partials/list_wrapper_inner.html" %}
+    {%- endif -%}
   {% endblock %}
 </div>

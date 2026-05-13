@@ -1,0 +1,32 @@
+{#
+  core/ui/templates/partials/status_oob.html
+
+  HTMX Out-of-Band (OOB) Fragmente für den Status-Polling-Mechanismus.
+  Aktualisiert Status- und Letzter-Lauf-Zellen ohne das gesamte Listen-Fragment
+  zu ersetzen – verhindert Flackern von Filtern und anderen Page-Header-Elementen.
+
+  Deaktiviert den Poll-Div automatisch sobald kein Job mehr läuft.
+
+  Variablen:
+    cfg             – dict {item_id: item_dict} aus load_config/storage
+    module          – Modulname (str)
+    running         – dict der laufenden Jobs {key: mode}
+    has_run_buttons – bool (default True)
+    has_status      – bool (default True)
+#}
+{% import 'partials/components/ui_macros.html' as ui %}
+
+{# Poll-Div: deaktiviert sich selbst wenn kein Job mehr läuft #}
+<div id="poll-{{ module }}" hx-swap-oob="true" style="display:none"
+     {% if running %}hx-get="/ui/{{ module }}/status" hx-trigger="every 2s" hx-swap="none"{% endif %}></div>
+
+{% for item_id, item in cfg.items() %}
+  {% set is_running = (module ~ ":" ~ item_id) in (running or {}) %}
+  {% set _status = 'running' if is_running else (last_run_status(module, item_id) or item.last_status) %}
+  {% if has_status | default(True) %}
+  <td id="status-{{ module }}-{{ item_id }}" hx-swap-oob="true" class="col-status">{{ ui.status_inline(_status) }}</td>
+  {% endif %}
+  {% if has_run_buttons | default(True) %}
+  <td id="lastrun-{{ module }}-{{ item_id }}" hx-swap-oob="true" class="col-last-run">{{ item.last_run or '—' }}</td>
+  {% endif %}
+{% endfor %}

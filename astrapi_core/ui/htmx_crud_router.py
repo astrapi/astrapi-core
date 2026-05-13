@@ -21,11 +21,11 @@ Verwendung:
     def preview_item(...): ...
 """
 
-import yaml
 from pathlib import Path
 from typing import Callable
 
-from fastapi import APIRouter, HTTPException, Request, Header, Response
+import yaml
+from fastapi import APIRouter, Header, HTTPException, Request, Response
 from fastapi.responses import HTMLResponse
 
 
@@ -37,6 +37,9 @@ def make_htmx_crud_router(
     preview_fn: Callable[[str], list[dict]] | None = None,
     running_fn: Callable[[], dict] | None = None,
     create_defaults: dict | None = None,
+    on_create: Callable[[str, dict], None] | None = None,
+    on_update: Callable[[str, dict], None] | None = None,
+    on_delete: Callable[[str], None] | None = None,
 ) -> APIRouter:
     """Erstellt einen HTMX-CRUD-Router für ein Modul.
 
@@ -45,6 +48,9 @@ def make_htmx_crud_router(
         schema_path:  Pfad zur schema.yaml des Moduls
         post_process: Optionale Funktion die das payload-Dict nach dem Einlesen
                       transformiert (z.B. description aus host ableiten).
+        on_create:    Optionaler Callback nach dem Anlegen: on_create(item_id, data)
+        on_update:    Optionaler Callback nach dem Aktualisieren: on_update(item_id, data)
+        on_delete:    Optionaler Callback nach dem Löschen: on_delete(item_id)
     """
     router = APIRouter()
 
@@ -57,28 +63,33 @@ def make_htmx_crud_router(
             raise HTTPException(500, f"Schema-Datei fehlerhaft: {e}")
 
     def _list_response(request: Request):
-        from astrapi_core.ui.render import render
         from astrapi_core.system.db import load_config
+        from astrapi_core.ui.render import render
+
         content = render(
             request,
             "partials/list_wrapper_inner.html",
             {
-                "cfg":              load_config(key),
-                "module":           key,
+                "cfg": load_config(key),
+                "module": key,
                 "content_template": f"{key}/partials/card_body.html",
-                "container_id":     f"tab-{key}",
-                "loading_id":       f"{key}-loading",
-                "running":          running_fn() if running_fn else {},
+                "container_id": f"mod-{key}",
+                "loading_id": f"{key}-loading",
+                "running": running_fn() if running_fn else {},
             },
         ).body.decode()
-        return HTMLResponse(content, headers={
-            "HX-Retarget": f"#tab-{key}",
-            "HX-Reswap":   "innerHTML",
-        })
+        return HTMLResponse(
+            content,
+            headers={
+                "HX-Retarget": f"#mod-{key}",
+                "HX-Reswap": "innerHTML",
+            },
+        )
 
     def _clean(data: dict) -> dict:
         return {
-            k: v for k, v in data.items()
+            k: v
+            for k, v in data.items()
             if v is not None
             and not (isinstance(v, str) and v.strip() == "")
             and not (isinstance(v, list) and len(v) == 0)
@@ -92,14 +103,16 @@ def make_htmx_crud_router(
             for ln in list_fields:
                 if k.startswith(f"{ln}_"):
                     try:
-                        idx = int(k[len(ln) + 1:])
+                        idx = int(k[len(ln) + 1 :])
                         lists[ln].append((idx, v))
                     except ValueError:
                         pass
         for n in list_fields:
             lists[n] = [v for _, v in sorted(lists[n])]
         prefixes = tuple(f"{n}_" for n in list_fields)
-        clean_payload = {k: v for k, v in payload.items() if not any(k.startswith(p) for p in prefixes)}
+        clean_payload = {
+            k: v for k, v in payload.items() if not any(k.startswith(p) for p in prefixes)
+        }
         for f in fields:
             if not f.get("name") or f.get("type") in ("list", "section"):
                 continue
@@ -122,14 +135,21 @@ def make_htmx_crud_router(
 
     @router.post("/create")
     async def create_one(request: Request):
-        from astrapi_core.system.db import save_item, next_item_id
-        form    = await request.form()
+        from astrapi_core.system.db import next_item_id, save_item
+
+        form = await request.form()
         payload = _parse_form(form, _load_schema())
         if create_defaults:
             for k, v in create_defaults.items():
                 if k not in payload:
                     payload[k] = v
-        save_item(key, next_item_id(key), _clean(payload))
+        item_id = next_item_id(key)
+        save_item(key, item_id, _clean(payload))
+        if on_create is not None:
+            try:
+                on_create(str(item_id), payload)
+            except Exception:
+                pass
         if request.headers.get("HX-Request") == "true":
             return _list_response(request)
         return payload
@@ -137,14 +157,21 @@ def make_htmx_crud_router(
     @router.patch("/{item_id}/edit")
     async def patch_one(item_id: str, request: Request):
         from astrapi_core.system.db import get_item, save_item
-        iid      = int(item_id)
+
+        iid = int(item_id)
         existing = get_item(key, iid)
         if existing is None:
             raise HTTPException(404, "Item not found")
-        form    = await request.form()
+        form = await request.form()
         payload = _parse_form(form, _load_schema())
         existing.update(payload)
-        save_item(key, iid, _clean(existing))
+        cleaned = _clean(existing)
+        save_item(key, iid, cleaned)
+        if on_update is not None:
+            try:
+                on_update(str(iid), cleaned)
+            except Exception:
+                pass
         if request.headers.get("HX-Request") == "true":
             return _list_response(request)
         return existing
@@ -152,28 +179,41 @@ def make_htmx_crud_router(
     @router.delete("/{item_id}/delete")
     def delete_one(request: Request, item_id: str, hx_request: str | None = Header(None)):
         from astrapi_core.system.db import delete_item
+
         if not delete_item(key, item_id):
             raise HTTPException(404, "Item not found")
+        if on_delete is not None:
+            try:
+                on_delete(item_id)
+            except Exception:
+                pass
         if hx_request:
             return _list_response(request)
         return Response(status_code=204)
 
     if preview_fn is not None:
+
         @router.get("/{item_id}/preview")
         def preview_item(item_id: str, request: Request):
-            from astrapi_core.ui.fastapi_templates import get_templates
             from astrapi_core.system.db import get_item
+            from astrapi_core.ui.fastapi_templates import get_templates
+
             entry = get_item(key, item_id)
             if entry is None:
                 raise HTTPException(404, "Item not found")
-            return get_templates().TemplateResponse(request, "partials/preview_modal.html", {
-                "description": entry.get("description", item_id),
-                "commands":    preview_fn(item_id),
-            })
+            return get_templates().TemplateResponse(
+                request,
+                "partials/preview_modal.html",
+                {
+                    "description": entry.get("description", item_id),
+                    "commands": preview_fn(item_id),
+                },
+            )
 
     @router.post("/{item_id}/toggle")
     def toggle_item(request: Request, item_id: str, hx_request: str | None = Header(None)):
         from astrapi_core.system.db import load_config, save_item
+
         cfg = load_config(key)
         iid = item_id
         if iid not in cfg:

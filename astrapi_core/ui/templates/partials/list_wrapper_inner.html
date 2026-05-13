@@ -1,13 +1,13 @@
 {#
   core/ui/templates/partials/list_wrapper_inner.html
 
-  Generisches Card-/Listen-Template für runnable CRUD-Module.
-  Ersetzt das innerHTML von #{{ container_id }} via HTMX.
+  Generisches Listen-Template für runnable CRUD-Module.
+  Status-Polling via HTMX OOB-Swaps (partials/status_oob.html).
 
   Variablen:
     cfg              – dict {item_id: item_dict} aus load_config/storage
     module           – Modulname (str)
-    container_id     – ID des Listen-Containers (z.B. "tab-borg")
+    container_id     – ID des Listen-Containers (z.B. "mod-borg")
     loading_id       – ID des Lade-Indikators
     content_template – Pfad zum modul-spezifischen Inhalt-Partial
     running          – dict der laufenden Jobs {key: mode}
@@ -19,147 +19,55 @@
 
   Tabellen-Struktur (immer gleich):
     col-name | [modul-spezifische Spalten] | col-last-run (130px) | col-status (60px) | col-actions (38px)
+
+  Deklarativ (wenn module_obj(module).ui_content gesetzt):
+    Spalten-Header und -Zellen werden aus ui_content.columns gerendert
+    statt aus list_header.html / list_row.html includes.
 #}
 {% import 'partials/components/ui_macros.html' as ui %}
 
+{# ── Deklarative Spalten aus ui_content oder _col_obj (ContentColumns-Sub-Tabelle) ── #}
+{#    _col_obj wird von content_columns.html via {% with %} gesetzt              #}
+{%- if _col_obj is defined and _col_obj -%}
+  {%- set _ui_content = _col_obj -%}
+{%- else -%}
+  {%- set _mod_obj = (module_obj(module) if module_obj is defined else none) -%}
+  {%- set _ui_content = _mod_obj.ui_content if _mod_obj else none -%}
+{%- endif -%}
+{%- set _ui_cols = _ui_content.columns if (_ui_content and _ui_content.type == 'table') else [] -%}
+{%- set _item_url_prefix = (_col_obj.item_url_prefix if (_col_obj is defined and _col_obj) else '') -%}
+
+{# Überschreibe has_run_buttons / has_edit / has_delete aus ui_content wenn gesetzt #}
+{%- if _ui_content -%}
+  {%- set has_run_buttons = _ui_content.has_run_buttons -%}
+  {%- set has_status      = _ui_content.has_status -%}
+  {%- set has_edit        = _ui_content.has_edit -%}
+  {%- set has_delete      = _ui_content.has_delete -%}
+  {%- set has_toggle      = _ui_content.has_toggle -%}
+{%- endif -%}
+
 {% if running %}
-<div hx-get="/ui/{{ module }}/status"
+<div id="poll-{{ module }}" hx-get="/ui/{{ module }}/status"
      hx-trigger="every 2s"
-     hx-target="#{{ container_id }}"
-     hx-swap="innerHTML"
+     hx-swap="none"
      style="display:none"></div>
 {% endif %}
-<div x-data="viewToggle('{{ module }}')">
-
-{# ── Page-Header: nur Settings + extra_page_actions (falls vorhanden) ────────── #}
-{% if module_has_settings(module) %}
-<div class="page-header" data-debug-label="page-header">
-  <div class="page-header-main" data-debug-label="page-header-main">
-    {{ ui.settings_button(module=module) }}
-  </div>
-  <div class="page-header-actions" data-debug-label="page-header-actions"></div>
-</div>
-{% endif %}
-
-{# ── Karten-Ansicht ───────────────────────────────────────────────────────── #}
-<div class="ds-list-grid" x-show="view === 'card'">
-
-{% if cfg %}
-  {% for name, item in cfg.items() %}
-    {% set item_name = name %}
-    {% set item_data = item %}
-    {% set is_running = (module ~ ":" ~ item_name) in (running or {}) %}
-    {% set run_mode = (running or {}).get(module ~ ":" ~ item_name, "") %}
-
-    <article class="ds-card {{ 'on' if item_data.enabled else 'off' }}" data-debug-label="ds-card">
-
-      <!-- Card Header -->
-      <div class="card-header" data-debug-label="card-header">
-        <div class="card-title">
-          {{ item_data.description or item_data.job or item_data.host or item_name }}
-        </div>
-        {% if has_toggle | default(True) %}
-        {% set _display_name = item_data.description or item_data.job or item_data.host or item_name %}
-        {{ ui.toggle_switch(module=module, item=item_name, container_id=container_id,
-                            loading_id=loading_id, enabled=item_data.enabled,
-                            description=_display_name) }}
-        {% endif %}
-      </div>
-
-      <!-- Card Body -->
-      {% set _card_content %}{% include content_template %}{% endset %}
-      {% if _card_content | trim %}
-      <div class="card-inner" data-debug-label="card-inner">
-        <div class="card-body" data-debug-label="card-body">
-          <div class="card-meta">
-            {{ _card_content }}
-          </div>
-        </div>
-      </div>
-      {% endif %}
-
-      <!-- Card Run Info -->
-      {% set _status = 'running' if is_running else last_run_status(module, item_name) %}
-      {% set _run_date = item_data.last_built if item_data.last_built is defined and item_data.last_built else item_data.last_run %}
-      {% set _run_label = 'Letzter Build:' if item_data.last_built is defined and item_data.last_built else 'Letzter Lauf:' %}
-      {% if _run_date or _status %}
-      <div class="card-run-info" data-debug-label="card-run-info">
-        <div class="card-run-left">
-          <span>{{ _run_label }}</span>
-          <span class="card-run-date">{{ _run_date or '—' }}</span>
-        </div>
-        {% if _status %}
-        {{ ui.status_inline(_status) }}
-        {% endif %}
-      </div>
-      {% endif %}
-
-      <!-- Card Footer -->
-      <div class="card-footer" data-debug-label="card-footer">
-        <div class="card-footer-actions">
-          {% set _card_actions = module_card_actions(module) %}
-          {% for action in _card_actions %}{{ ui.card_action_button(action, item_name, item_data, container_id, loading_id) }}{% endfor %}
-        </div>
-        <div class="card-footer-actions">
-          {% if extra_actions_template %}{% include extra_actions_template ignore missing %}{% endif %}
-          {% if has_edit | default(True) %}
-          {{ ui.edit_button(module=module, item=item_name, container_id=container_id, loading_id=loading_id) }}
-          {% endif %}
-          {% if has_delete | default(True) %}
-          {{ ui.delete_button(module=module, item=item_name, container_id=container_id, loading_id=loading_id, description=item_data.description or item_data.job or item_data.host or item_name) }}
-          {% endif %}
-        </div>
-      </div>
-
-    </article>
-  {% endfor %}
-{% else %}
-  <div class="empty-state">
-    <svg width="40" height="40" viewBox="0 0 24 24" fill="currentColor" stroke="none"><use href="#icon-file-text"></use></svg>
-    <div class="empty-state-title">Keine Einträge vorhanden</div>
-    <div class="empty-state-sub">Erstelle den ersten Eintrag mit „Neu"</div>
-  </div>
-{% endif %}
-</div>
 
 {# ── Tabellen-Ansicht ─────────────────────────────────────────────────────── #}
-<div class="ds-list-table-wrap" x-show="view === 'list'" style="display:none;" data-debug-label="ds-list-table-wrap">
-<div class="table-toolbar" data-debug-label="table-toolbar">
-  <div class="table-toolbar-title">{{ module_label(module) }}</div>
-  <div class="table-toolbar-right">
-    {% if filter_defs %}
-    {% for f in filter_defs %}
-    <select
-      class="form-select table-filter-select"
-      x-data="moduleFilter('{{ module }}__{{ f.param }}')"
-      @change="save($el.value)"
-      hx-get="/ui/{{ module }}/content"
-      hx-target="#{{ container_id }}"
-      hx-swap="innerHTML"
-      hx-include="[data-filter-for='{{ module }}']"
-      data-filter-for="{{ module }}">
-      <option value="">{{ f.all_label }}</option>
-      {% for opt in f.options %}
-      <option value="{{ opt.value }}" {% if opt.value | string == f.active | string %}selected{% endif %}>{{ opt.label }}</option>
-      {% endfor %}
-    </select>
-    {% endfor %}
-    {% endif %}
-    {% if extra_page_actions_template %}{% include extra_page_actions_template ignore missing %}{% endif %}
-    {% if has_create | default(True) %}
-    {{ ui.add_button(module=module, container_id=container_id, loading_id=loading_id) }}
-    {% endif %}
-  </div>
-</div>
-<div class="ds-list-table-wrap-scroll">
+<div class="content-items--table" data-debug-label="content-item">
 {% if cfg %}
-  {% set _card_actions = module_card_actions(module) %}
+  {%- set _col_card_actions = (_col_obj.card_actions if (_col_obj is defined and _col_obj and _col_obj.card_actions) else []) -%}
+  {%- set _card_actions = (_col_card_actions if _col_card_actions else module_card_actions(module)) -%}
   {% set _name_fixed = {'rsync': false} %}
-  <table class="ds-list-table" data-module="{{ module }}" data-col-widths="{{ col_widths(module) | e }}" data-debug-label="ds-list-table">
+  <table class="ds-list-table" data-module="{{ module }}" data-col-widths="{{ col_widths(module) | e }}">
     <thead>
       <tr>
         <th class="col-name sortable">Name</th>
-        {% include module + '/partials/list_header.html' ignore missing %}
+        {% if _ui_cols %}
+          {% for col in _ui_cols %}{{ ui.col_header(col) }}{% endfor %}
+        {% else %}
+          {% include module + '/partials/list_header.html' ignore missing %}
+        {% endif %}
         {% if has_run_buttons | default(True) %}
         <th class="col-last-run sortable">Letzter Lauf</th>
         {% endif %}
@@ -188,34 +96,38 @@
         {% set item_name = name %}
         {% set item_data = item %}
         {% set is_running = (module ~ ":" ~ item_name) in (running or {}) %}
-        <tr class="{{ 'on' if item_data.enabled else 'off' }}" data-debug-label="list-row">
+        <tr id="row-{{ module }}-{{ item_name }}" class="{{ 'on' if item_data.enabled else 'off' }}">
           <td class="col-name">
             {{ item_data.description or item_data.job or item_data.host or item_name }}
           </td>
-          {% include module + '/partials/list_row.html' ignore missing %}
+          {% if _ui_cols %}
+            {% for col in _ui_cols %}{{ ui.col_cell(col, item_name, item_data) }}{% endfor %}
+          {% else %}
+            {% include module + '/partials/list_row.html' ignore missing %}
+          {% endif %}
           {% if has_run_buttons | default(True) %}
-          <td class="col-last-run">{{ item_data.last_run or '—' }}</td>
+          <td id="lastrun-{{ module }}-{{ item_name }}" class="col-last-run">{{ item_data.last_run or '—' }}</td>
           {% endif %}
           {% if has_status | default(True) %}
           {% set _status = 'running' if is_running else (last_run_status(module, item_name) or item_data.last_status) %}
-          <td class="col-status">{{ ui.status_inline(_status) }}</td>
+          <td id="status-{{ module }}-{{ item_name }}" class="col-status">{{ ui.status_inline(_status) }}</td>
           {% endif %}
           <td class="col-actions">
-            <div class="table-actions" data-debug-label="table-actions">
-              <div class="table-ctx-menu" data-debug-label="table-ctx-menu"
+            <div class="table-actions">
+              <div class="table-ctx-menu"
                    x-data="{open: false, pos: {top:0, right:0}, toggle(btn){ const r=btn.getBoundingClientRect(); this.pos={top: r.bottom+2, right: window.innerWidth-r.right}; this.open=!this.open; }}"
                    @click.outside="open = false">
                 <button type="button" class="btn-icon" @click="toggle($el)" title="Weitere Aktionen" :class="{'active': open}">
                   <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" stroke="none"><use href="#icon-menu-dots"></use></svg>
                 </button>
-                <div class="table-ctx-dropdown" data-debug-label="table-ctx-dropdown" x-show="open" :style="'top:'+pos.top+'px;right:'+pos.right+'px'" @click="open = false">
+                <div class="table-ctx-dropdown" x-show="open" :style="'top:'+pos.top+'px;right:'+pos.right+'px'" @click="open = false">
                   {% for action in _card_actions %}{{ ui.card_action_button(action, item_name, item_data, container_id, loading_id) }}{% endfor %}
                   {% if extra_actions_template %}{% include extra_actions_template ignore missing %}{% endif %}
                   {% if has_edit | default(True) %}
-                  {{ ui.edit_button(module=module, item=item_name, container_id=container_id, loading_id=loading_id) }}
+                  {{ ui.edit_button(module=module, item=item_name, container_id=container_id, loading_id=loading_id, item_prefix=_item_url_prefix) }}
                   {% endif %}
                   {% if has_delete | default(True) %}
-                  {{ ui.delete_button(module=module, item=item_name, container_id=container_id, loading_id=loading_id, description=item_data.description or item_data.job or item_data.host or item_name) }}
+                  {{ ui.delete_button(module=module, item=item_name, container_id=container_id, loading_id=loading_id, description=item_data.description or item_data.job or item_data.host or item_name, item_prefix=_item_url_prefix) }}
                   {% endif %}
                 </div>
               </div>
@@ -232,34 +144,32 @@
     <div class="empty-state-sub">Erstelle den ersten Eintrag mit „Neu"</div>
   </div>
 {% endif %}
-</div>{# /ds-list-table-wrap-scroll #}
+</div>{# /content-items--table #}
 
 {% if pagination and pagination.total_pages > 1 %}
-<div class="pagination" hx-boost="false">
-  <span class="pagination-info">{{ pagination.start }}–{{ pagination.end }} von {{ pagination.total }}</span>
-  <div class="pagination-controls">
-    <button class="btn-icon pagination-btn"
-            {% if pagination.has_prev %}hx-get="{{ pagination.prev_url }}" hx-target="#{{ container_id }}" hx-swap="innerHTML"{% else %}disabled{% endif %}>
-      <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" stroke="none"><use href="#icon-chevron-left"></use></svg>
-    </button>
-    {% for p in pagination.pages %}
-      {% if p.num == "…" %}
-        <span class="pagination-ellipsis">…</span>
-      {% else %}
-        <button class="pagination-page {{ 'active' if p.active else '' }}"
-                {% if not p.active %}hx-get="{{ p.url }}" hx-target="#{{ container_id }}" hx-swap="innerHTML"{% endif %}>
-          {{ p.num }}
-        </button>
-      {% endif %}
-    {% endfor %}
-    <button class="btn-icon pagination-btn"
-            {% if pagination.has_next %}hx-get="{{ pagination.next_url }}" hx-target="#{{ container_id }}" hx-swap="innerHTML"{% else %}disabled{% endif %}>
-      <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" stroke="none"><use href="#icon-chevron-right"></use></svg>
-    </button>
+<div class="content-footer" hx-boost="false" data-debug-label="content-footer">
+  <div class="pagination">
+    <span class="pagination-info">{{ pagination.start }}–{{ pagination.end }} von {{ pagination.total }}</span>
+    <div class="pagination-controls">
+      <button class="btn-icon pagination-btn"
+              {% if pagination.has_prev %}hx-get="{{ pagination.prev_url }}" hx-target="#{{ container_id }}" hx-swap="innerHTML"{% else %}disabled{% endif %}>
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" stroke="none"><use href="#icon-chevron-left"></use></svg>
+      </button>
+      {% for p in pagination.pages %}
+        {% if p.num == "…" %}
+          <span class="pagination-ellipsis">…</span>
+        {% else %}
+          <button class="pagination-page {{ 'active' if p.active else '' }}"
+                  {% if not p.active %}hx-get="{{ p.url }}" hx-target="#{{ container_id }}" hx-swap="innerHTML"{% endif %}>
+            {{ p.num }}
+          </button>
+        {% endif %}
+      {% endfor %}
+      <button class="btn-icon pagination-btn"
+              {% if pagination.has_next %}hx-get="{{ pagination.next_url }}" hx-target="#{{ container_id }}" hx-swap="innerHTML"{% else %}disabled{% endif %}>
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" stroke="none"><use href="#icon-chevron-right"></use></svg>
+      </button>
+    </div>
   </div>
 </div>
 {% endif %}
-
-</div>
-
-</div>{# /x-data #}

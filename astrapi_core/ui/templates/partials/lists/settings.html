@@ -4,11 +4,7 @@
 #}
 {% import 'partials/components/ui_macros.html' as ui %}
 
-<div id="settings-container">
-
-  <div class="table-toolbar" data-debug-label="table-toolbar">
-    <div class="table-toolbar-title">Einstellungen</div>
-  </div>
+<div id="settings-container" data-debug-label="content-item">
 
   <div class="section-stack">
 
@@ -18,31 +14,46 @@
   </div>
   {% endif %}
 
+  {# ── Globale Einstellungen ────────────────────────────────────────────────── #}
+  <div>
+    <div class="content-item on" data-debug-label="content-subitem">
+      <div class="card-header">
+        <span class="card-title">Allgemein</span>
+      </div>
+      <div class="card-body" style="padding:16px;">
+          <form hx-post="/ui/settings/save/global"
+                hx-target="#settings-container"
+                hx-swap="outerHTML"
+                class="form-stack" style="gap:14px;">
+            <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px;">
+              <div class="form-group" style="margin:0;">
+                <label class="form-label">Einträge pro Seite</label>
+                <input type="number" name="PAGINATION_PAGE_SIZE" class="form-control"
+                       min="5" max="200"
+                       value="{{ settings.get('PAGINATION_PAGE_SIZE', 15) }}">
+                <div style="font-size:11px; color:var(--text-3); margin-top:4px;">Gilt für alle Listen-Ansichten in der App</div>
+              </div>
+            </div>
+            <div>
+              <button type="submit" class="btn btn-primary btn-sm">Speichern</button>
+            </div>
+          </form>
+      </div>
+    </div>
+  </div>
+
   {# ── SSH-Key (nur wenn App es benötigt) ──────────────────────────────────── #}
   {% if show_ssh_key %}
   <div>
-    <div class="ds-card on" x-data="{ open: false }" data-debug-label="ds-card">
-      <div class="card-body" style="padding:16px;" data-debug-label="card-body">
-        <button type="button"
-                @click="open = !open"
-                style="display:flex; align-items:center; justify-content:space-between;
-                       width:100%; background:none; border:none; padding:0;
-                       cursor:pointer; font-weight:600; color:inherit; font-size:inherit;">
-          <span>{{ app_name }}</span>
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" stroke="none"
-               style="transition:transform .2s; flex-shrink:0;"
-               :style="open ? 'transform:rotate(180deg)' : ''"><use href="#icon-chevron-down"></use></svg>
-        </button>
-        <div x-show="open"
-             x-transition:enter="transition-all"
-             x-transition:enter-start="opacity-0"
-             x-transition:enter-end="opacity-100"
-             style="margin-top:14px;">
+    <div class="content-item on" data-debug-label="content-subitem">
+      <div class="card-header">
+        <span class="card-title">{{ app_name }}</span>
+      </div>
+      <div class="card-body" style="padding:16px;">
           <div hx-get="/ui/settings/ssh-key"
                hx-trigger="load"
                hx-swap="innerHTML">
           </div>
-        </div>
       </div>
     </div>
   </div>

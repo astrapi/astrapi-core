@@ -31,6 +31,7 @@ def render(request, template: str, ctx: dict | None = None, *, status_code: int 
     bleiben können.
     """
     from .fastapi_templates import get_templates
+
     base: dict = _ctx_fn() if _ctx_fn is not None else {}
     if ctx:
         base.update(ctx)
@@ -53,6 +54,7 @@ def render_string(request, template: str, ctx: dict | None = None) -> str:
     Nützlich um Partials server-seitig in einen anderen Template-Context einzubetten.
     """
     from .fastapi_templates import get_templates
+
     base: dict = _ctx_fn() if _ctx_fn is not None else {}
     if ctx:
         base.update(ctx)
@@ -66,3 +68,21 @@ def render_string(request, template: str, ctx: dict | None = None) -> str:
     base["request"] = request
 
     return get_templates().env.get_template(template).render(base)
+
+
+def render_toast_badge(request, ok: bool, msg: str):
+    """Rendert ein floating Toast-Badge (oben mittig, auto-dismiss nach 4s).
+
+    Für Test/Ping-Aktionen in beliebigen Modulen. Das Badge wird via HTMX
+    mit hx-swap="beforeend" in den body eingefügt und verschwindet automatisch.
+
+    Verwendung in einem Modul-Router::
+
+        from astrapi_core.ui.render import render_toast_badge
+
+        @router.post("/ui/mymodule/{item_id}/test")
+        def test_item(item_id: str, request: Request):
+            ok, msg = _do_test(item_id)
+            return render_toast_badge(request, ok, msg)
+    """
+    return render(request, "partials/toast_badge.html", {"ok": ok, "msg": msg, "toast": True})

@@ -1,7 +1,7 @@
 {% extends "_base.html" %}
 
 {% block content %}
-<!-- Mobile: Hamburger + Overlay -->
+{# MOBILE:
 <div id="mobile-header">
   <button id="mobile-menu-btn" onclick="toggleSidebar()" aria-label="Menü öffnen">
     <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" stroke="none"><use href="#icon-hamburger"></use></svg>
@@ -9,14 +9,13 @@
   <span id="mobile-title">{{ title }}</span>
 </div>
 <div id="sidebar-overlay" onclick="closeSidebar()"></div>
+#}
 
 <div class="app-layout">
   {% include "navigation/index.html" %}
-  <div class="main-content" data-debug-label="main-content">
-    <div id="main-content">
+  <div class="main-content" id="main-content">
       {{ initial_content | safe }}
     </div>
-  </div>
 </div>
 {% endblock %}
 
@@ -29,17 +28,15 @@
    Versucht zuerst /ui/, fällt bei 404 auf /api/ zurück.
 
    Unterstützte List-Container-IDs:
-     id="tab-{module}"       (Framework-Standard)
-     id="tab-{module}-list"  (backupctl-Konvention)
+     id="mod-{module}"       (Framework-Standard)
 ─────────────────────────────────────────────────────────────────────────────*/
 (function() {
   var _timers = {};
 
   function _moduleFromEl(el) {
     var id = el && el.id || '';
-    if (!id.startsWith('tab-')) return null;
+    if (!id.startsWith('mod-')) return null;
     var mod = id.slice(4);
-    if (mod.endsWith('-list')) mod = mod.slice(0, -5);
     return mod || null;
   }
 
@@ -75,8 +72,7 @@
   document.body.addEventListener('openLogModal', function(e) {
     var mod    = e.detail.module;
     var itemId = e.detail.itemId;
-    var listEl = document.getElementById('tab-' + mod + '-list')
-              || document.getElementById('tab-' + mod);
+    var listEl = document.getElementById('mod-' + mod);
     if (listEl) startPolling(mod, listEl);
     fetch('/api/' + mod + '/' + itemId + '/logs?live=1')
       .then(function(r) { return r.text(); })

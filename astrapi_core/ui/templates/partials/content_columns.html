@@ -1,0 +1,18 @@
+{#
+  core/ui/templates/partials/content_columns.html
+
+  Rendert ContentColumns: mehrere ContentTable-Instanzen nebeneinander.
+  Erwartet im Context:
+    _ui_content  – ContentColumns-Instanz (mit .cols und .stretch)
+    _columns_data – list of (ContentTable, cfg_dict) – bereitgestellt vom Modul-Renderer
+#}
+<div class="content-columns{{ ' content-columns--stretch' if _ui_content.stretch else '' }}">
+{% for col, col_cfg in _columns_data %}
+  <div class="content-item on" data-debug-label="content-item">
+    {% if col.title %}<div class="sysinfo-card-header">{{ col.title }}</div>{% endif %}
+    {% with cfg=col_cfg, _col_obj=col %}
+      {% include "partials/list_wrapper_inner.html" %}
+    {% endwith %}
+  </div>
+{% endfor %}
+</div>

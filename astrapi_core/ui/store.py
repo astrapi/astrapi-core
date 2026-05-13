@@ -21,8 +21,8 @@ from __future__ import annotations
 
 from typing import Protocol, runtime_checkable
 
-
 # ── Protokoll (abstrakte Schnittstelle) ────────────────────────────────────────
+
 
 @runtime_checkable
 class ModuleStore(Protocol):
@@ -46,6 +46,7 @@ class ModuleStore(Protocol):
 
 # ── SqliteTableStore – backupctl-Implementierung ───────────────────────────────
 
+
 class SqliteTableStore:
     """ModuleStore-Implementierung für generische SQLite-Tabellen (backupctl).
 
@@ -62,37 +63,64 @@ class SqliteTableStore:
     def list(self) -> dict[str, dict]:
         """Gibt {str(id): item_dict} zurück – identisch zu core.system.db.load_config."""
         from astrapi_core.system.db import load_config
+
         return load_config(self.key)
 
     def get(self, item_id: str) -> dict | None:
         """Gibt ein Item per ID zurück oder None."""
         from astrapi_core.system.db import get_item
+
         return get_item(self.key, item_id)
 
     def create(self, item_id: str | None, data: dict) -> str:
         """Legt einen neuen Eintrag an.
 
-        item_id=None → auto-increment (SQLite wählt nächste freie ID).
+        item_id wird ignoriert – auto-increment via SQLite.
         Gibt die neue ID als str zurück.
         """
-        from astrapi_core.system.db import save_item, load_config
-        save_item(self.key, item_id, data)
-        if item_id is None:
-            # Letzte eingefügte ID ermitteln (größte ID in der Tabelle)
-            cfg = load_config(self.key)
-            if cfg:
-                return str(max(int(k) for k in cfg.keys()))
-            return "1"
-        return str(item_id)
+        from astrapi_core.system.db import create_item
+
+        new_id = create_item(self.key, data)
+        return str(new_id)
 
     def update(self, item_id: str, data: dict) -> None:
-        """Aktualisiert einen bestehenden Eintrag."""
-        from astrapi_core.system.db import save_item
-        save_item(self.key, item_id, data)
+        """Aktualisiert einen bestehenden Eintrag vollständig."""
+        from astrapi_core.system.db import get_item, save_item
+
+        existing = get_item(self.key, item_id)
+        if existing is None:
+            raise KeyError(f"'{item_id}' nicht gefunden in '{self.key}'")
+        existing.update(data)
+        save_item(self.key, item_id, existing)
+
+    def upsert(self, item_id: str, data: dict) -> dict:
+        """Aktualisiert vorhandene Felder oder legt neu an wenn nicht vorhanden."""
+        from astrapi_core.system.db import get_item, save_item
+
+        existing = get_item(self.key, item_id) or {}
+        existing.update(data)
+        save_item(self.key, item_id, existing)
+        return existing
+
+    def exists(self, item_id: str) -> bool:
+        """Gibt True zurück wenn der Eintrag existiert."""
+        return self.get(item_id) is not None
+
+    def toggle(self, item_id: str, field: str = "enabled", default: bool = True) -> bool:
+        """Schaltet ein Boolean-Feld um. Gibt den neuen Wert zurück."""
+        from astrapi_core.system.db import get_item, patch_item
+
+        existing = get_item(self.key, item_id)
+        if existing is None:
+            raise KeyError(f"'{item_id}' nicht gefunden in '{self.key}'")
+        new_val = not bool(existing.get(field, default))
+        patch_item(self.key, item_id, **{field: int(new_val)})
+        return new_val
 
     def delete(self, item_id: str) -> bool:
         """Löscht einen Eintrag. Gibt True zurück wenn erfolgreich."""
         from astrapi_core.system.db import delete_item
+
         return delete_item(self.key, item_id)
 
     def __repr__(self) -> str:

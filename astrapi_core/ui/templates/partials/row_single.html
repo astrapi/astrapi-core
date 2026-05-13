@@ -1,0 +1,72 @@
+{#
+  core/ui/templates/partials/row_single.html
+
+  Rendert genau eine <tr> für einen einzelnen Listeneintrag.
+  Wird von Run-Endpoints zurückgegeben (hx-swap="outerHTML" auf #row-{module}-{item}).
+
+  Variablen:
+    module        – Modulname (str)
+    item_name     – ID des Eintrags (str)
+    item_data     – Item-Dict
+    running       – dict der laufenden Jobs {key: mode}
+    container_id  – ID des Listen-Containers (z.B. "mod-borg")
+    loading_id    – ID des Lade-Indikators
+    has_run_buttons – bool (default True)
+    has_status      – bool (default True)
+    has_edit        – bool (default True)
+    has_delete      – bool (default True)
+#}
+{% import 'partials/components/ui_macros.html' as ui %}
+
+{%- set _mod_obj = (module_obj(module) if module_obj is defined else none) -%}
+{%- set _ui_content = _mod_obj.ui_content if _mod_obj else none -%}
+{%- set _ui_cols = _ui_content.columns if (_ui_content and _ui_content.type == 'table') else [] -%}
+
+{%- if _ui_content -%}
+  {%- set has_run_buttons = _ui_content.has_run_buttons -%}
+  {%- set has_status      = _ui_content.has_status -%}
+  {%- set has_edit        = _ui_content.has_edit -%}
+  {%- set has_delete      = _ui_content.has_delete -%}
+  {%- set has_toggle      = _ui_content.has_toggle -%}
+{%- endif -%}
+
+{%- set _card_actions = module_card_actions(module) -%}
+{%- set is_running = (module ~ ":" ~ item_name) in (running or {}) -%}
+
+<tr id="row-{{ module }}-{{ item_name }}" class="{{ 'on' if item_data.enabled else 'off' }}">
+  <td class="col-name">
+    {{ item_data.description or item_data.job or item_data.host or item_name }}
+  </td>
+  {% if _ui_cols %}
+    {% for col in _ui_cols %}{{ ui.col_cell(col, item_name, item_data) }}{% endfor %}
+  {% else %}
+    {% include module + '/partials/list_row.html' ignore missing %}
+  {% endif %}
+  {% if has_run_buttons | default(True) %}
+  <td id="lastrun-{{ module }}-{{ item_name }}" class="col-last-run">{{ item_data.last_run or '—' }}</td>
+  {% endif %}
+  {% if has_status | default(True) %}
+  {% set _status = 'running' if is_running else (last_run_status(module, item_name) or item_data.last_status) %}
+  <td id="status-{{ module }}-{{ item_name }}" class="col-status">{{ ui.status_inline(_status) }}</td>
+  {% endif %}
+  <td class="col-actions">
+    <div class="table-actions">
+      <div class="table-ctx-menu"
+           x-data="{open: false, pos: {top:0, right:0}, toggle(btn){ const r=btn.getBoundingClientRect(); this.pos={top: r.bottom+2, right: window.innerWidth-r.right}; this.open=!this.open; }}"
+           @click.outside="open = false">
+        <button type="button" class="btn-icon" @click="toggle($el)" title="Weitere Aktionen" :class="{'active': open}">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" stroke="none"><use href="#icon-menu-dots"></use></svg>
+        </button>
+        <div class="table-ctx-dropdown" x-show="open" :style="'top:'+pos.top+'px;right:'+pos.right+'px'" @click="open = false">
+          {% for action in _card_actions %}{{ ui.card_action_button(action, item_name, item_data, container_id, loading_id) }}{% endfor %}
+          {% if has_edit | default(True) %}
+          {{ ui.edit_button(module=module, item=item_name, container_id=container_id, loading_id=loading_id) }}
+          {% endif %}
+          {% if has_delete | default(True) %}
+          {{ ui.delete_button(module=module, item=item_name, container_id=container_id, loading_id=loading_id, description=item_data.description or item_data.job or item_data.host or item_name) }}
+          {% endif %}
+        </div>
+      </div>
+    </div>
+  </td>
+</tr>
