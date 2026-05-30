@@ -176,8 +176,7 @@ def make_htmx_crud_router(
             return _list_response(request)
         return existing
 
-    @router.delete("/{item_id}/delete")
-    def delete_one(request: Request, item_id: str, hx_request: str | None = Header(None)):
+    def _do_delete(request: Request, item_id: str, hx_request: str | None):
         from astrapi_core.system.db import delete_item
 
         if not delete_item(key, item_id):
@@ -190,6 +189,14 @@ def make_htmx_crud_router(
         if hx_request:
             return _list_response(request)
         return Response(status_code=204)
+
+    @router.delete("/{item_id}/delete")
+    def delete_one(request: Request, item_id: str, hx_request: str | None = Header(None)):
+        return _do_delete(request, item_id, hx_request)
+
+    @router.delete("/{item_id}")
+    def delete_one_plain(request: Request, item_id: str, hx_request: str | None = Header(None)):
+        return _do_delete(request, item_id, hx_request)
 
     if preview_fn is not None:
 
