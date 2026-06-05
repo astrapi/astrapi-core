@@ -221,8 +221,12 @@ class Scheduler:
                 action["fn"]()
                 log.info("Job '%s': Schritt '%s' abgeschlossen", job_id, step_key)
             except Exception as e:
+                import traceback as _tb
                 errors.append(f"{step_key}: {e}")
-                log.error("Job '%s': Schritt '%s' fehlgeschlagen: %s", job_id, step_key, e)
+                log.error(
+                    "Job '%s': Schritt '%s' fehlgeschlagen:\n%s",
+                    job_id, step_key, _tb.format_exc(),
+                )
 
         try:
             from astrapi_core.system.logger import clear_active_log_id as _clear_log_id
