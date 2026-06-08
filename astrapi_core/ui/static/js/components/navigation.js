@@ -1,35 +1,34 @@
-/* MOBILE: Mobile sidebar management
-
-function toggleSidebar() {
-  var sidebar = document.getElementById('sidebar');
-  var overlay = document.getElementById('sidebar-overlay');
-  var isOpen  = sidebar.classList.contains('mobile-open');
-  if (isOpen) {
-    closeSidebar();
+function toggleMobileNav() {
+  if (document.body.classList.contains('mobile-nav-open')) {
+    closeMobileNav();
   } else {
-    sidebar.classList.add('mobile-open');
-    overlay.classList.add('visible');
+    document.body.classList.add('mobile-nav-open');
     document.body.style.overflow = 'hidden';
   }
 }
 
-function closeSidebar() {
-  var sidebar = document.getElementById('sidebar');
-  var overlay = document.getElementById('sidebar-overlay');
-  sidebar.classList.remove('mobile-open');
-  overlay.classList.remove('visible');
+function closeMobileNav() {
+  document.body.classList.remove('mobile-nav-open');
   document.body.style.overflow = '';
 }
 
-// Nav-Klick auf Mobile → Sidebar schließen
-document.addEventListener('htmx:afterSwap', function(e) {
-  if (e.target && e.target.id === 'main-content' && window.innerWidth < 769) {
-    closeSidebar();
-  }
+function _setMobileTitle(text) {
+  var el = document.getElementById('mobile-title');
+  if (el && text) el.textContent = text;
+}
+
+document.addEventListener('DOMContentLoaded', function() {
+  var active = document.querySelector('.nav-item.active span');
+  if (active) _setMobileTitle(active.textContent.trim());
 });
 
-// Escape → Sidebar schließen
-document.addEventListener('keydown', function(e) {
-  if (e.key === 'Escape') closeSidebar();
+document.addEventListener('htmx:afterSwap', function(e) {
+  if (e.target?.id !== 'main-content') return;
+  if (window.innerWidth < 769) closeMobileNav();
+  var h = e.target.querySelector('.content-header-title') || e.target.querySelector('.page-title');
+  if (h) _setMobileTitle(h.textContent.trim());
 });
-*/
+
+document.addEventListener('keydown', function(e) {
+  if (e.key === 'Escape') closeMobileNav();
+});

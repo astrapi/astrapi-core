@@ -1,21 +1,22 @@
 {% extends "_base.html" %}
 
 {% block content %}
-{# MOBILE:
-<div id="mobile-header">
-  <button id="mobile-menu-btn" onclick="toggleSidebar()" aria-label="Menü öffnen">
-    <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" stroke="none"><use href="#icon-hamburger"></use></svg>
-  </button>
-  <span id="mobile-title">{{ title }}</span>
-</div>
-<div id="sidebar-overlay" onclick="closeSidebar()"></div>
-#}
-
 <div class="app-layout">
-  {% include "navigation/index.html" %}
+  <div id="mobile-header">
+    <button id="mobile-menu-btn" onclick="toggleMobileNav()" aria-label="Menü öffnen">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" stroke="none"><use href="#icon-hamburger"></use></svg>
+    </button>
+    <span id="mobile-title"></span>
+  </div>
+  <div id="sidebar-overlay" onclick="closeMobileNav()"></div>
+
+  <aside id="sidebar" data-debug-label="sidebar">
+    {% include "navigation/index.html" %}
+  </aside>
+
   <div class="main-content" id="main-content">
-      {{ initial_content | safe }}
-    </div>
+    {{ initial_content | safe }}
+  </div>
 </div>
 {% endblock %}
 

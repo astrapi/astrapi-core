@@ -1,0 +1,70 @@
+{#
+  core/ui/templates/partials/mobile_cards_generic.html
+
+  Generisches Mobile-Karten-Template – Fallback für list_wrapper_inner.html.
+  Wird automatisch verwendet wenn {module}/partials/mobile_cards.html fehlt.
+
+  Verfügbare Variablen (aus list_wrapper_inner.html geerbt):
+    cfg              – dict {item_id: item_dict}
+    module           – Modulname
+    container_id     – ID des Listen-Containers
+    loading_id       – ID des Lade-Indikators
+    _ui_cols         – deklarative Spalten (Col-Instanzen) oder []
+    _card_actions    – Aktions-Buttons (aus modul.yaml card_actions)
+    _item_url_prefix – URL-Präfix für Item-Links
+    has_status       – bool
+    has_run_buttons  – bool
+    has_edit         – bool
+    has_delete       – bool
+    running          – dict laufender Jobs
+
+  Konvention für modulspezifische Karten:
+    Lege {module}/partials/mobile_cards.html an. Dieses Template hat Zugriff
+    auf dieselben Variablen und wird bevorzugt geladen.
+#}
+{% import 'partials/components/ui_macros.html' as ui %}
+
+{% if cfg %}
+  {% for item_name, item_data in cfg.items() %}
+    {%- set is_running = (module ~ ":" ~ item_name) in (running or {}) -%}
+    {%- set _status = 'running' if is_running else (last_run_status(module, item_name) if last_run_status is defined else none) or item_data.get('last_status') -%}
+    {%- set _title = item_data.get('description') or item_data.get('job') or item_data.get('host') or item_name -%}
+    <div class="m-card {{ 'on' if item_data.get('enabled', True) else 'off' }}">
+
+      <div class="m-card-header">
+        <span class="m-card-title">{{ _title }}</span>
+        {% if has_status | default(True) %}{{ ui.status_inline(_status) }}{% endif %}
+      </div>
+
+      {% if _ui_cols %}
+      <div class="m-card-meta">
+        {% for col in _ui_cols %}
+          {%- set _val = item_data.get(col.key) -%}
+          {% if _val %}
+          <div class="m-card-meta-row">
+            <span class="m-card-meta-label">{{ col.label }}</span>
+            <span class="m-card-meta-value">
+              {%- if col.type == 'status' -%}{{ ui.status_inline(_val) }}
+              {%- else -%}{{ _val }}{%- endif -%}
+            </span>
+          </div>
+          {% endif %}
+        {% endfor %}
+      </div>
+      {% endif %}
+
+      <div class="m-card-footer">
+        {% for action in _card_actions %}{{ ui.card_action_button(action, item_name, item_data, container_id, loading_id) }}{% endfor %}
+        {% if has_edit | default(True) %}{{ ui.edit_button(module=module, item=item_name, container_id=container_id, loading_id=loading_id, item_prefix=_item_url_prefix) }}{% endif %}
+        {% if has_delete | default(True) %}{{ ui.delete_button(module=module, item=item_name, container_id=container_id, loading_id=loading_id, description=_title, item_prefix=_item_url_prefix) }}{% endif %}
+      </div>
+
+    </div>
+  {% endfor %}
+{% else %}
+  <div class="empty-state">
+    <svg width="40" height="40" viewBox="0 0 24 24" fill="currentColor" stroke="none"><use href="#icon-file-text"></use></svg>
+    <div class="empty-state-title">Keine Einträge vorhanden</div>
+    <div class="empty-state-sub">Erstelle den ersten Eintrag mit „Neu"</div>
+  </div>
+{% endif %}

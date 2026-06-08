@@ -35,7 +35,7 @@ document.getElementById("sidebar")?.addEventListener("click", function (e) {
     const navItem = e.target.closest(".nav-item");
     if (!navItem) return;
     const mobileTitle = document.getElementById("mobile-title");
-    /* MOBILE: if (mobileTitle) mobileTitle.textContent = navItem.querySelector("span")?.textContent?.trim() || ""; */
+    if (mobileTitle) mobileTitle.textContent = navItem.querySelector("span")?.textContent?.trim() || "";
 });
 
 document.addEventListener('DOMContentLoaded', function() {

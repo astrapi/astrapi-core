@@ -1,0 +1,68 @@
+{#
+  activity_log/partials/mobile_cards.html
+  Mobile-Karten für den Activity-Log.
+
+  Layout pro Karte:
+    Header:  Job-Name (links)  •  Status-Badge (rechts)
+    Meta:    Modul  •  Zeitpunkt  •  Dauer
+    Footer:  Typ-Badge  •  Detail-Button  •  Log-Button
+#}
+{% import 'partials/components/ui_macros.html' as ui %}
+{%- set _type_map = {
+  'job':       {'label': 'job',   'cls': 'badge-muted'},
+  'scheduler': {'label': 'sched', 'cls': 'badge-muted'},
+  'error':     {'label': 'err',   'cls': 'badge-status-err'},
+  'warning':   {'label': 'warn',  'cls': 'badge-status-warn'},
+  'system':    {'label': 'sys',   'cls': 'badge-muted'},
+} -%}
+
+{% if cfg %}
+  {% for item_name, item_data in cfg.items() %}
+    {%- set _t = _type_map.get(item_data.get('log_type'), {'label': item_data.get('log_type') or '?', 'cls': 'badge-muted'}) -%}
+    {%- set _title = item_data.get('item_label') or item_data.get('module') or item_name -%}
+    <div class="m-card on">
+
+      <div class="m-card-header">
+        <span class="m-card-title">{{ _title }}</span>
+        {{ ui.status_inline(item_data.get('status')) }}
+      </div>
+
+      <div class="m-card-meta">
+        <div class="m-card-meta-row">
+          <span class="m-card-meta-value al-m-line">
+            <span class="al-m-module">{{ item_data.get('module') or '—' }}</span>
+            <span class="al-m-sep">•</span>
+            <span>{{ item_data.get('created_at') or '—' }}</span>
+            {%- if item_data.get('duration_fmt') and item_data.get('duration_fmt') != '—' %}
+            <span class="al-m-sep">•</span>
+            <span>{{ item_data.get('duration_fmt') }}</span>
+            {%- endif %}
+          </span>
+        </div>
+      </div>
+
+      <div class="m-card-footer">
+        <span class="badge-pill {{ _t.cls }}">{{ _t.label }}</span>
+        <div class="m-card-footer-actions">
+          <button hx-get="/ui/activity_log/{{ item_name }}/detail"
+                  hx-target="body" hx-swap="beforeend"
+                  class="btn-icon" title="Detail">
+            {{ ui.icon('info') }}
+          </button>
+          <button hx-get="/ui/activity_log/{{ item_name }}/log"
+                  hx-target="body" hx-swap="beforeend"
+                  class="btn-icon btn-icon-log" title="Log">
+            {{ ui.icon('file-text') }}
+          </button>
+        </div>
+      </div>
+
+    </div>
+  {% endfor %}
+{% else %}
+  <div class="empty-state">
+    <svg width="40" height="40" viewBox="0 0 24 24" fill="currentColor" stroke="none"><use href="#icon-file-text"></use></svg>
+    <div class="empty-state-title">Keine Einträge vorhanden</div>
+    <div class="empty-state-sub">Noch keine Aktivität protokolliert</div>
+  </div>
+{% endif %}

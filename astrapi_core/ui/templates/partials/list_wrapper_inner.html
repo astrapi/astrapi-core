@@ -53,7 +53,8 @@
      style="display:none"></div>
 {% endif %}
 
-{# ── Tabellen-Ansicht ─────────────────────────────────────────────────────── #}
+{# ── Desktop-Ansicht (Tabelle) ────────────────────────────────────────────── #}
+<div class="desktop-view">
 <div class="content-items--table" data-debug-label="content-item">
 {% if cfg %}
   {%- set _col_card_actions = (_col_obj.card_actions if (_col_obj is defined and _col_obj and _col_obj.card_actions) else []) -%}
@@ -174,3 +175,10 @@
   </div>
 </div>
 {% endif %}
+
+</div>{# /desktop-view #}
+
+{# ── Mobile-Ansicht (Karten) ──────────────────────────────────────────────── #}
+<div class="mobile-view">
+  {% include [module + '/partials/mobile_cards.html', 'partials/mobile_cards_generic.html'] %}
+</div>{# /mobile-view #}

@@ -199,17 +199,19 @@ def collect() -> dict:
         extra_info = _extra_info_fn() if _extra_info_fn else {}
 
         updater = None
-        if _update_packages_fn:
-            try:
-                st = get_status()
-                updater = {
-                    "status": st["status"],
-                    "last_checked": st["last_checked"],
-                    "error": st["error"],
-                    "packages": st["packages"] or _update_packages_fn(),
-                }
-            except Exception:
-                updater = {"status": "idle", "last_checked": None, "error": None, "packages": []}
+        try:
+            st = get_status()
+            packages = st["packages"]
+            if not packages:
+                packages = _update_packages_fn() if _update_packages_fn else get_packages_with_versions()
+            updater = {
+                "status": st["status"],
+                "last_checked": st["last_checked"],
+                "error": st["error"],
+                "packages": packages,
+            }
+        except Exception:
+            updater = {"status": "idle", "last_checked": None, "error": None, "packages": []}
 
         procs = []
         for p in sorted(
@@ -360,7 +362,7 @@ def _packages_to_update() -> list:
 
 
 def _packages_to_display() -> list:
-    return [p for p in _packages_to_update() if p != "astrapi-core"]
+    return _packages_to_update()
 
 
 def _installed_version(package: str) -> str:

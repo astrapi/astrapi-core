@@ -215,7 +215,7 @@ input,select,textarea { font-family:var(--font); }
 }
 .page-subtitle { font-size:12px; color:var(--text-3); margin-left:4px; }
 .page-header--section { padding-left:16px; }
-/* MOBILE: @media (max-width:768px) { .page-subtitle { display:none; } } */
+@media (max-width:768px) { .page-subtitle { display:none; } }
 
 .page-header-main,
 .page-header-actions,
@@ -873,9 +873,9 @@ input,select,textarea { font-family:var(--font); }
   background:rgba(248,113,113,.18);
   color:#f87171;
 }
-/* MOBILE: @media (max-width:900px) {
+@media (max-width:900px) {
   .content-columns, .content-columns--wide { grid-template-columns:1fr; }
-} */
+}
 
 /* ═════════════════════════ MISC ═════════════════════════════════ */
 .content-area {
@@ -960,10 +960,10 @@ input,select,textarea { font-family:var(--font); }
 .cron-preset.active { border-color:var(--b); }
 
 /* ── Responsive ─────────────────────────────────────────────── */
-/* MOBILE: @media (max-width:900px) { .content-items { grid-template-columns:1fr; } } */
-/* MOBILE: @media (max-width:900px) { .settings-form-grid { grid-template-columns:1fr; } } */
+@media (max-width:900px) { .content-items { grid-template-columns:1fr; } }
+@media (max-width:900px) { .settings-form-grid { grid-template-columns:1fr; } }
 .settings-form-grid--2col { grid-template-columns:repeat(2, minmax(0,1fr)); }
-/* MOBILE: @media (max-width:900px) { .settings-form-grid--2col { grid-template-columns:1fr; } } */
+@media (max-width:900px) { .settings-form-grid--2col { grid-template-columns:1fr; } }
 
 /* ── Sysinfo: Haupt-Layout → .content-columns.content-columns--wide ── */
 .sysinfo-card-header {
@@ -998,27 +998,27 @@ input,select,textarea { font-family:var(--font); }
 .sysinfo-gauge-sub   { font-size:11px; color:var(--text-3); margin-top:8px; }
 
 /* ── Sysinfo: responsive Grids ───────────────────────────────── */
-/* MOBILE: @media (max-width:768px) {
+@media (max-width:768px) {
   .content-columns, .content-columns--wide { grid-template-columns: 1fr; }
   .sysinfo-gauges-grid  { grid-template-columns: 1fr 1fr; }
   .sysinfo-gauges    { grid-template-columns:1fr !important; }
   .sysinfo-info      { grid-template-columns:1fr !important; }
   .sysinfo-app-grid  { grid-template-columns:1fr !important; }
-} */
+}
 
 /* ── Activity Log: Filter Desktop/Mobile ─────────────────────── */
 .al-filters-desktop { display:contents; }
-/* MOBILE: .al-filters-mobile  { display:none; } */
-/* MOBILE: @media (max-width:768px) {
+.al-filters-mobile { display:none; }
+@media (max-width:768px) {
   .al-filters-desktop { display:none; }
   .al-filters-mobile {
     display:flex; flex-wrap:wrap; gap:6px; align-items:center;
     margin-bottom:14px;
   }
-} */
+}
 
 /* ── Activity Log: kompakte Mobilansicht ─────────────────────── */
-/* MOBILE: .al-status-dot {
+.al-status-dot {
   display:none;
   width:8px; height:8px; border-radius:50%; flex-shrink:0;
   margin-right:5px; vertical-align:middle;
@@ -1043,9 +1043,12 @@ input,select,textarea { font-family:var(--font); }
     overflow:hidden; text-overflow:ellipsis;
   }
   .al-mobile-meta-sep       { margin:0 3px; }
-} */
+}
 
-/* MOBILE: Mobile Header + Overlay + Layout
+/* Desktop: Mobile-Views standardmäßig ausblenden */
+.mobile-view { display:none; }
+
+/* ── Mobile Header + Overlay + Layout ───────────────────────── */
 #mobile-header {
   display:none;
   position:fixed; top:0; left:0; right:0; z-index:50;
@@ -1074,7 +1077,7 @@ input,select,textarea { font-family:var(--font); }
   backdrop-filter:blur(2px);
   -webkit-backdrop-filter:blur(2px);
 }
-#sidebar-overlay.visible { display:block; }
+body.mobile-nav-open #sidebar-overlay { display:block; }
 @media (max-width:768px) {
   #mobile-header { display:flex; }
   .app-layout { display:block; padding:0; }
@@ -1085,7 +1088,7 @@ input,select,textarea { font-family:var(--font); }
     box-shadow:4px 0 24px rgba(0,0,0,0.4);
     border-radius:0;
   }
-  #sidebar.mobile-open { transform:translateX(0); }
+  body.mobile-nav-open #sidebar { transform:translateX(0); }
   .main-content {
     padding:56px 16px 16px;
     height:100vh;
@@ -1099,8 +1102,149 @@ input,select,textarea { font-family:var(--font); }
   }
   .page-title { font-size:15px; }
   .sb-header { display:none; }
+
+  /* ── Desktop/Mobile-View-Trennung ───────────────────────────── */
+  .desktop-view { display:none; }
+  .mobile-view  { display:block; }
+
+  /* ── Äußerer Content-Rahmen entfernen ───────────────────────── */
+  .content-area {
+    background:transparent;
+    border-radius:0;
+    padding:0;
+    min-height:unset;
+  }
+
+  /* ── Content-Header: Titel ausblenden, Aktionen umbrechen ──── */
+  .content-header-title { display:none; }
+  .content-header {
+    min-height:unset;
+    padding:10px 14px;
+    justify-content:flex-start;
+    flex-wrap:wrap;
+    gap:6px;
+  }
+  .content-header-actions {
+    width:100%; flex-wrap:wrap; gap:6px;
+  }
+  .content-header-actions .table-filter-select {
+    flex:1 1 auto; min-width:90px;
+  }
+
+  /* ── Mobile Karten ──────────────────────────────────────────── */
+  .m-card {
+    border-radius:var(--rad);
+    background:var(--card);
+    overflow:hidden;
+    margin-bottom:8px;
+    transition:background var(--t);
+  }
+  .m-card.off { background:var(--card-off); }
+  .m-card-header {
+    display:flex; align-items:center; justify-content:space-between;
+    gap:8px;
+    padding:12px 14px 10px;
+    border-bottom:1px solid var(--border-s);
+  }
+  .m-card-title {
+    font-size:14px; font-weight:600; color:var(--text);
+    letter-spacing:-0.01em;
+    min-width:0; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
+    flex:1;
+  }
+  .m-card-meta {
+    padding:8px 14px;
+    display:flex; flex-direction:column; gap:4px;
+  }
+  .m-card-meta-row {
+    display:flex; align-items:baseline; gap:6px;
+    font-size:12px;
+  }
+  .m-card-meta-label {
+    color:var(--text-3); flex-shrink:0; min-width:80px;
+  }
+  .m-card-meta-value {
+    color:var(--text-2);
+    min-width:0; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
+  }
+  .m-card-footer {
+    display:flex; align-items:center; gap:4px;
+    padding:8px 14px;
+    border-top:1px solid var(--border-s);
+  }
+  .m-card-footer-actions { margin-left:auto; display:flex; gap:4px; }
+
+  /* Activity-Log: kompakte Meta-Zeile */
+  .al-m-line {
+    display:flex; align-items:center; gap:0; flex-wrap:nowrap;
+    overflow:hidden; text-overflow:ellipsis; white-space:nowrap;
+  }
+  .al-m-module { font-family:var(--mono); font-size:11px; }
+  .al-m-sep    { margin:0 5px; color:var(--text-3); }
+
+  /* ══ Android-like Polish ═══════════════════════════════════════ */
+
+  /* App-Bar: 56dp, Schatten, Touch-Targets */
+  #mobile-header {
+    height:56px;
+    box-shadow:0 2px 12px rgba(0,0,0,0.5);
+  }
+  #mobile-title {
+    font-size:17px; font-weight:600; letter-spacing:-0.01em;
+  }
+  #mobile-menu-btn {
+    width:48px; height:48px; border-radius:50%;
+  }
+
+  /* Sidebar + Overlay an neue App-Bar-Höhe anpassen */
+  #sidebar         { top:56px; width:min(280px, 82vw); }
+  #sidebar-overlay { top:56px; }
+
+  /* Hauptinhalt: genug Luft nach oben (App-Bar) + unten (FAB) */
+  .main-content { padding-top:64px; padding-bottom:88px; }
+
+  /* Nav-Items: Android-Drawer-Stil */
+  .nav-item {
+    min-height:48px; padding:12px 16px;
+    border-radius:12px; font-size:14px; font-weight:500;
+  }
+  .nav-item.active {
+    background:rgba(37,99,235,0.15);
+    color:var(--b);
+  }
+  .nav-item.active .nav-icon { color:var(--b); opacity:1; }
+  .nav-item:active            { background:rgba(37,99,235,0.12); }
+
+  /* Karten: Material-Elevation + größerer Radius */
+  .m-card {
+    border-radius:16px;
+    box-shadow:0 1px 3px rgba(0,0,0,0.3), 0 3px 10px rgba(0,0,0,0.18);
+    margin-bottom:10px;
+  }
+  .m-card-header { padding:14px 16px 12px; min-height:56px; }
+  .m-card-title  { font-size:15px; }
+  .m-card-footer { padding:10px 16px; min-height:48px; }
+  .m-card:active { opacity:0.88; transition:opacity 0.08s; }
+
+  /* Content-Header mit Filtern: dezente Karte */
+  .content-header:has(.table-filter-select) {
+    border-radius:14px;
+    margin-bottom:12px;
+  }
+
+  /* FAB: „Neu"-Button als Extended Floating Action Button */
+  .content-header:not(:has(.table-filter-select)) {
+    height:0; overflow:visible;
+    margin:0; padding:0; min-height:0;
+    background:transparent; box-shadow:none; border-radius:0;
+  }
+  .content-header:not(:has(.table-filter-select)) .btn-primary {
+    position:fixed; bottom:24px; right:20px; z-index:30;
+    border-radius:28px; height:48px; padding:0 24px;
+    font-size:14px; font-weight:600; letter-spacing:0.01em;
+    box-shadow:0 4px 20px rgba(37,99,235,0.5), 0 2px 6px rgba(0,0,0,0.3);
+  }
 }
-*/
 
 /* ════════════════════ SETTINGS ══════════════════════════════════ */
 
