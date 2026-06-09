@@ -186,6 +186,16 @@ def collect() -> dict:
         except Exception:
             os_name = "?"
 
+        os_pretty = "?"
+        try:
+            with open("/etc/os-release", encoding="utf-8") as _f:
+                for _line in _f:
+                    if _line.startswith("PRETTY_NAME="):
+                        os_pretty = _line.split("=", 1)[1].strip().strip('"')
+                        break
+        except Exception:
+            os_pretty = os_name
+
         import getpass
         import os as _os
 
@@ -234,8 +244,18 @@ def collect() -> dict:
         except Exception:
             pass
 
+        disk_paths = list(_extra_disks)
+        try:
+            from astrapi_core.ui.settings_registry import get_module as _get_module
+            for _p in _get_module("system", "extra_disks", "").split(","):
+                _p = _p.strip()
+                if _p and _p not in disk_paths:
+                    disk_paths.append(_p)
+        except Exception:
+            pass
+
         extra_disks_data = []
-        for mp in _extra_disks:
+        for mp in disk_paths:
             try:
                 _d = psutil.disk_usage(mp)
                 extra_disks_data.append(
@@ -275,6 +295,7 @@ def collect() -> dict:
                 "hostname": hostname,
                 "kernel": kernel,
                 "os_name": os_name,
+                "os_pretty": os_pretty,
                 "sys_uptime": _fmt_uptime(time.time() - boot),
                 "app_uptime": _fmt_uptime(time.time() - _START_TIME),
                 "user": current_user,
@@ -351,9 +372,10 @@ def configure_updater(app_root: "_Path") -> None:
 
 
 def _packages_to_update() -> list:
-    pkgs = ["astrapi-core"]
+    pkgs = []
     if _app_package:
         pkgs.append(_app_package)
+    pkgs.append("astrapi-core")
     return pkgs
 
 

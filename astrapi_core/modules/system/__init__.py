@@ -14,16 +14,6 @@ module = load_modul(
     _KEY,
     None,
     ui_router,
-    ui_header=Header(
-        [
-            Header.action_button(
-                "Aktualisieren",
-                hx_get=f"/ui/{_KEY}/metrics",
-                hx_target="#system-metrics",
-                hx_swap="outerHTML",
-                style="ghost",
-            )
-        ]
-    ),
+    ui_header=Header([]),
     ui_content=ContentCustom(template="system/partials/content.html"),
 )

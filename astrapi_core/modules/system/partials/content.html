@@ -13,10 +13,15 @@
 {# ── Haupt-Layout: linke Info-Karte + rechte 2×2-Gauges ───────────── #}
 <div class="content-columns content-columns--wide">
 
-{# ── Linke Karte: Versionen / Infos ───────────────────────────────── #}
+{# ── Linke Karte: Anwendungen + System-Info ───────────────────────── #}
+{# Paketnamen aus dem Updater sammeln (für Deduplizierung) #}
+{% set ns = namespace(updater_names=[]) %}
+{% if info.updater %}{% for p in info.updater.packages %}{% set ns.updater_names = ns.updater_names + [p.name] %}{% endfor %}{% endif %}
+
+{# ── Karte 1: Anwendungen ────────────────────────────────────────── #}
 <div class="content-item on sysinfo-info-card" data-debug-label="content-item">
   <div class="sysinfo-card-header">
-    <span>Anwendung</span>
+    <span>Anwendungen</span>
     {% if info.updater %}
     <button class="btn btn-ghost btn-sm"
             hx-post="/ui/system/check"
@@ -28,8 +33,6 @@
   <div style="padding:0 16px 12px;" data-debug-label="content-subitem">
   <table class="ds-list-table">
     <tbody>
-
-      {# 1. App-Version aus dem Updater (mit optionalem Update-Button) #}
       {% if info.updater %}
         {% for pkg in info.updater.packages %}
         <tr class="on">
@@ -53,26 +56,8 @@
         </tr>
         {% endfor %}
       {% endif %}
-
-      {# 2. User #}
-      <tr class="on">
-        <td>User</td>
-        <td>{{ info.system.user }}</td>
-        <td></td>
-      </tr>
-
-      {# 3. Datenbank (falls in software vorhanden) #}
-      {% if info.software.get('Datenbank') %}
-      <tr class="on">
-        <td>Datenbank</td>
-        <td>{{ info.software['Datenbank'] }}</td>
-        <td></td>
-      </tr>
-      {% endif %}
-
-      {# 4. Restliche Software-Einträge (Dependencies) #}
       {% for key, val in info.software.items() %}
-      {% if key not in ('psutil', 'Datenbank') %}
+      {% if key not in ('psutil', 'Datenbank') and key not in ns.updater_names and key.startswith('python') %}
       <tr class="on">
         <td>{{ key }}</td>
         <td>{{ val }}</td>
@@ -80,13 +65,54 @@
       </tr>
       {% endif %}
       {% endfor %}
-
+      {% for key, val in info.software.items() %}
+      {% if key not in ('psutil', 'Datenbank') and key not in ns.updater_names and not key.startswith('python') %}
+      <tr class="on">
+        <td>{{ key }}</td>
+        <td>{{ val }}</td>
+        <td></td>
+      </tr>
+      {% endif %}
+      {% endfor %}
     </tbody>
   </table>
-  </div>{# /padding #}
+  </div>
 </div>
 
-{# ── Rechte Seite: 2×2 Gauge-Karten ──────────────────────────────── #}
+{# ── Rechte Spalte: System-Karte + Gauges ────────────────────────── #}
+<div style="display:flex; flex-direction:column; gap:12px;">
+
+{# ── Karte 2: System ─────────────────────────────────────────────── #}
+<div class="content-item on sysinfo-info-card" data-debug-label="content-item">
+  <div class="sysinfo-card-header">
+    <span>System</span>
+  </div>
+  <div style="padding:0 16px 12px;" data-debug-label="content-subitem">
+  <table class="ds-list-table">
+    <tbody>
+      <tr class="on">
+        <td>OS</td>
+        <td>{{ info.system.os_pretty }}</td>
+        <td></td>
+      </tr>
+      <tr class="on">
+        <td>User</td>
+        <td>{{ info.system.user }}</td>
+        <td></td>
+      </tr>
+      {% if info.software.get('Datenbank') %}
+      <tr class="on">
+        <td>Datenbank</td>
+        <td>{{ info.software['Datenbank'] }}</td>
+        <td></td>
+      </tr>
+      {% endif %}
+    </tbody>
+  </table>
+  </div>
+</div>
+
+{# ── Gauges: CPU, RAM, DISK, SWAP ─────────────────────────────────── #}
 <div class="sysinfo-gauges-grid">
 
   {# CPU #}
@@ -146,49 +172,31 @@
   </div>
   {% else %}<div></div>{% endif %}
 
-  {# SWAP #}
+  {# Extra-Disks (aus Einstellungen oder configure()) #}
+  {% for ed in info.extra_disks %}
   <div class="content-item on sysinfo-gauge-card" data-debug-label="content-item">
-    <div class="sysinfo-card-header">SWAP</div>
+    <div class="sysinfo-card-header">{{ ed.label }}</div>
     <div style="padding:0 18px 16px;">
     <div class="sysinfo-gauge-head">
-      <div class="sysinfo-gauge-value">{{ info.swap.percent }}<span class="sysinfo-gauge-unit">%</span></div>
+      <div class="sysinfo-gauge-value">{{ ed.percent }}<span class="sysinfo-gauge-unit">%</span></div>
     </div>
     <div class="sysinfo-gauge-bar-wrap">
-      <div style="height:100%; width:{{ info.swap.percent }}%; border-radius:99px;
-                  background:{{ 'var(--r)' if info.swap.percent > 70 else 'var(--b-dim, var(--b))' }};
+      <div style="height:100%; width:{{ ed.percent }}%; border-radius:99px;
+                  background:{{ 'var(--r)' if ed.percent > 90 else ('var(--b)' if ed.percent > 70 else 'var(--g)') }};
                   transition:width 400ms;"></div>
     </div>
     <div class="sysinfo-gauge-sub" style="display:flex; justify-content:space-between;">
-      <span>{{ info.swap.used }} belegt</span><span>{{ info.swap.total }} gesamt</span>
+      <span>{{ ed.used_fmt }} belegt</span><span>{{ ed.free_fmt }} frei</span><span>{{ ed.total_fmt }} gesamt</span>
     </div>
     </div>{# /padding #}
   </div>
+  {% endfor %}
+  {% if not info.extra_disks %}<div></div>{% endif %}
 
 </div>{# /sysinfo-gauges-grid #}
-</div>{# /sysinfo-layout #}
+</div>{# /rechte Spalte #}
+</div>{# /content-columns #}
 
-{# ── Services (falls konfiguriert) ───────────────────────────────── #}
-{% if info.services %}
-<div style="margin-top:12px; display:flex; flex-direction:column; gap:6px;" data-debug-label="content-item">
-  {% for svc in info.services %}
-  <div style="display:flex; align-items:center; justify-content:space-between;
-              padding:8px 10px; background:var(--sel); border-radius:var(--rad);" data-debug-label="content-subitem">
-    <div>
-      <div style="font-family:var(--mono); font-size:13px; color:var(--text);">{{ svc.name }}</div>
-      {% if svc.desc %}<div style="font-size:11px; color:var(--text-3); margin-top:1px;">{{ svc.desc }}</div>{% endif %}
-    </div>
-    <div style="display:flex; align-items:center; gap:8px;">
-      <span style="font-size:11px; color:var(--text-3);">{{ svc.enabled }}</span>
-      <span style="font-size:12px; font-weight:600; padding:2px 8px; border-radius:99px;
-                   background:{{ 'rgba(38,162,105,0.2)' if svc.ok else 'var(--err-bg)' }};
-                   color:{{ 'var(--g)' if svc.ok else 'var(--err)' }};">
-        {{ svc.active }}
-      </span>
-    </div>
-  </div>
-  {% endfor %}
-</div>
-{% endif %}
 
 {# ──────────────────────────────────────────────────────────────────── #}
 {# LEGACY-ABSCHNITT ENTFERNT (gauges + app-grid) – neues Layout oben  #}
