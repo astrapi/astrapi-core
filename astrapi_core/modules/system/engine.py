@@ -457,12 +457,15 @@ def check_updates() -> list:
             latest_display = "—"
         else:
             latest_display = latest
-            try:
-                from packaging.version import Version
+            if installed == "—":
+                update_available = True
+            else:
+                try:
+                    from packaging.version import Version
 
-                update_available = Version(latest) > Version(installed)
-            except Exception:
-                update_available = False
+                    update_available = Version(latest) > Version(installed)
+                except Exception:
+                    update_available = False
 
         packages.append(
             {
