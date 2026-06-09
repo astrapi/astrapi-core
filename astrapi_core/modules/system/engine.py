@@ -327,7 +327,7 @@ _upd_state: dict = {
 }
 _upd_lock = _threading.Lock()
 
-_INDEX_URL = "https://gitlab.com/api/v4/projects/81004951/packages/pypi/simple"
+_PYPI_SIMPLE = "https://pypi.org/simple"
 
 
 def configure_updater(app_root: "_Path") -> None:
@@ -348,10 +348,6 @@ def configure_updater(app_root: "_Path") -> None:
             _app_package = cfg.get("name") or None
     except Exception:
         pass
-
-
-def _pip_index_args() -> list:
-    return ["--index-url", _INDEX_URL] if _INDEX_URL else []
 
 
 def _packages_to_update() -> list:
@@ -379,10 +375,7 @@ def _latest_version(package: str) -> "str | None":
     import urllib.error
     import urllib.request
 
-    if not _INDEX_URL:
-        return None
-
-    pkg_url = f"{_INDEX_URL.rstrip('/')}/{package}/"
+    pkg_url = f"{_PYPI_SIMPLE}/{package}/"
     req = urllib.request.Request(pkg_url)
     _upd_log.debug("updater: GET %s", pkg_url)
 
@@ -447,7 +440,7 @@ def check_updates() -> list:
 
                 update_available = Version(latest) > Version(installed)
             except Exception:
-                update_available = latest != installed
+                update_available = False
 
         packages.append(
             {
@@ -509,7 +502,7 @@ def _do_update() -> None:
     set_active_log_id(log_id)
 
     try:
-        cmd = [sys.executable, "-m", "pip", "install", "--upgrade"] + pkgs + _pip_index_args()
+        cmd = [sys.executable, "-m", "pip", "install", "--upgrade"] + pkgs
         proc = _subprocess.Popen(
             cmd,
             stdout=_subprocess.PIPE,
