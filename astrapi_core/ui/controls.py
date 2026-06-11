@@ -124,6 +124,17 @@ class Col:
         return cls(type="composed", key=key, label=label, cls=css, template=template)
 
     @classmethod
+    def version_badge(
+        cls,
+        key: str,
+        label: str,
+        update_key: str = "upstream_version",
+        css: str = "col-version",
+    ) -> "Col":
+        """Zeigt current version (mono) + orangen Badge wenn update_key gesetzt und != key."""
+        return cls(type="version_badge", key=key, label=label, cls=css, remote_key=update_key)
+
+    @classmethod
     def status(cls, key: str, label: str, css: str = "col-status") -> "Col":
         """Standard-Status-Badge via status_inline-Makro (ok/error/warning/running/…)"""
         return cls(type="status", key=key, label=label, cls=css)
@@ -277,6 +288,7 @@ class ContentTable:
     has_toggle: bool = True
 
     title: str = ""  # Titel für eingebettete Tabellen in columns-Layout
+    last_run_label: str = "Letzter Lauf"  # Überschreibbares Label für die last_run-Spalte
 
     # Für ContentColumns: gibt an, welches Context-Key die Tabellendaten enthält
     cfg_key: str = "cfg"

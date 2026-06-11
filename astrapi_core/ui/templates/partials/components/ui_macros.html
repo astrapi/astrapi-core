@@ -376,6 +376,12 @@
 {%- elif col.type == 'composed' -%}
 {%- set _composed = col.template | replace('{item_name}', item_name | string) | replace('{key}', _val | string) -%}
 <td class="{{ col.cls }}">{{ _composed if _val else '—' }}</td>
+{%- elif col.type == 'version_badge' -%}
+{%- set _upd = item_data.get(col.remote_key) if col.remote_key else '' -%}
+<td class="{{ col.cls }}">
+  {{- _val or '—' -}}
+  {%- if _upd and _upd != _val %}<span class="badge-pill badge-warn" style="margin-left:6px" title="Neue Version verfügbar: {{ _upd }}">{{ _upd }}</span>{% endif -%}
+</td>
 {%- elif col.type == 'status' -%}
 <td class="{{ col.cls }}">{{ status_inline(_val) }}</td>
 {%- else -%}

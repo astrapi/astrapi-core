@@ -71,7 +71,7 @@
           {% include module + '/partials/list_header.html' ignore missing %}
         {% endif %}
         {% if has_run_buttons | default(True) %}
-        <th class="col-last-run sortable">Letzter Lauf</th>
+        <th class="col-last-run sortable">{{ (_ui_content.last_run_label if _ui_content else none) or 'Letzter Lauf' }}</th>
         {% endif %}
         {% if has_status | default(True) %}<th class="col-status">Status</th>{% endif %}
         <th class="col-actions">
