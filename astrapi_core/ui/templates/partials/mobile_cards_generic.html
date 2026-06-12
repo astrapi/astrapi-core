@@ -24,6 +24,18 @@
 #}
 {% import 'partials/components/ui_macros.html' as ui %}
 
+{# Ghost-Aktions-Buttons (z.B. "Auf Updates prüfen") vor den Karten #}
+{%- set _ui_header = (module_obj(module) if module_obj is defined else none) %}
+{%- set _ui_header = _ui_header.ui_header if _ui_header else none %}
+{% if _ui_header and _ui_header.controls %}
+  {%- set _ghost_ctrls = _ui_header.controls | selectattr('style', 'equalto', 'ghost') | list -%}
+  {% if _ghost_ctrls %}
+  <div class="m-module-actions">
+    {% for ctrl in _ghost_ctrls %}{{ ui.header_control(ctrl, module, container_id, loading_id | default('')) }}{% endfor %}
+  </div>
+  {% endif %}
+{% endif %}
+
 {% if cfg %}
   {% for item_name, item_data in cfg.items() %}
     {%- set is_running = (module ~ ":" ~ item_name) in (running or {}) -%}
@@ -51,6 +63,8 @@
             <span class="m-card-meta-label">{{ col.label }}</span>
             <span class="m-card-meta-value">
               {%- if col.type == 'status' -%}{{ ui.status_inline(_val) }}
+              {%- elif col.type == 'badge_enum' and col.enum -%}{%- set _e = col.enum.get(_val) -%}{{ _e.label if _e else _val }}
+              {%- elif col.type == 'version_badge' -%}{{ _val }}
               {%- else -%}{{ _val }}{%- endif -%}
             </span>
           </div>

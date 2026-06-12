@@ -1145,9 +1145,16 @@ body.mobile-nav-open #sidebar-overlay { display:block; }
   .content-header-actions {
     width:100%; flex-wrap:wrap; gap:6px;
   }
+  .content-header-actions .btn-ghost { display:none; }
   .content-header-actions .table-filter-select {
     flex:1 1 auto; min-width:90px;
   }
+  .m-module-actions {
+    display:flex; flex-wrap:wrap; gap:6px; margin-bottom:8px;
+  }
+  .m-module-actions .btn { flex:1 1 auto; justify-content:center; }
+  .m-card-meta-value .lr-date { min-width:0; }
+  .m-card-meta-value .lr-time { min-width:0; }
 
   /* ── Mobile Karten ──────────────────────────────────────────── */
   .m-card {
