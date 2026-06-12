@@ -27,6 +27,6 @@
   <td id="status-{{ module }}-{{ item_id }}" hx-swap-oob="true" class="col-status">{{ ui.status_inline(_status) }}</td>
   {% endif %}
   {% if has_run_buttons | default(True) %}
-  <td id="lastrun-{{ module }}-{{ item_id }}" hx-swap-oob="true" class="col-last-run">{{ item.last_run or '—' }}</td>
+  <td id="lastrun-{{ module }}-{{ item_id }}" hx-swap-oob="true" class="col-last-run">{{ ui.last_run_cell(item.last_run) }}</td>
   {% endif %}
 {% endfor %}

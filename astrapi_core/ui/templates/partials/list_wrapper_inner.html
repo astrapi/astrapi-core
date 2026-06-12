@@ -108,7 +108,7 @@
             {% include module + '/partials/list_row.html' ignore missing %}
           {% endif %}
           {% if has_run_buttons | default(True) %}
-          <td id="lastrun-{{ module }}-{{ item_name }}" class="col-last-run">{{ item_data.last_run or '—' }}</td>
+          <td id="lastrun-{{ module }}-{{ item_name }}" class="col-last-run">{{ ui.last_run_cell(item_data.last_run) }}</td>
           {% endif %}
           {% if has_status | default(True) %}
           {% set _status = 'running' if is_running else (last_run_status(module, item_name) or item_data.last_status) %}

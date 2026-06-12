@@ -11,3 +11,9 @@ def fmt_bytes(n: float | None) -> str:
             return f"{n:.1f} {unit}"
         n /= 1024
     return f"{n:.1f} PB"
+
+
+def fmt_now() -> str:
+    """Aktuellen Zeitstempel im deutschen Format: TT.MM.JJJJ HH:MM"""
+    from datetime import datetime
+    return datetime.now().strftime("%d.%m.%Y %H:%M")

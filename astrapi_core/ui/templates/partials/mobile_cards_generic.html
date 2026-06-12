@@ -41,7 +41,7 @@
         {% if has_run_buttons | default(True) and item_data.get('last_run') %}
         <div class="m-card-meta-row">
           <span class="m-card-meta-label">{{ (_ui_content.last_run_label if _ui_content else none) or 'Letzter Lauf' }}</span>
-          <span class="m-card-meta-value">{{ item_data.get('last_run') }}</span>
+          <span class="m-card-meta-value">{{ ui.last_run_cell(item_data.get('last_run')) }}</span>
         </div>
         {% endif %}
         {% for col in _ui_cols %}

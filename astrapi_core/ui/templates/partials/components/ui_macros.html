@@ -431,3 +431,5 @@
 </button>
 {%- endif %}
 {% endmacro %}
+
+{% macro last_run_cell(value) %}{%- if value and ' ' in value -%}{%- set parts = value.split(' ', 1) -%}<span class="lr-date">{{ parts[0] }}</span><span class="lr-time">{{ parts[1] }}</span>{%- else -%}{{ value or '—' }}{%- endif %}{% endmacro %}
