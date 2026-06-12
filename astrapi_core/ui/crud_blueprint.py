@@ -75,6 +75,9 @@ def make_crud_router(
     schema_path: str,
     label: str | None = None,
     description_field: str = "description",
+    has_create: bool = True,
+    has_edit: bool = True,
+    has_delete: bool = True,
     has_run_buttons: bool = False,
     has_status: bool = True,
     has_toggle: bool = True,
@@ -123,6 +126,9 @@ def make_crud_router(
             loading_id=_l_id,
             content_template=f"{key}/partials/card_body.html",
             running=running_fn() if running_fn else {},
+            has_create=has_create,
+            has_edit=has_edit,
+            has_delete=has_delete,
             has_run_buttons=has_run_buttons,
             has_status=has_status,
         )
@@ -232,66 +238,72 @@ def make_crud_router(
 
     register_content_renderer(key, _content_string)
 
-    @router.get(f"/ui/{key}/create", response_class=HTMLResponse)
-    def create_modal(request: Request):
-        return render(
-            request,
-            "partials/create_edit/create_edit_modal.html",
-            dict(
-                schema=_resolved_fields(),
-                id_field=schema["id_field"],
-                modal_width=schema["modal_width"],
-                item=None,
-                item_id=None,
-                submit_url=f"/ui/{key}/",
-                method="post",
-                title=f"Neuer {_label}",
-                reload_url=f"/ui/{key}/content",
-                container_id=request.query_params.get("container_id", _c_id),
-                loading_id=request.query_params.get("loading_id", _l_id),
-                prefill_template=prefill_template,
-            ),
-        )
+    if has_create:
 
-    @router.get(f"/ui/{key}/{{item_id}}/edit", response_class=HTMLResponse)
-    def edit_modal(item_id: str, request: Request):
-        item = store.get(item_id)
-        if item is None:
-            return HTMLResponse(f"{_label} nicht gefunden", status_code=404)
-        return render(
-            request,
-            "partials/create_edit/create_edit_modal.html",
-            dict(
-                schema=_resolved_fields(),
-                id_field=schema["id_field"],
-                modal_width=schema["modal_width"],
-                item=item,
-                item_id=item_id,
-                submit_url=f"/ui/{key}/{item_id}/update",
-                method="post",
-                title=f"{_label} bearbeiten",
-                reload_url=f"/ui/{key}/content",
-                container_id=request.query_params.get("container_id", _c_id),
-                loading_id=request.query_params.get("loading_id", _l_id),
-            ),
-        )
+        @router.get(f"/ui/{key}/create", response_class=HTMLResponse)
+        def create_modal(request: Request):
+            return render(
+                request,
+                "partials/create_edit/create_edit_modal.html",
+                dict(
+                    schema=_resolved_fields(),
+                    id_field=schema["id_field"],
+                    modal_width=schema["modal_width"],
+                    item=None,
+                    item_id=None,
+                    submit_url=f"/ui/{key}/",
+                    method="post",
+                    title=f"Neuer {_label}",
+                    reload_url=f"/ui/{key}/content",
+                    container_id=request.query_params.get("container_id", _c_id),
+                    loading_id=request.query_params.get("loading_id", _l_id),
+                    prefill_template=prefill_template,
+                ),
+            )
 
-    @router.get(f"/ui/{key}/{{item_id}}/delete", response_class=HTMLResponse)
-    def delete_modal(item_id: str, request: Request):
-        item = store.get(item_id) or {}
-        return render(
-            request,
-            "partials/confirm_modal.html",
-            dict(
-                description=item.get(description_field, item_id),
-                verb="löschen",
-                confirm_url=f"/api/{key}/{item_id}",
-                method="delete",
-                reload_url=f"/ui/{key}/content",
-                container_id=request.query_params.get("container_id", _c_id),
-                loading_id=request.query_params.get("loading_id", _l_id),
-            ),
-        )
+    if has_edit:
+
+        @router.get(f"/ui/{key}/{{item_id}}/edit", response_class=HTMLResponse)
+        def edit_modal(item_id: str, request: Request):
+            item = store.get(item_id)
+            if item is None:
+                return HTMLResponse(f"{_label} nicht gefunden", status_code=404)
+            return render(
+                request,
+                "partials/create_edit/create_edit_modal.html",
+                dict(
+                    schema=_resolved_fields(),
+                    id_field=schema["id_field"],
+                    modal_width=schema["modal_width"],
+                    item=item,
+                    item_id=item_id,
+                    submit_url=f"/ui/{key}/{item_id}/update",
+                    method="post",
+                    title=f"{_label} bearbeiten",
+                    reload_url=f"/ui/{key}/content",
+                    container_id=request.query_params.get("container_id", _c_id),
+                    loading_id=request.query_params.get("loading_id", _l_id),
+                ),
+            )
+
+    if has_delete:
+
+        @router.get(f"/ui/{key}/{{item_id}}/delete", response_class=HTMLResponse)
+        def delete_modal(item_id: str, request: Request):
+            item = store.get(item_id) or {}
+            return render(
+                request,
+                "partials/confirm_modal.html",
+                dict(
+                    description=item.get(description_field, item_id),
+                    verb="löschen",
+                    confirm_url=f"/api/{key}/{item_id}",
+                    method="delete",
+                    reload_url=f"/ui/{key}/content",
+                    container_id=request.query_params.get("container_id", _c_id),
+                    loading_id=request.query_params.get("loading_id", _l_id),
+                ),
+            )
 
     if has_toggle:
 
