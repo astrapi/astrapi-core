@@ -612,8 +612,8 @@ input,select,textarea { font-family:var(--font); }
 .ds-list-table .col-dim      { font-family:var(--mono,monospace); font-size:.85em; color:var(--text-3); white-space:nowrap; }
 .ds-list-table .col-hide-sm  { }
 .ds-list-table .col-last-run { width:160px; min-width:160px; white-space:nowrap; text-align:right; }
-.col-last-run .lr-date, .m-card-meta-value .lr-date { display:inline-block; min-width:80px; text-align:right; }
-.col-last-run .lr-time, .m-card-meta-value .lr-time { display:inline-block; min-width:42px; text-align:right; color:var(--text-2); }
+.col-last-run .lr-date, .m-card-meta-value .lr-date { display:inline-block; min-width:80px; text-align:right; font-family:var(--mono,monospace); font-size:.85em; }
+.col-last-run .lr-time, .m-card-meta-value .lr-time { display:inline-block; min-width:40px; text-align:right; font-family:var(--mono,monospace); font-size:.85em; color:var(--text-2); }
 .ds-list-table .col-status   { width:100px; min-width:100px; text-align:right; }
 /* badge-mono: inline monospace tag (Modul, Log-Typ, …) */
 .badge-mono { display:inline-block; font-family:var(--mono,monospace); font-size:10px;
