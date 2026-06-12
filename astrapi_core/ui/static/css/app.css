@@ -1,3 +1,19 @@
+/* ── Lokale Schriftarten ─────────────────────────────────────── */
+@font-face {
+  font-family: 'Inter';
+  src: url('/static/fonts/sans.woff2') format('woff2');
+  font-weight: 100 900;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: 'JetBrains Mono';
+  src: url('/static/fonts/mono.woff2') format('woff2');
+  font-weight: 100 900;
+  font-style: normal;
+  font-display: swap;
+}
+
 /* ============================================================
    backupctl – Tailwind-inspirierte Design Tokens
    ============================================================ */

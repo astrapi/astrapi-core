@@ -1,0 +1,20 @@
+Schriftarten – Herkunft und Originalnamen
+==========================================
+
+sans.woff2
+  Schrift:    Inter (Variable Font, latin-Subset)
+  Version:    v20
+  Gewichte:   300–700 (variable)
+  Lizenz:     SIL Open Font License 1.1
+  Quelle:     https://fonts.google.com/specimen/Inter
+  Original:   UcC73FwrK3iLTeHuS_nVMrMxCp50SjIa1ZL7.woff2
+  Download:   https://fonts.gstatic.com/s/inter/v20/UcC73FwrK3iLTeHuS_nVMrMxCp50SjIa1ZL7.woff2
+
+mono.woff2
+  Schrift:    JetBrains Mono (Variable Font, latin-Subset)
+  Version:    v24
+  Gewichte:   400–500 (variable)
+  Lizenz:     SIL Open Font License 1.1
+  Quelle:     https://fonts.google.com/specimen/JetBrains+Mono
+  Original:   tDbv2o-flEEny0FZhsfKu5WU4zr3E_BX0PnT8RD8yKwBNntkaToggR7BYRbKPxDcwg.woff2
+  Download:   https://fonts.gstatic.com/s/jetbrainsmono/v24/tDbv2o-flEEny0FZhsfKu5WU4zr3E_BX0PnT8RD8yKwBNntkaToggR7BYRbKPxDcwg.woff2
