@@ -43,7 +43,7 @@
   --warn:    #f59e0b;
   --warn-bg: rgba(245,158,11,0.14);
 
-  --font: 'Plus Jakarta Sans', ui-sans-serif, sans-serif;
+  --font: 'Inter', ui-sans-serif, sans-serif;
   --mono: 'JetBrains Mono', ui-monospace, monospace;
   --font-mono: var(--mono);
   --text-muted: var(--text-3);
