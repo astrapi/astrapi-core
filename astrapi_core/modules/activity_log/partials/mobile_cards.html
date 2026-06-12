@@ -19,7 +19,7 @@
 {% if cfg %}
   {% for item_name, item_data in cfg.items() %}
     {%- set _t = _type_map.get(item_data.get('log_type'), {'label': item_data.get('log_type') or '?', 'cls': 'badge-muted'}) -%}
-    {%- set _title = item_data.get('item_label') or item_data.get('module') or item_name -%}
+    {%- set _title = item_data.get('description') or item_data.get('item_id') or item_data.get('module') or item_name -%}
     <div class="m-card on">
 
       <div class="m-card-header">
