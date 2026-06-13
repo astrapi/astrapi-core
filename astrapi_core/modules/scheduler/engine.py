@@ -236,7 +236,7 @@ class Scheduler:
 
         duration_s   = int(time.time() - start)
         duration     = f"{duration_s}s"
-        status_label = "OK" if not errors else ("Fehler: " + "; ".join(errors))
+        status_label = "ok" if not errors else "error"
 
         _status_store().upsert(job_id, {
             "last_run":      datetime.now().strftime("%d.%m.%Y %H:%M"),
