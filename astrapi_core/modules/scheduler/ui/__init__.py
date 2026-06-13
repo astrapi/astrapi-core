@@ -2,7 +2,7 @@
 
 import uuid
 
-from fastapi import APIRouter, Request
+from fastapi import APIRouter, Request, Response
 from fastapi.responses import HTMLResponse
 
 from astrapi_core.ui.controls import Col, ContentTable
@@ -254,3 +254,22 @@ def scheduler_job_trigger(job_id: str, request: Request):
 
     trigger_job(job_id)
     return render(request, "content.html", _list_ctx())
+
+
+# ── API-Routen (von confirm_modal aufgerufen) ──────────────────────────────────
+
+
+@router.delete(f"/api/{KEY}/{{job_id}}", status_code=204)
+def scheduler_job_delete(job_id: str):
+    from astrapi_core.modules.scheduler.engine import delete_job
+
+    delete_job(job_id)
+    return Response(status_code=204)
+
+
+@router.patch(f"/api/{KEY}/{{job_id}}/toggle", status_code=204)
+def scheduler_job_toggle(job_id: str):
+    from astrapi_core.modules.scheduler.engine import toggle_job
+
+    toggle_job(job_id)
+    return Response(status_code=204)
