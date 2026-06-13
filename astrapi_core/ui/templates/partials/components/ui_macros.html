@@ -61,7 +61,7 @@
   {% set _s = status | lower if status else '' %}
   {% if _s == 'ok' %}
     <span class="badge-pill badge-status-ok">OK</span>
-  {% elif _s == 'error' %}
+  {% elif _s == 'error' or _s.startswith('fehler') %}
     <span class="badge-pill badge-status-err"><svg width="11" height="11" viewBox="0 0 24 24" fill="currentColor" stroke="none"><use href="#icon-close"></use></svg>Fehler</span>
   {% elif _s == 'warning' %}
     <span class="badge-pill badge-status-warn"><svg width="11" height="11" viewBox="0 0 24 24" fill="currentColor" stroke="none"><use href="#icon-alert"></use></svg>Warnung</span>
