@@ -41,6 +41,8 @@
             {{ pkg.installed }}
             {% if pkg.update_available %}
             <span style="color:var(--g); font-weight:600; margin-left:4px;">→ {{ pkg.latest }}</span>
+            {% elif pkg.latest and pkg.latest != '—' %}
+            <span style="color:var(--text-3); margin-left:4px;">aktuell</span>
             {% endif %}
           </td>
           <td>
