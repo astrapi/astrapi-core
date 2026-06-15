@@ -154,7 +154,7 @@
     <span class="pagination-info">{{ pagination.start }}–{{ pagination.end }} von {{ pagination.total }}</span>
     <div class="pagination-controls">
       <button class="btn-icon pagination-btn"
-              {% if pagination.has_prev %}hx-get="{{ pagination.prev_url }}" hx-target="#{{ container_id }}" hx-swap="innerHTML"{% else %}disabled{% endif %}>
+              {% if pagination.has_prev %}hx-get="{{ pagination.prev_url }}" hx-target="#{{ container_id }}" hx-swap="outerHTML"{% else %}disabled{% endif %}>
         <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" stroke="none"><use href="#icon-chevron-left"></use></svg>
       </button>
       {% for p in pagination.pages %}
@@ -162,13 +162,13 @@
           <span class="pagination-ellipsis">…</span>
         {% else %}
           <button class="pagination-page {{ 'active' if p.active else '' }}"
-                  {% if not p.active %}hx-get="{{ p.url }}" hx-target="#{{ container_id }}" hx-swap="innerHTML"{% endif %}>
+                  {% if not p.active %}hx-get="{{ p.url }}" hx-target="#{{ container_id }}" hx-swap="outerHTML"{% endif %}>
             {{ p.num }}
           </button>
         {% endif %}
       {% endfor %}
       <button class="btn-icon pagination-btn"
-              {% if pagination.has_next %}hx-get="{{ pagination.next_url }}" hx-target="#{{ container_id }}" hx-swap="innerHTML"{% else %}disabled{% endif %}>
+              {% if pagination.has_next %}hx-get="{{ pagination.next_url }}" hx-target="#{{ container_id }}" hx-swap="outerHTML"{% else %}disabled{% endif %}>
         <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" stroke="none"><use href="#icon-chevron-right"></use></svg>
       </button>
     </div>

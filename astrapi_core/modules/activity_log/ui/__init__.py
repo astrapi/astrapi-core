@@ -36,6 +36,13 @@ def _filter_kwargs(request: Request) -> dict:
     )
 
 
+def _pagination_url(request: Request, page: int) -> str:
+    params = {k: v for k, v in request.query_params.items() if k != "page"}
+    params["page"] = str(page)
+    qs = "&".join(f"{k}={v}" for k, v in params.items())
+    return f"/ui/{KEY}/content?{qs}"
+
+
 def _content_ctx(request: Request) -> dict:
     try:
         page = max(1, int(request.query_params.get("page", 1)))
@@ -44,6 +51,11 @@ def _content_ctx(request: Request) -> dict:
     fkw = _filter_kwargs(request)
     total = count_activity(**fkw)
     pagination = build_pagination(total, page)
+    if pagination:
+        pagination["prev_url"] = _pagination_url(request, pagination["page"] - 1)
+        pagination["next_url"] = _pagination_url(request, pagination["page"] + 1)
+        for p in pagination["pages"]:
+            p["url"] = "#" if p.get("is_ellipsis") else _pagination_url(request, p["num"])
     ps = _page_size()
     entries = enrich(
         list_activity(
