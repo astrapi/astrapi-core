@@ -380,7 +380,37 @@ def _packages_to_update() -> list:
 
 
 def _packages_to_display() -> list:
-    return _packages_to_update()
+    """Alle direkten Abhängigkeiten des App-Pakets für die Anzeige."""
+    import re
+    from importlib.metadata import requires as pkg_requires
+
+    seen: set[str] = set()
+    pkgs: list[str] = []
+
+    def _add(name: str) -> None:
+        key = name.lower().replace("-", "_")
+        if key not in seen:
+            seen.add(key)
+            pkgs.append(name)
+
+    rest: list[str] = []
+
+    if _app_package:
+        _add(_app_package)
+        try:
+            for req in pkg_requires(_app_package) or []:
+                if "; extra ==" in req:
+                    continue
+                name = re.split(r"[\[;>=<!@\s]", req)[0].strip()
+                if name and name.lower().replace("-", "_") not in seen:
+                    rest.append(name)
+        except Exception:
+            pass
+
+    _add("astrapi-core")
+    for name in sorted(rest, key=lambda n: n.lower()):
+        _add(name)
+    return pkgs
 
 
 def _installed_version(package: str) -> str:
@@ -393,48 +423,24 @@ def _installed_version(package: str) -> str:
 
 
 def _latest_version(package: str) -> "str | None":
-    import re
+    import json
     import urllib.error
     import urllib.request
 
-    pkg_url = f"{_PYPI_SIMPLE}/{package}/"
-    req = urllib.request.Request(pkg_url)
-    _upd_log.debug("updater: GET %s", pkg_url)
-
+    url = f"https://pypi.org/pypi/{package}/json"
+    _upd_log.debug("updater: GET %s", url)
     try:
-        with urllib.request.urlopen(req, timeout=15) as resp:
-            html = resp.read().decode("utf-8", errors="replace")
+        with urllib.request.urlopen(url, timeout=15) as resp:
+            data = json.loads(resp.read())
+        return data["info"]["version"]
     except urllib.error.HTTPError as e:
-        _upd_log.warning("updater: HTTP %s für %s", e.code, pkg_url)
+        _upd_log.warning("updater: HTTP %s für %s", e.code, url)
         if e.code == 404:
             return None
         raise
     except Exception as e:
-        _upd_log.warning("updater: Fehler beim Abrufen von %s: %s", pkg_url, e)
+        _upd_log.warning("updater: Fehler beim Abrufen von %s: %s", url, e)
         return None
-
-    pkg_norm = package.lower().replace("-", "_")
-    filenames = re.findall(r">([^<]+\.(?:whl|tar\.gz))<", html)
-    versions = []
-    for filename in filenames:
-        fn_norm = filename.lower().replace("-", "_")
-        if fn_norm.startswith(pkg_norm + "_"):
-            rest = filename[len(pkg_norm) + 1 :]
-            ver = re.split(r"[-.](?:py\d|cp\d|tar|whl)", rest)[0]
-            if ver and re.match(r"^\d", ver):
-                versions.append(ver)
-
-    if not versions:
-        return None
-
-    try:
-        from packaging.version import Version
-
-        versions.sort(key=Version, reverse=True)
-    except Exception:
-        versions.sort(reverse=True)
-
-    return versions[0]
 
 
 def check_updates() -> list:
