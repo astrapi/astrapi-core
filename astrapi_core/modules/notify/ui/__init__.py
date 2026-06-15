@@ -2,7 +2,7 @@
 
 import uuid
 
-from fastapi import APIRouter, Request
+from fastapi import APIRouter, Request, Response
 from fastapi.responses import HTMLResponse
 
 from astrapi_core.ui.controls import Col, ContentTable
@@ -24,7 +24,11 @@ from ..engine import (
     update_job,
 )
 from ..engine import (
+    delete_channel,
+    delete_job,
     test_channel as _test_channel,
+    toggle_channel,
+    toggle_job,
 )
 from ..engine import (
     test_job as _test_job,
@@ -417,3 +421,30 @@ async def edit_job_apply(job_id: str, request: Request):
 def test_job_view(job_id: str, request: Request):
     ok, msg = _test_job(job_id)
     return render_toast_badge(request, ok, msg)
+
+
+# ── API-Routen (von confirm_modal aufgerufen) ─────────────────────────────────
+
+
+@router.delete(f"/api/{KEY}/{{channel_id}}", status_code=204)
+def delete_channel_api(channel_id: str):
+    delete_channel(channel_id)
+    return Response(status_code=204)
+
+
+@router.patch(f"/api/{KEY}/{{channel_id}}/toggle", status_code=204)
+def toggle_channel_api(channel_id: str):
+    toggle_channel(channel_id)
+    return Response(status_code=204)
+
+
+@router.delete(f"/api/{KEY}/jobs/{{job_id}}", status_code=204)
+def delete_job_api(job_id: str):
+    delete_job(job_id)
+    return Response(status_code=204)
+
+
+@router.patch(f"/api/{KEY}/jobs/{{job_id}}/toggle", status_code=204)
+def toggle_job_api(job_id: str):
+    toggle_job(job_id)
+    return Response(status_code=204)
