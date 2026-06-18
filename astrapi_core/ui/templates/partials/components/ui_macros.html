@@ -286,6 +286,7 @@
 {%- macro _sub(s) -%}
   {%- set ns = namespace(v=s) -%}
   {%- for k, v in _subs %}{%- set ns.v = ns.v | replace(k, v) -%}{%- endfor -%}
+  {%- for k, v in item_data.items() %}{%- set ns.v = ns.v | replace('{' + k + '}', v | string) -%}{%- endfor -%}
   {{- ns.v -}}
 {%- endmacro -%}
 {%- if action.href -%}
