@@ -43,8 +43,6 @@ from .settings_registry import (
 from .settings_registry import (
     set as settings_set,
 )
-from .storage import init as storage_init
-
 CORE_ROOT = Path(__file__).resolve().parent
 
 
@@ -128,7 +126,6 @@ def create(
 
     # ── Einstellungs-Registry initialisieren ──────────────────────────────────
     settings_init(app_root)
-    storage_init(app_root)
     _light_default = "1" if app_cfg.get("LIGHT_MODE", False) else "0"
     global_defaults = {
         k: v

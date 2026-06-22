@@ -94,7 +94,7 @@ def make_crud_router(
 
     Args:
         store:             ModuleStore-Instanz des Moduls (SqliteTableStore oder
-                           SqliteStorage/YamlStorage)
+                           SqliteStorage)
         key:               Ressourcenname (z.B. "hosts", "remotes")
         schema_path:       Absoluter Pfad zur schema.yaml
         label:             Anzeigename (Standard: key.capitalize())

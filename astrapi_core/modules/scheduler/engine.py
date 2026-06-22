@@ -6,7 +6,7 @@ Module registrieren Aktionen einmalig beim Start:
     from astrapi_core.modules.scheduler.engine import register_action
     register_action("hosts.check", "Hosts prüfen", check_hosts)
 
-Jobs werden in YamlStorage("scheduler_jobs") gespeichert und können
+Jobs werden in SqliteStorage("scheduler_jobs") gespeichert und können
 über die UI erstellt, bearbeitet und gelöscht werden.
 """
 import logging
@@ -35,13 +35,13 @@ def _get_timezone() -> str:
 # ── Storage (lazy) ─────────────────────────────────────────────────────────────
 
 def _jobs_store():
-    from astrapi_core.ui.storage import YamlStorage
-    return YamlStorage("scheduler_jobs")
+    from astrapi_core.ui.storage import SqliteStorage
+    return SqliteStorage("scheduler_jobs")
 
 
 def _status_store():
-    from astrapi_core.ui.storage import YamlStorage
-    return YamlStorage("scheduler_status")
+    from astrapi_core.ui.storage import SqliteStorage
+    return SqliteStorage("scheduler_status")
 
 
 class Scheduler:

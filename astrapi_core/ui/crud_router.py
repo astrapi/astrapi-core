@@ -37,7 +37,7 @@ def make_crud_router(
     """Erstellt einen generischen CRUD-Router für FastAPI.
 
     Args:
-        store:  YamlStorage-Instanz des Moduls
+        store:  SqliteStorage-Instanz des Moduls
         key:    Ressourcenname (z.B. "hosts", "tasks")
         ItemIn: Pydantic-Modell für Eingabedaten
 
