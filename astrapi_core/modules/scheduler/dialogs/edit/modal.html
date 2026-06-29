@@ -9,7 +9,7 @@
     loading_id   – HTMX-Indikator
 #}
 {% extends "partials/modal_base_form.html" %}
-{% from "partials/components/ui_macros.html" import modal_title, modal_footer, btn %}
+{% from "partials/components/ui_macros.html" import modal_title, modal_footer, btn, form_group, form_input %}
 
 {% set is_new = job is none or job.get('id') is none %}
 
@@ -27,26 +27,15 @@
 
 {% block form_content %}
   <!-- Name (volle Breite) -->
-  <div class="form-group">
-    <label class="form-label">Name <span class="required-mark">*</span></label>
-    <input type="text" name="label" class="form-input"
-           value="{{ job.label if job else '' }}"
-           placeholder="z.B. Nightly Sync"
-           data-required="true">
-    <span class="form-error"></span>
-  </div>
+  {% call form_group('Name', required=True) %}
+    {{ form_input('label', job.label if job else '', placeholder='z.B. Nightly Sync', required=True) }}
+  {% endcall %}
 
   <!-- Cron-Ausdruck -->
-  <div class="form-group">
-    <label class="form-label">Cron-Ausdruck <span class="required-mark">*</span></label>
-    <input type="text" name="cron" id="cron-input" class="form-input"
-           value="{{ job.cron if job else '' }}"
-           placeholder="0 2 * * *"
-           data-required="true"
-           autocomplete="off"
-           oninput="cronUpdate(this.value)">
-    <span class="form-error"></span>
-  </div>
+  {% call form_group('Cron-Ausdruck', required=True) %}
+    {{ form_input('cron', job.cron if job else '', placeholder='0 2 * * *', required=True,
+                  attrs='id="cron-input" autocomplete="off" oninput="cronUpdate(this.value)"') }}
+  {% endcall %}
 
   <!-- Cron-Helper -->
   <div style="margin-top:-6px;">

@@ -11,7 +11,7 @@
     all_channels – Dict {ch_id: ch_dict} der verfügbaren Kanäle
 #}
 {% extends "partials/modal_base_form.html" %}
-{% from "partials/components/ui_macros.html" import modal_title, modal_footer %}
+{% from "partials/components/ui_macros.html" import modal_title, modal_footer, form_select, form_input %}
 
 {% set is_edit = job is not none %}
 {% set v = job or {} %}
@@ -33,10 +33,10 @@
   {# ── Name ─────────────────────────────────────────────────────────────── #}
   <div class="form-group">
     <label class="form-label">Name <span class="required-mark">*</span></label>
-    <input type="text" name="label" id="job-name" class="form-input"
-           value="{{ v.get('label', '') }}"
-           placeholder="z. B. Server-Fehler → ntfy"
-           oninput="this.classList.remove('is-invalid'); var _e=document.getElementById(this.id+'-error'); if(_e)_e.style.display='none';">
+    {%- set _attrs -%}
+    id="job-name" oninput="this.classList.remove('is-invalid'); var _e=document.getElementById(this.id+'-error'); if(_e)_e.style.display='none';"
+    {%- endset -%}
+    {{ form_input('label', v.get('label', ''), placeholder='z. B. Server-Fehler → ntfy', attrs=_attrs) }}
     <span id="job-name-error" class="form-error" style="display:none;">Bitte einen Namen eingeben.</span>
   </div>
 
@@ -44,15 +44,15 @@
   <div class="form-group">
     <label class="form-label">Kanal <span class="required-mark">*</span></label>
     {% if all_channels %}
-      <select name="channel_id" id="job-channel" class="form-input"
-              onchange="this.classList.remove('is-invalid'); var _e=document.getElementById(this.id+'-error'); if(_e)_e.style.display='none';">
+      {% call form_select('channel_id', required=True,
+                          attrs='id="job-channel" onchange="this.classList.remove(\'is-invalid\'); var _e=document.getElementById(this.id+\'-error\'); if(_e)_e.style.display=\'none\';"') %}
         <option value="" {{ 'selected' if not cur_channel else '' }}>– Kanal wählen –</option>
         {% for ch_id, ch in all_channels.items() %}
           <option value="{{ ch_id }}" {{ 'selected' if ch_id == cur_channel else '' }}>
             {{ ch.get('label') or ch_id }}
           </option>
         {% endfor %}
-      </select>
+      {% endcall %}
       <span id="job-channel-error" class="form-error" style="display:none;">Bitte einen Kanal auswählen.</span>
     {% else %}
       <div style="padding:10px 14px; border-radius:var(--rad);

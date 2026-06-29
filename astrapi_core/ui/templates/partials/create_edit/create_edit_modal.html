@@ -18,7 +18,7 @@
     span: N        – Feld belegt N Spalten im Section-Grid
 #}
 {% extends "partials/modal_base_form.html" %}
-{% from "partials/components/ui_macros.html" import modal_title, modal_footer %}
+{% from "partials/components/ui_macros.html" import modal_title, modal_footer, form_group, form_input %}
 
 {% set enabled_field = schema | selectattr('name', 'equalto', 'enabled') | list | first %}
 {% set enabled_val   = (values if values is mapping else (item if item is mapping else {})).get('enabled', True) %}
@@ -45,21 +45,14 @@
 
   {# ── ID-Feld (nur beim Anlegen) ─────────────────────────────────────── #}
   {% if id_field and not item %}
-    <div class="form-group">
-      <label class="form-label">
-        {{ id_field.label }}
-        <span class="required-mark">*</span>
-      </label>
-      <input
-        type="text"
-        name="{{ id_field.name }}"
-        class="form-input"
-        data-required="true"
-        {% if id_field.placeholder %}placeholder="{{ id_field.placeholder }}"{% endif %}
-        {% if id_field.max %}maxlength="{{ id_field.max }}"{% endif %}
-      >
-      <span class="form-error"></span>
-    </div>
+    {%- set _attrs -%}
+      {%- if id_field.max %}maxlength="{{ id_field.max }}"{% endif -%}
+    {%- endset -%}
+    {% call form_group(id_field.label, required=True) %}
+      {{ form_input(id_field.name, required=True,
+                    placeholder=id_field.placeholder | default(''),
+                    attrs=_attrs) }}
+    {% endcall %}
   {% endif %}
 
   {% if has_sections %}

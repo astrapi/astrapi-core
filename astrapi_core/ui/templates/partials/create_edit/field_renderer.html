@@ -1,124 +1,97 @@
+{% from 'partials/components/ui_macros.html' import form_group, form_input, form_select, form_textarea, toggle_field %}
+
 {% if field.type == "boolean" %}
-<div class="field-toggle-row">
-  <input
-    type="checkbox"
-    name="{{ field.name }}"
-    {% if values and values[field.name] %}checked{% endif %}
-    id="field-{{ field.name }}"
-    style="display:none;"
-  >
-  <button
-    type="button"
-    id="toggle-{{ field.name }}"
-    class="toggle-switch {% if values and values[field.name] %}toggle-on{% else %}toggle-off{% endif %}"
-    onclick="
-      var cb = document.getElementById('field-{{ field.name }}');
-      cb.checked = !cb.checked;
-      this.classList.toggle('toggle-on', cb.checked);
-      this.classList.toggle('toggle-off', !cb.checked);
-    "
-  ><span class="toggle-knob"></span></button>
-</div>
+{{ toggle_field(field.name,
+               checked=values and values[field.name],
+               label='',
+               field_id='field-' ~ field.name) }}
 
-{% else %}
+{% elif field.type == "text" %}
+  {%- set _attrs -%}
+    {%- if field.max %}maxlength="{{ field.max }}" {% endif -%}
+    {%- if field.min_length %}minlength="{{ field.min_length }}" {% endif -%}
+    {%- if field.pattern %}pattern="{{ field.pattern }}" {% endif -%}
+    {%- if field.mono %}style="font-family:var(--mono);"{% endif -%}
+  {%- endset -%}
+  {% call form_group(field.label, required=field.required) %}
+    {{ form_input(field.name, values[field.name] if values else '',
+                  required=field.required,
+                  placeholder=field.placeholder | default(''),
+                  attrs=_attrs) }}
+  {% endcall %}
+
+{% elif field.type == "number" %}
+  {%- set _attrs -%}
+    {%- if field.min is defined %}min="{{ field.min }}" {% endif -%}
+    {%- if field.max is defined %}max="{{ field.max }}"{% endif -%}
+  {%- endset -%}
+  {% call form_group(field.label, required=field.required) %}
+    {{ form_input(field.name, values[field.name] if values else '',
+                  type='number', required=field.required, attrs=_attrs) }}
+  {% endcall %}
+
+{% elif field.type == "select" %}
+  {% call form_group(field.label, required=field.required) %}
+    {{ form_select(field.name, field.options,
+                   values[field.name] if values else '',
+                   required=field.required) }}
+  {% endcall %}
+
+{% elif field.type == "password" %}
+  {% call form_group(field.label, required=field.required) %}
+    {{ form_input(field.name, type='password',
+                  placeholder=field.placeholder | default('••••••••'),
+                  attrs='autocomplete="new-password"') }}
+  {% endcall %}
+
+{% elif field.type == "textarea" %}
+  {% call form_group(field.label, required=field.required) %}
+    {{ form_textarea(field.name, values[field.name] if values else '',
+                     placeholder=field.placeholder | default(''),
+                     attrs=('style="font-family:var(--mono);"' if field.mono else '')) }}
+  {% endcall %}
+
+{% elif field.type == "list" %}
 <div class="form-group">
-  <label class="form-label">
-    {{ field.label }}
-    {% if field.required %}<span class="required-mark">*</span>{% endif %}
-  </label>
-
-  {% if field.type == "text" %}
-    <input
-      type="text"
-      name="{{ field.name }}"
-      value="{{ values[field.name] if values else '' }}"
-      {% if field.max %}maxlength="{{ field.max }}"{% endif %}
-      {% if field.min_length %}minlength="{{ field.min_length }}"{% endif %}
-      {% if field.pattern %}pattern="{{ field.pattern }}"{% endif %}
-      {% if field.required %}data-required="true"{% endif %}
-      {% if field.placeholder %}placeholder="{{ field.placeholder }}"{% endif %}
-      class="form-input"
-      {% if field.mono %}style="font-family:var(--mono);"{% endif %}
-    >
-    <span class="form-error"></span>
-
-  {% elif field.type == "number" %}
-    <input
-      type="number"
-      name="{{ field.name }}"
-      value="{{ values[field.name] if values else '' }}"
-      {% if field.min is defined %}min="{{ field.min }}"{% endif %}
-      {% if field.max is defined %}max="{{ field.max }}"{% endif %}
-      {% if field.required %}data-required="true"{% endif %}
-      class="form-input"
-    >
-    <span class="form-error"></span>
-
-  {% elif field.type == "select" %}
-    <select
-      name="{{ field.name }}"
-      {% if field.required %}data-required="true"{% endif %}
-      class="form-select"
-    >
-      <option value="" style="color:var(--text-muted);">– bitte wählen –</option>
-      {% for opt in field.options %}
-        {% if opt is mapping %}
-          <option value="{{ opt.value }}"
-            {% if values and values[field.name] == opt.value %}selected{% endif %}
-          >{{ opt.label }}</option>
-        {% else %}
-          <option value="{{ opt }}"
-            {% if values and values[field.name] == opt %}selected{% endif %}
-          >{{ opt }}</option>
-        {% endif %}
-      {% endfor %}
-    </select>
-    <span class="form-error"></span>
-
-  {% elif field.type == "password" %}
-    <input
-      type="password"
-      name="{{ field.name }}"
-      class="form-input"
-      placeholder="{{ field.placeholder if field.placeholder else '••••••••' }}"
-      autocomplete="new-password"
-    >
-
-  {% elif field.type == "list" %}
-    {% include "partials/create_edit/list_field.html" %}
-
-  {% elif field.type == "info" %}
-    {% set _raw = values[field.name] if values else '' %}
-    {% if field.resolve == "remote_host" and resolve_remote_host is defined %}
-      {% set _raw = resolve_remote_host(_raw) %}
-    {% endif %}
-    <div class="form-info-value"
-         style="padding:6px 0; color:var(--text-muted); font-size:0.9em;">
-      {{ _raw or '—' }}
-    </div>
-
-  {% elif field.type == "multiselect" %}
-    {% set current = values[field.name] if values else [] %}
-    <div style="display:flex; flex-wrap:wrap; gap:6px; margin-top:4px;">
-      {% for opt in field.options %}
-        {% if opt is mapping %}
-          {% set opt_value = opt.value %}
-          {% set opt_label = opt.label %}
-        {% else %}
-          {% set opt_value = opt %}
-          {% set opt_label = opt %}
-        {% endif %}
-        {% set is_checked = opt_value in current %}
-        <label style="cursor:pointer; user-select:none;"
-               onclick="var cb=this.querySelector('input'); cb.checked=!cb.checked; this.querySelector('span').className='badge-pill '+(cb.checked?'badge-live':'badge-muted');">
-          <input type="checkbox" name="{{ field.name }}" value="{{ opt_value }}"
-                 {% if is_checked %}checked{% endif %}
-                 style="display:none;">
-          <span class="badge-pill {{ 'badge-live' if is_checked else 'badge-muted' }}">{{ opt_label }}</span>
-        </label>
-      {% endfor %}
-    </div>
-  {% endif %}
-
+  <label class="form-label">{{ field.label }}{% if field.required %}<span class="required-mark">*</span>{% endif %}</label>
+  {% include "partials/create_edit/list_field.html" %}
 </div>
+
+{% elif field.type == "info" %}
+<div class="form-group">
+  <label class="form-label">{{ field.label }}</label>
+  {% set _raw = values[field.name] if values else '' %}
+  {% if field.resolve == "remote_host" and resolve_remote_host is defined %}
+    {% set _raw = resolve_remote_host(_raw) %}
+  {% endif %}
+  <div class="form-info-value" style="padding:6px 0; color:var(--text-muted); font-size:0.9em;">
+    {{ _raw or '—' }}
+  </div>
+</div>
+
+{% elif field.type == "multiselect" %}
+<div class="form-group">
+  <label class="form-label">{{ field.label }}</label>
+  {% set current = values[field.name] if values else [] %}
+  <div style="display:flex; flex-wrap:wrap; gap:6px; margin-top:4px;">
+    {% for opt in field.options %}
+      {% if opt is mapping %}
+        {% set opt_value = opt.value %}
+        {% set opt_label = opt.label %}
+      {% else %}
+        {% set opt_value = opt %}
+        {% set opt_label = opt %}
+      {% endif %}
+      {% set is_checked = opt_value in current %}
+      <label style="cursor:pointer; user-select:none;"
+             onclick="var cb=this.querySelector('input'); cb.checked=!cb.checked; this.querySelector('span').className='badge-pill '+(cb.checked?'badge-live':'badge-muted');">
+        <input type="checkbox" name="{{ field.name }}" value="{{ opt_value }}"
+               {% if is_checked %}checked{% endif %}
+               style="display:none;">
+        <span class="badge-pill {{ 'badge-live' if is_checked else 'badge-muted' }}">{{ opt_label }}</span>
+      </label>
+    {% endfor %}
+  </div>
+</div>
+
 {% endif %}

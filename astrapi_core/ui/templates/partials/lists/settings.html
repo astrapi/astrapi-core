@@ -3,7 +3,7 @@
   Einstellungen – optionale Karten: Update, SSH-Key, Moduleinstellungen
 #}
 {% import 'partials/components/ui_macros.html' as ui %}
-{% from 'partials/components/ui_macros.html' import btn_save %}
+{% from 'partials/components/ui_macros.html' import btn_save, form_input %}
 
 <div id="settings-container" data-debug-label="content-item">
 
@@ -29,9 +29,9 @@
             <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px;">
               <div class="form-group" style="margin:0;">
                 <label class="form-label">Einträge pro Seite</label>
-                <input type="number" name="PAGINATION_PAGE_SIZE" class="form-control"
-                       min="5" max="200"
-                       value="{{ settings.get('PAGINATION_PAGE_SIZE', 15) }}">
+                {{ form_input('PAGINATION_PAGE_SIZE',
+                             settings.get('PAGINATION_PAGE_SIZE', 15),
+                             type='number', attrs='min="5" max="200"') }}
                 <div style="font-size:11px; color:var(--text-3); margin-top:4px;">Gilt für alle Listen-Ansichten in der App</div>
               </div>
             </div>

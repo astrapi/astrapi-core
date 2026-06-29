@@ -1,4 +1,4 @@
-{% from "partials/components/ui_macros.html" import btn %}
+{% from "partials/components/ui_macros.html" import btn, form_textarea %}
 <div id="ssh-key-section">
 
   {% if flash %}
@@ -10,10 +10,8 @@
   {% if pubkey %}
   <div class="form-group" style="margin-bottom:12px;">
     <label class="form-label">Öffentlicher SSH-Key</label>
-    <textarea class="form-input" rows="3" readonly
-              style="font-family:var(--mono); font-size:12px; resize:none; cursor:text;"
-              onclick="this.select()"
-    >{{ pubkey }}</textarea>
+    {{ form_textarea('pubkey', pubkey, rows=3,
+                     attrs='readonly style="font-family:var(--mono); font-size:12px; resize:none; cursor:text;" onclick="this.select()"') }}
     <div class="form-hint">Diesen Key in <code>~/.ssh/authorized_keys</code> auf den Remote-Servern eintragen.</div>
   </div>
   {% else %}

@@ -161,6 +161,100 @@
 {{ btn(label, variant='primary', type=type, attrs=_id ~ ('disabled' if disabled else '')) }}
 {% endmacro %}
 
+{# ── Form-Steuerelemente ──────────────────────────────────────────────────── #}
+{# Alle Formular-Controls bauen auf diesen Macros auf (G-013).                #}
+{# Ausnahmen: hidden-Inputs, multiselect (badge-pill), list (Alpine.js),      #}
+{#            filter-selects im List-Header (header_control), borg-Browser     #}
+
+{#
+  form_group(label, required, help)
+  Caller-Macro: Wrapper für ein Formularfeld (Label + Control + Fehler-Span).
+#}
+{% macro form_group(label='', required=False, help='') %}
+<div class="form-group">
+  {% if label %}
+  <label class="form-label">{{ label }}{% if required %}<span class="required-mark">*</span>{% endif %}</label>
+  {% endif %}
+  {{ caller() }}
+  {% if help %}<span class="form-help">{{ help }}</span>{% endif %}
+  <span class="form-error"></span>
+</div>
+{% endmacro %}
+
+{#
+  form_input(name, value, type, required, placeholder, attrs)
+  Rendert <input class="form-input">. Passwort-Felder: value wird nie gerendert.
+  Varianten via attrs: style="font-family:var(--mono);", readonly, autocomplete, HTMX-Attribute.
+#}
+{% macro form_input(name, value='', type='text', required=False, placeholder='', attrs='') %}
+<input type="{{ type }}"
+       name="{{ name }}"
+       class="form-input"
+       {% if type != 'password' %}value="{{ value }}"{% endif %}
+       {% if required %}data-required="true"{% endif %}
+       {% if placeholder %}placeholder="{{ placeholder }}"{% endif %}
+       {% if attrs %}{{ attrs | safe }}{% endif %}>
+{% endmacro %}
+
+{#
+  form_select(name, options, value, required, placeholder, attrs)
+  Rendert <select class="form-select">. options: [{value, label}] oder [str].
+  Caller: {% call form_select('name', attrs='...') %}<option>...</option>{% endcall %}
+          für komplexe/dynamische Options-Strukturen (kein placeholder in diesem Modus).
+#}
+{% macro form_select(name, options=[], value='', required=False, placeholder='– bitte wählen –', attrs='') %}
+<select name="{{ name }}"
+        class="form-select"
+        {% if required %}data-required="true"{% endif %}
+        {% if attrs %}{{ attrs | safe }}{% endif %}>
+  {% if caller is defined %}
+  {{ caller() }}
+  {% else %}
+  {% if placeholder %}<option value="" style="color:var(--text-3);">{{ placeholder }}</option>{% endif %}
+  {% for opt in options %}
+  {% if opt is mapping %}
+  <option value="{{ opt.value }}" {% if value|string == opt.value|string %}selected{% endif %}>{{ opt.label }}</option>
+  {% else %}
+  <option value="{{ opt }}" {% if value|string == opt|string %}selected{% endif %}>{{ opt }}</option>
+  {% endif %}
+  {% endfor %}
+  {% endif %}
+</select>
+{% endmacro %}
+
+{#
+  form_textarea(name, value, rows, placeholder, attrs)
+  Rendert <textarea class="form-input">.
+  Readonly: attrs='readonly style="resize:none; cursor:text;" onclick="this.select()"'
+#}
+{% macro form_textarea(name, value='', rows=3, placeholder='', attrs='') %}
+<textarea name="{{ name }}"
+          class="form-input"
+          rows="{{ rows }}"
+          {% if placeholder %}placeholder="{{ placeholder }}"{% endif %}
+          {% if attrs %}{{ attrs | safe }}{% endif %}>{{ value }}</textarea>
+{% endmacro %}
+
+{#
+  toggle_field(name, checked, label, field_id)
+  Toggle-Switch mit Hidden-Input (liefert immer "0" oder "1").
+  Ersetzt alle raw hidden+checkbox+button-Konstrukte in Forms.
+#}
+{% macro toggle_field(name, checked=False, label='Aktiviert', field_id='') %}
+{% set _id = field_id if field_id else ('tf-' ~ name) %}
+<label class="toggle-field">
+  <input type="hidden" name="{{ name }}" value="0">
+  <input type="checkbox" name="{{ name }}" value="1" id="{{ _id }}"
+         style="display:none;" {{ 'checked' if checked }}>
+  <button type="button"
+          class="toggle-switch {{ 'toggle-on' if checked else 'toggle-off' }}"
+          onclick="var c=document.getElementById('{{ _id }}');c.checked=!c.checked;this.className='toggle-switch '+(c.checked?'toggle-on':'toggle-off');">
+    <span class="toggle-knob"></span>
+  </button>
+  {% if label %}<span class="toggle-field-label">{{ label }}</span>{% endif %}
+</label>
+{% endmacro %}
+
 {# ── Modal-Standard-Komponenten ──────────────────────────────────────────── #}
 {# Alle Modals erben von partials/modal_base.html (oder _form / _info).       #}
 {# Die Außenstruktur (Backdrop, Container, Escape-Key) ist dort definiert.    #}

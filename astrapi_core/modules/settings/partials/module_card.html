@@ -3,7 +3,7 @@
   Inline-Einstellungskarte für ein Modul auf der Einstellungsseite.
   Erwartet im Kontext: data.mod, data.schema, data.values
 #}
-{% from "partials/components/ui_macros.html" import btn, btn_save %}
+{% from "partials/components/ui_macros.html" import btn, btn_save, form_input, form_select, form_textarea, toggle_field %}
 {% set mod    = data['mod'] %}
 {% set schema = data['schema'] %}
 {% set values = data['values'] %}
@@ -55,25 +55,11 @@
             <label class="form-label">{{ field.label }}</label>
 
             {% if ftype == 'select' %}
-            <select name="{{ fkey }}" class="form-select">
-              {% for opt in field.options %}
-                {% if opt is mapping %}
-                  <option value="{{ opt.value }}" {{ 'selected' if fval == opt.value }}>{{ opt.label }}</option>
-                {% else %}
-                  <option value="{{ opt }}" {{ 'selected' if fval == opt }}>{{ opt }}</option>
-                {% endif %}
-              {% endfor %}
-            </select>
+            {{ form_select(fkey, field.options, fval, placeholder='') }}
 
             {% elif ftype == 'checkbox' %}
-            <label class="toggle-field" style="padding-top:4px;">
-              <input type="hidden" name="{{ fkey }}" value="0">
-              <input type="checkbox" name="{{ fkey }}" value="1"
-                     style="width:16px; height:16px;"
-                     {{ 'checked' if fval in (True, '1', 'true', 'on') }}
-                     onchange="this.form.querySelector('[name={{ fkey }}][type=hidden]').disabled=this.checked">
-              <span class="toggle-field-label">{{ field.get('checkbox_label', 'Aktiviert') }}</span>
-            </label>
+            {{ toggle_field(fkey, fval in (True, '1', 'true', 'on'),
+                            label='', field_id='tf-' ~ fkey) }}
 
             {% elif ftype == 'list' %}
             {% set flist = fval if fval is iterable and fval is not string else [] %}
@@ -86,7 +72,7 @@
                   <input type="text"
                          :name="`{{ fkey }}_${i}`"
                          x-model="lines[i]"
-                         class="form-input"
+                         class="form-input" {# G-013-Ausnahme: Alpine.js x-model mit dynamischem :name #}
                          style="flex:1;{% if field.get('mono') %}font-family:var(--font-mono);{% endif %}font-size:13px;">
                   <button type="button" @click="remove(i)"
                           class="btn-icon btn-icon-danger" title="Entfernen">
@@ -105,21 +91,27 @@
             </div>
 
             {% elif ftype == 'textarea' %}
-            <textarea name="{{ fkey }}" class="form-input"
-                      rows="{{ field.get('rows', 3) }}"
-                      placeholder="{{ field.get('placeholder', '') }}"
-                      style="resize:vertical; font-family:{% if field.get('mono') %}var(--font-mono){% else %}inherit{% endif %};">{{ fval }}</textarea>
+            {%- set _ta_attrs -%}
+              style="resize:vertical; font-family:{% if field.get('mono') %}var(--font-mono){% else %}inherit{% endif %};"
+            {%- endset -%}
+            {{ form_textarea(fkey, fval,
+                             rows=field.get('rows', 3),
+                             placeholder=field.get('placeholder', ''),
+                             attrs=_ta_attrs) }}
 
             {% elif ftype == 'password' %}
-            <input type="password" name="{{ fkey }}" class="form-input"
-                   placeholder="{{ field.get('placeholder', '••••••••') }}"
-                   autocomplete="new-password">
+            {{ form_input(fkey, type='password',
+                          placeholder=field.get('placeholder', '••••••••'),
+                          attrs='autocomplete="new-password"') }}
 
             {% else %}
-            <input type="{{ ftype }}" name="{{ fkey }}" class="form-input"
-                   value="{{ fval }}"
-                   placeholder="{{ field.get('placeholder', '') }}"
-                   style="{% if field.get('mono') %}font-family:var(--font-mono);{% endif %}{% if field.get('width') %}width:{{ field.width }};{% endif %}">
+            {%- set _attrs -%}
+              {%- if field.get('mono') %}style="font-family:var(--font-mono);{% if field.get('width') %}width:{{ field.width }};{% endif %}"
+              {%- elif field.get('width') %}style="width:{{ field.width }};"{% endif -%}
+            {%- endset -%}
+            {{ form_input(fkey, fval, type=ftype,
+                          placeholder=field.get('placeholder', ''),
+                          attrs=_attrs) }}
             {% endif %}
 
             {% if field.get('description') %}
