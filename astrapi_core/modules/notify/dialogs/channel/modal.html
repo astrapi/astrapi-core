@@ -9,7 +9,7 @@
     selected_backend – Backend-Key (ntfy, …)
 #}
 {% extends "partials/modal_base_form.html" %}
-{% from "partials/components/ui_macros.html" import modal_title, modal_footer %}
+{% from "partials/components/ui_macros.html" import modal_title, modal_footer, form_input %}
 
 {% set is_edit = channel is not none %}
 {% set v = channel or {} %}
@@ -29,16 +29,17 @@
 {% endblock %}
 
 {% block form_content %}
+  {%- set _oninput -%}
+  oninput="this.classList.remove('is-invalid'); var _e=document.getElementById(this.id+'-error'); if(_e)_e.style.display='none';"
+  {%- endset -%}
   {# ── Backend (fest, nicht änderbar) ────────────────────────────────── #}
   <input type="hidden" name="backend" value="{{ cur_backend }}">
 
   {# ── Name ─────────────────────────────────────────────────────────────── #}
   <div class="form-group">
     <label class="form-label">Name <span class="required-mark">*</span></label>
-    <input type="text" name="label" id="ch-label" class="form-input"
-           value="{{ v.get('label', '') }}"
-           placeholder="z. B. Mein ntfy-Server"
-           oninput="this.classList.remove('is-invalid'); var _e=document.getElementById(this.id+'-error'); if(_e)_e.style.display='none';">
+    {{ form_input('label', v.get('label', ''), placeholder='z. B. Mein ntfy-Server',
+                  attrs='id="ch-label" ' ~ _oninput) }}
     <span id="ch-label-error" class="form-error" style="display:none;">Bitte einen Namen eingeben.</span>
   </div>
 
@@ -47,18 +48,14 @@
   <div style="display:flex; flex-direction:column; gap:12px; margin-top:4px;">
     <div class="form-group">
       <label class="form-label">Server-URL <span class="required-mark">*</span></label>
-      <input type="url" name="ntfy_url" id="ch-ntfy-url" class="form-input"
-             value="{{ v.get('ntfy_url') or 'https://ntfy.sh' }}"
-             placeholder="https://ntfy.sh"
-             oninput="this.classList.remove('is-invalid'); var _e=document.getElementById(this.id+'-error'); if(_e)_e.style.display='none';">
+      {{ form_input('ntfy_url', v.get('ntfy_url') or 'https://ntfy.sh', type='url',
+                    placeholder='https://ntfy.sh', attrs='id="ch-ntfy-url" ' ~ _oninput) }}
       <span id="ch-ntfy-url-error" class="form-error" style="display:none;">Bitte eine gültige URL eingeben.</span>
     </div>
     <div class="form-group">
       <label class="form-label">Thema <span class="required-mark">*</span></label>
-      <input type="text" name="ntfy_topic" id="ch-ntfy-topic" class="form-input"
-             value="{{ v.get('ntfy_topic', '') }}"
-             placeholder="mein-thema"
-             oninput="this.classList.remove('is-invalid'); var _e=document.getElementById(this.id+'-error'); if(_e)_e.style.display='none';">
+      {{ form_input('ntfy_topic', v.get('ntfy_topic', ''), placeholder='mein-thema',
+                    attrs='id="ch-ntfy-topic" ' ~ _oninput) }}
       <span id="ch-ntfy-topic-error" class="form-error" style="display:none;">Bitte ein Thema eingeben.</span>
     </div>
     <label style="display:flex; align-items:center; gap:8px; cursor:pointer;">
@@ -77,65 +74,51 @@
     <div style="display:grid; grid-template-columns:2fr 1fr; gap:12px;">
       <div class="form-group" style="margin:0;">
         <label class="form-label">SMTP-Server <span class="required-mark">*</span></label>
-        <input type="text" name="mail_smtp_host" id="ch-smtp-host" class="form-input"
-               value="{{ v.get('mail_smtp_host', '') }}"
-               placeholder="smtp.gmail.com"
-               oninput="this.classList.remove('is-invalid'); var _e=document.getElementById(this.id+'-error'); if(_e)_e.style.display='none';">
+        {{ form_input('mail_smtp_host', v.get('mail_smtp_host', ''), placeholder='smtp.gmail.com',
+                      attrs='id="ch-smtp-host" ' ~ _oninput) }}
         <span id="ch-smtp-host-error" class="form-error" style="display:none;">Pflichtfeld.</span>
       </div>
       <div class="form-group" style="margin:0;">
         <label class="form-label">Port <span class="required-mark">*</span></label>
-        <input type="number" name="mail_smtp_port" id="ch-smtp-port" class="form-input"
-               value="{{ v.get('mail_smtp_port') or 587 }}"
-               min="1" max="65535" placeholder="587"
-               oninput="this.classList.remove('is-invalid'); var _e=document.getElementById(this.id+'-error'); if(_e)_e.style.display='none';">
+        {{ form_input('mail_smtp_port', v.get('mail_smtp_port') or 587, type='number',
+                      placeholder='587', attrs='id="ch-smtp-port" min="1" max="65535" ' ~ _oninput) }}
         <span id="ch-smtp-port-error" class="form-error" style="display:none;">Pflichtfeld.</span>
       </div>
     </div>
     <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px;">
       <div class="form-group" style="margin:0;">
         <label class="form-label">Benutzername <span class="required-mark">*</span></label>
-        <input type="text" name="mail_smtp_user" id="ch-smtp-user" class="form-input"
-               value="{{ v.get('mail_smtp_user', '') }}"
-               placeholder="user@example.com"
-               autocomplete="username"
-               oninput="this.classList.remove('is-invalid'); var _e=document.getElementById(this.id+'-error'); if(_e)_e.style.display='none';">
+        {{ form_input('mail_smtp_user', v.get('mail_smtp_user', ''), placeholder='user@example.com',
+                      attrs='id="ch-smtp-user" autocomplete="username" ' ~ _oninput) }}
         <span id="ch-smtp-user-error" class="form-error" style="display:none;">Pflichtfeld.</span>
       </div>
       <div class="form-group" style="margin:0;">
         <label class="form-label">Passwort <span class="required-mark">*</span></label>
-        <input type="password" name="mail_smtp_password" id="ch-smtp-pass" class="form-input"
-               value="{{ v.get('mail_smtp_password', '') }}"
-               placeholder="••••••••"
-               autocomplete="new-password"
-               oninput="this.classList.remove('is-invalid'); var _e=document.getElementById(this.id+'-error'); if(_e)_e.style.display='none';">
+        {%- set _pw_attrs -%}
+        id="ch-smtp-pass" autocomplete="new-password" value="{{ v.get('mail_smtp_password', '') }}" {{ _oninput }}
+        {%- endset -%}
+        {{ form_input('mail_smtp_password', type='password', placeholder='••••••••', attrs=_pw_attrs) }}
         <span id="ch-smtp-pass-error" class="form-error" style="display:none;">Pflichtfeld.</span>
       </div>
     </div>
     <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px;">
       <div class="form-group" style="margin:0;">
         <label class="form-label">Von <span class="required-mark">*</span></label>
-        <input type="email" name="mail_from" id="ch-mail-from" class="form-input"
-               value="{{ v.get('mail_from', '') }}"
-               placeholder="app@example.com"
-               oninput="this.classList.remove('is-invalid'); var _e=document.getElementById(this.id+'-error'); if(_e)_e.style.display='none';">
+        {{ form_input('mail_from', v.get('mail_from', ''), type='email',
+                      placeholder='app@example.com', attrs='id="ch-mail-from" ' ~ _oninput) }}
         <span id="ch-mail-from-error" class="form-error" style="display:none;">Pflichtfeld.</span>
       </div>
       <div class="form-group" style="margin:0;">
         <label class="form-label">An <span class="required-mark">*</span></label>
-        <input type="email" name="mail_to" id="ch-mail-to" class="form-input"
-               value="{{ v.get('mail_to', '') }}"
-               placeholder="admin@example.com"
-               oninput="this.classList.remove('is-invalid'); var _e=document.getElementById(this.id+'-error'); if(_e)_e.style.display='none';">
+        {{ form_input('mail_to', v.get('mail_to', ''), type='email',
+                      placeholder='admin@example.com', attrs='id="ch-mail-to" ' ~ _oninput) }}
         <span id="ch-mail-to-error" class="form-error" style="display:none;">Pflichtfeld.</span>
       </div>
     </div>
     <div class="form-group">
       <label class="form-label">Betreff-Präfix <span class="required-mark">*</span></label>
-      <input type="text" name="mail_subject_prefix" id="ch-subject-prefix" class="form-input"
-             value="{{ v.get('mail_subject_prefix') or '[Notify]' }}"
-             placeholder="[Notify]"
-             oninput="this.classList.remove('is-invalid'); var _e=document.getElementById(this.id+'-error'); if(_e)_e.style.display='none';">
+      {{ form_input('mail_subject_prefix', v.get('mail_subject_prefix') or '[Notify]',
+                    placeholder='[Notify]', attrs='id="ch-subject-prefix" ' ~ _oninput) }}
       <span id="ch-subject-prefix-error" class="form-error" style="display:none;">Pflichtfeld.</span>
     </div>
     <label style="display:flex; align-items:center; gap:8px; cursor:pointer;">
