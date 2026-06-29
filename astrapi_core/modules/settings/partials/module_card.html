@@ -3,6 +3,7 @@
   Inline-Einstellungskarte für ein Modul auf der Einstellungsseite.
   Erwartet im Kontext: data.mod, data.schema, data.values
 #}
+{% from "partials/components/ui_macros.html" import btn, btn_save %}
 {% set mod    = data['mod'] %}
 {% set schema = data['schema'] %}
 {% set values = data['values'] %}
@@ -96,14 +97,10 @@
                 </div>
               </template>
               <div>
-                <button type="button" @click="add()"
-                        class="btn btn-ghost btn-sm" style="gap:5px;">
-                  <svg width="13" height="13" viewBox="0 0 24 24"
-                       fill="currentColor" stroke="none">
-                    <use href="#icon-plus"></use>
-                  </svg>
+                {% call btn(attrs='style="gap:5px;" @click="add()"') %}
+                  <svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor" stroke="none"><use href="#icon-plus"></use></svg>
                   Hinzufügen
-                </button>
+                {% endcall %}
               </div>
             </div>
 
@@ -137,7 +134,7 @@
         {% if ns.grid_open %}</div>{% endif %}
 
         <div class="form-actions" style="padding-bottom:4px;">
-          <button type="submit" class="btn btn-primary btn-sm">Speichern</button>
+          {{ btn_save() }}
         </div>
 
       </form>

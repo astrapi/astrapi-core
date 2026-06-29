@@ -3,6 +3,7 @@
   Einstellungen – optionale Karten: Update, SSH-Key, Moduleinstellungen
 #}
 {% import 'partials/components/ui_macros.html' as ui %}
+{% from 'partials/components/ui_macros.html' import btn_save %}
 
 <div id="settings-container" data-debug-label="content-item">
 
@@ -34,8 +35,8 @@
                 <div style="font-size:11px; color:var(--text-3); margin-top:4px;">Gilt für alle Listen-Ansichten in der App</div>
               </div>
             </div>
-            <div>
-              <button type="submit" class="btn btn-primary btn-sm">Speichern</button>
+            <div class="form-actions">
+              {{ btn_save() }}
             </div>
           </form>
       </div>

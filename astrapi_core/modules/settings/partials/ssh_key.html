@@ -1,3 +1,4 @@
+{% from "partials/components/ui_macros.html" import btn %}
 <div id="ssh-key-section">
 
   {% if flash %}
@@ -21,15 +22,10 @@
   </div>
   {% endif %}
 
-  <button
-    type="button"
-    class="btn btn-sm {{ 'btn-secondary' if pubkey else 'btn-primary' }}"
-    hx-post="/ui/settings/ssh-key/generate"
-    hx-target="#ssh-key-section"
-    hx-swap="outerHTML"
-    hx-confirm="{{ 'Bestehendes Schlüsselpaar ersetzen? Der alte Key wird als .bak gesichert.' if pubkey else '' }}"
-  >
-    {{ 'Schlüsselpaar neu generieren' if pubkey else 'SSH-Key erzeugen' }}
-  </button>
+  {{ btn(
+    'Schlüsselpaar neu generieren' if pubkey else 'SSH-Key erzeugen',
+    attrs='hx-post="/ui/settings/ssh-key/generate" hx-target="#ssh-key-section" hx-swap="outerHTML"'
+          ~ (' hx-confirm="Bestehendes Schlüsselpaar ersetzen? Der alte Key wird als .bak gesichert."' if pubkey else '')
+  ) }}
 
 </div>

@@ -1,3 +1,4 @@
+{% from "partials/components/ui_macros.html" import btn %}
 <div
   x-data='{
     "lines": {{ (values or {}).get(field.name, []) | tojson }},
@@ -27,14 +28,9 @@
   </template>
 
   <div>
-    <button
-      type="button"
-      @click="add()"
-      class="btn btn-ghost btn-sm"
-      style="gap:5px;"
-    >
+    {% call btn(attrs='style="gap:5px;" @click="add()"') %}
       <svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor" stroke="none"><use href="#icon-plus"></use></svg>
       Hinzufügen
-    </button>
+    {% endcall %}
   </div>
 </div>

@@ -195,10 +195,6 @@ def create(
     jinja_env.globals["module_obj"] = _module_obj
 
     def _global_ctx() -> dict:
-        def module_has_settings(key: str) -> bool:
-            m = _mod_map.get(key)
-            return bool(m and m.settings_schema and m.settings_button)
-
         def module_obj(key: str):
             """Gibt das vollständige Module-Objekt zurück (für deklaratives UI)."""
             return _module_obj(key)
@@ -238,7 +234,6 @@ def create(
             "app_lang": _srget("APP_LANG", app_cfg.get("APP_LANG", "de")),
             "light_mode": (_light == "1" or _light is True),
             "modules": modules,
-            "module_has_settings": module_has_settings,
             "module_obj": module_obj,
             "module_label": module_label,
             "module_card_actions": module_card_actions,
@@ -486,75 +481,6 @@ def _register_module_settings_routes(api, modules: list) -> None:
 
     from .settings_registry import get_module
     from .settings_registry import set_many as _set_many
-
-    mod_map = {m.key: m for m in modules if m.settings_schema}
-    if not mod_map:
-        return
-
-    @api.api_route(
-        "/ui/{module_key}/settings",
-        methods=["GET", "POST"],
-        response_class=HTMLResponse,
-        include_in_schema=False,
-    )
-    async def module_settings_modal(module_key: str, request: Request):
-        mod = mod_map.get(module_key)
-        if mod is None:
-            return HTMLResponse("", status_code=404)
-
-        if request.method == "GET":
-            from astrapi_core.ui.module_loader import reload_settings
-
-            reload_settings(mod)
-
-        if request.method == "POST":
-            form = await request.form()
-            password_keys = {f["key"] for f in mod.settings_schema if f.get("type") == "password"}
-            list_keys = {f["key"] for f in mod.settings_schema if f.get("type") == "list"}
-            prefixed = {}
-            for lk in list_keys:
-                items = []
-                i = 0
-                while True:
-                    val = form.get(f"{lk}_{i}")
-                    if val is None:
-                        break
-                    if val.strip():
-                        items.append(val.strip())
-                    i += 1
-                prefixed[f"module.{module_key}.{lk}"] = items
-            handled = {f"{lk}_{i}" for lk in list_keys for i in range(50)}
-            for k, v in form.multi_items():
-                if k in handled:
-                    continue
-                if k in password_keys:
-                    if v.strip():
-                        set_secret(f"module.{module_key}.{k}", v.strip())
-                else:
-                    prefixed[f"module.{module_key}.{k}"] = v
-            _set_many(prefixed)
-
-        password_keys_all = {f["key"] for f in mod.settings_schema if f.get("type") == "password"}
-        current_values = {
-            field["key"]: (
-                get_secret_safe(f"module.{module_key}.{field['key']}", field.get("default", ""))
-                if field["key"] in password_keys_all
-                else get_module(module_key, field["key"], field.get("default", ""))
-            )
-            for field in mod.settings_schema
-            if "key" in field
-        }
-        from astrapi_core.ui.field_resolver import resolve_options_endpoint
-
-        return render(
-            request,
-            "partials/settings_modal.html",
-            dict(
-                mod=mod,
-                schema=resolve_options_endpoint(mod.settings_schema),
-                values=current_values,
-            ),
-        )
 
 
 # ─────────────────────────────────────────────────────────────────────────────

@@ -1,9 +1,9 @@
 {#
   core/ui/templates/partials/notify_card.html
   Benachrichtigungs-Karte auf der Einstellungsseite.
-  Zeigt Status, Konfigurationsübersicht, Test-Button und Einstellungs-Button.
-  Wird eingebunden von settings/partials/tab.html wenn module_has_settings('notify').
+  Zeigt Status, Konfigurationsübersicht und Test-Button.
 #}
+{% from "partials/components/ui_macros.html" import btn %}
 
 {# Aktuelle Einstellungswerte aus der Registry lesen #}
 {% set notify_enabled = settings.get('module.notify.enabled', false) %}
@@ -70,24 +70,11 @@
           <span id="notify-test-result"></span>
 
           {% if notify_enabled %}
-          <button class="btn btn-ghost btn-sm"
-                  hx-post="/ui/notify/test"
-                  hx-target="#notify-test-result"
-                  hx-swap="innerHTML"
-                  title="Test-Benachrichtigung senden">
+          {% call btn(attrs='hx-post="/ui/notify/test" hx-target="#notify-test-result" hx-swap="innerHTML" title="Test-Benachrichtigung senden"') %}
             <svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor" stroke="none"><use href="#icon-bell"></use></svg>
             Test senden
-          </button>
+          {% endcall %}
           {% endif %}
-
-          <button class="btn btn-ghost btn-sm"
-                  hx-get="/ui/notify/settings"
-                  hx-target="body"
-                  hx-swap="beforeend"
-                  title="Benachrichtigungen konfigurieren">
-            <svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor" stroke="none"><use href="#icon-settings"></use></svg>
-            Konfigurieren
-          </button>
         </div>
       </div>
     </div>

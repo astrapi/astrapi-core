@@ -251,25 +251,6 @@ def delete_modal(channel_id: str, request: Request):
     )
 
 
-@router.get(f"/ui/{KEY}/{{channel_id}}/toggle", response_class=HTMLResponse)
-def toggle_modal(channel_id: str, request: Request):
-    channel = get_channel(channel_id) or {}
-    enabled = request.query_params.get("enabled", "True")
-    verb = "deaktivieren" if enabled == "True" else "aktivieren"
-    return render(
-        request,
-        "partials/confirm_modal.html",
-        dict(
-            description=channel.get("label", channel_id),
-            verb=verb,
-            confirm_url=f"/api/{KEY}/{channel_id}/toggle",
-            method="patch",
-            reload_url=f"/ui/{KEY}/content",
-            container_id=_CONTAINER_ID,
-            loading_id=_LOADING_ID,
-        ),
-    )
-
 
 # ── Kanal CRUD-Aktionen ───────────────────────────────────────────────────────
 
@@ -367,25 +348,6 @@ def delete_job_modal(job_id: str, request: Request):
         ),
     )
 
-
-@router.get(f"/ui/{KEY}/jobs/{{job_id}}/toggle", response_class=HTMLResponse)
-def toggle_job_modal(job_id: str, request: Request):
-    job = get_job(job_id) or {}
-    enabled = request.query_params.get("enabled", "True")
-    verb = "deaktivieren" if enabled == "True" else "aktivieren"
-    return render(
-        request,
-        "partials/confirm_modal.html",
-        dict(
-            description=job.get("label", job_id),
-            verb=verb,
-            confirm_url=f"/api/{KEY}/jobs/{job_id}/toggle",
-            method="patch",
-            reload_url=f"/ui/{KEY}/content",
-            container_id=_CONTAINER_ID,
-            loading_id=_LOADING_ID,
-        ),
-    )
 
 
 # ── Job CRUD-Aktionen ─────────────────────────────────────────────────────────

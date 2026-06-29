@@ -1,0 +1,19 @@
+{% extends "partials/modal_base_form.html" %}
+
+{% block modal_id %}create-edit-modal{% endblock %}
+{% block modal_max_width %}560{% endblock %}
+
+{% block extra_styles %}
+<style>
+.pkg-search-results { border:1px solid var(--border); border-radius:6px; overflow:hidden; margin-top:4px; }
+.pkg-search-group   { padding:4px 10px; font-size:11px; font-weight:600; text-transform:uppercase;
+                      letter-spacing:.05em; color:var(--text-3); background:var(--bg-2); }
+.pkg-search-item    { padding:8px 10px; cursor:pointer; border-top:1px solid var(--border); }
+.pkg-search-item:hover { background:var(--bg-2); }
+.pkg-search-item-header { display:flex; align-items:baseline; gap:8px; }
+.pkg-search-name    { font-weight:600; font-size:13px; }
+.pkg-search-version { font-size:11px; color:var(--text-3); font-family:var(--font-mono, monospace); }
+.pkg-search-desc    { font-size:12px; color:var(--text-2); margin-top:2px;
+                      white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+</style>
+{% endblock %}

@@ -8,148 +8,129 @@
     container_id – ID des Listen-Containers
     loading_id   – HTMX-Indikator
 #}
-{% from "partials/components/ui_macros.html" import modal_title, modal_footer %}
+{% extends "partials/modal_base_form.html" %}
+{% from "partials/components/ui_macros.html" import modal_title, modal_footer, btn %}
+
 {% set is_new = job is none or job.get('id') is none %}
 
-<div id="scheduler-job-modal"
-     class="ds-modal-backdrop">
+{% block modal_id %}scheduler-job-modal{% endblock %}
+{% block modal_max_width %}580{% endblock %}
 
-  <div class="ds-modal" style="max-width:580px; padding:20px 24px;">
+{% block title %}
+  {{ modal_title(is_edit=not is_new, title='Job bearbeiten' if not is_new else 'Neuer Scheduler-Job') }}
+{% endblock %}
 
-    {{ modal_title(is_edit=not is_new, title='Job bearbeiten' if not is_new else 'Neuer Scheduler-Job') }}
+{% block submit_url %}{% if is_new %}/ui/scheduler/job{% else %}/ui/scheduler/job/{{ job.id }}/update{% endif %}{% endblock %}
+{% block form_id %}scheduler-job-form{% endblock %}
+{% block submit_btn_id %}sched-job-save{% endblock %}
+{% block form_style %}display:flex; flex-direction:column; gap:14px;{% endblock %}
 
-    {% if error %}
-    <div style="margin-bottom:12px; padding:8px 12px; border-radius:var(--rad-lg);
-                background:rgba(239,68,68,0.10); color:#f87171; font-size:13px;">
-      {{ error }}
+{% block form_content %}
+  <!-- Name (volle Breite) -->
+  <div class="form-group">
+    <label class="form-label">Name <span class="required-mark">*</span></label>
+    <input type="text" name="label" class="form-input"
+           value="{{ job.label if job else '' }}"
+           placeholder="z.B. Nightly Sync"
+           data-required="true">
+    <span class="form-error"></span>
+  </div>
+
+  <!-- Cron-Ausdruck -->
+  <div class="form-group">
+    <label class="form-label">Cron-Ausdruck <span class="required-mark">*</span></label>
+    <input type="text" name="cron" id="cron-input" class="form-input"
+           value="{{ job.cron if job else '' }}"
+           placeholder="0 2 * * *"
+           data-required="true"
+           autocomplete="off"
+           oninput="cronUpdate(this.value)">
+    <span class="form-error"></span>
+  </div>
+
+  <!-- Cron-Helper -->
+  <div style="margin-top:-6px;">
+    <div style="display:flex; flex-wrap:wrap; gap:5px; margin-bottom:7px;">
+      {% for label, expr in [
+        ('Täglich 02:00',   '0 2 * * *'),
+        ('Täglich 06:00',   '0 6 * * *'),
+        ('Stündlich',       '0 * * * *'),
+        ('Alle 15 Min',     '*/15 * * * *'),
+        ('Alle 30 Min',     '*/30 * * * *'),
+        ('Mo–Fr 08:00',     '0 8 * * 1-5'),
+        ('Wöchentlich Mo',  '0 3 * * 1'),
+        ('Monatlich 1.',    '0 2 1 * *'),
+      ] %}
+      {{ btn(label, size='', attrs='style="font-size:11px; padding:2px 8px;" onclick="cronSet(\'' ~ expr ~ '\')"') }}
+      {% endfor %}
+    </div>
+    <div id="cron-explain"
+         style="font-size:11px; color:var(--text-3); min-height:16px; transition:color .15s;">
+    </div>
+  </div>
+
+  <!-- Schritte -->
+  <div>
+    <label class="form-label" style="margin-bottom:8px;">Schritte</label>
+
+    {% if actions %}
+    <div id="sched-selected-steps"
+         style="min-height:40px; margin-bottom:8px; padding:6px;
+                border:1px dashed var(--border-s); border-radius:var(--rad-lg);
+                display:flex; flex-direction:column; gap:5px;">
+      {% set sel = job.steps if job and job.steps else [] %}
+      {% for step in sel %}
+      <div class="sched-step-item" data-key="{{ step }}" draggable="true"
+           style="display:flex; align-items:center; gap:8px; padding:5px 10px;
+                  background:rgba(99,102,241,0.08); border-radius:6px; cursor:grab; user-select:none;">
+        <svg width="10" height="10" viewBox="0 0 24 24" fill="currentColor" stroke="none" style="color:var(--text-3); flex-shrink:0;"><use href="#icon-drag-vertical"></use></svg>
+        <span style="flex:1; font-size:12px; color:var(--text-1);">{{ actions.get(step, step) }}</span>
+        <span style="font-size:11px; color:var(--text-3); font-family:monospace;">{{ step }}</span>
+        <button type="button" onclick="schedRemoveStep('{{ step }}')"
+                style="background:none; border:none; color:var(--text-3); cursor:pointer; padding:0 2px; font-size:15px; line-height:1;">×</button>
+      </div>
+      {% endfor %}
+    </div>
+
+    <div style="display:flex; flex-wrap:wrap; gap:5px; align-items:center;">
+      <span style="font-size:11px; color:var(--text-3);">Hinzufügen:</span>
+      {% set sel = job.steps if job and job.steps else [] %}
+      {% for key, label in actions.items() | sort(attribute='1') %}
+      {{ btn('+ ' ~ label,
+             attrs='id="sched-add-' ~ (key | replace('.', '_')) ~ '"'
+                    ~ ' onclick="schedAddStep(\'' ~ key ~ '\', \'' ~ label ~ '\')"'
+                    ~ (' style="display:none"' if key in sel else '')) }}
+      {% endfor %}
+    </div>
+
+    <div id="sched-steps-inputs">
+      {% set sel = job.steps if job and job.steps else [] %}
+      {% for step in sel %}
+      <input type="hidden" name="steps" value="{{ step }}">
+      {% endfor %}
+    </div>
+
+    {% else %}
+    <div style="padding:10px 12px; border:1px dashed var(--border-s); border-radius:var(--rad-lg);
+                font-size:13px; color:var(--text-3); text-align:center;">
+      Keine Aktionen registriert. Module müssen
+      <code>register_action()</code> aus <code>core.modules.scheduler.engine</code> aufrufen.
     </div>
     {% endif %}
-
-    <form id="scheduler-job-form"
-          {% if is_new %}
-            hx-post="/ui/scheduler/job"
-          {% else %}
-            hx-post="/ui/scheduler/job/{{ job.id }}/update"
-          {% endif %}
-          hx-target="#main-content"
-          hx-swap="innerHTML"
-          style="display:flex; flex-direction:column; gap:14px;">
-
-      <!-- Name (volle Breite) -->
-      <div class="form-group">
-        <label class="form-label">Name <span class="required-mark">*</span></label>
-        <input type="text" name="label" class="form-input"
-               value="{{ job.label if job else '' }}"
-               placeholder="z.B. Nightly Sync"
-               data-required="true">
-        <span class="form-error"></span>
-      </div>
-
-      <!-- Cron-Ausdruck -->
-      <div class="form-group">
-        <label class="form-label">Cron-Ausdruck <span class="required-mark">*</span></label>
-        <input type="text" name="cron" id="cron-input" class="form-input"
-               value="{{ job.cron if job else '' }}"
-               placeholder="0 2 * * *"
-               data-required="true"
-               autocomplete="off"
-               oninput="cronUpdate(this.value)">
-        <span class="form-error"></span>
-      </div>
-
-      <!-- Cron-Helper -->
-      <div style="margin-top:-6px;">
-        <!-- Presets -->
-        <div style="display:flex; flex-wrap:wrap; gap:5px; margin-bottom:7px;">
-          {% for label, expr in [
-            ('Täglich 02:00',   '0 2 * * *'),
-            ('Täglich 06:00',   '0 6 * * *'),
-            ('Stündlich',       '0 * * * *'),
-            ('Alle 15 Min',     '*/15 * * * *'),
-            ('Alle 30 Min',     '*/30 * * * *'),
-            ('Mo–Fr 08:00',     '0 8 * * 1-5'),
-            ('Wöchentlich Mo',  '0 3 * * 1'),
-            ('Monatlich 1.',    '0 2 1 * *'),
-          ] %}
-          <button type="button" class="btn btn-ghost btn-sm"
-                  style="font-size:11px; padding:2px 8px;"
-                  onclick="cronSet('{{ expr }}')">{{ label }}</button>
-          {% endfor %}
-        </div>
-        <!-- Erklärung -->
-        <div id="cron-explain"
-             style="font-size:11px; color:var(--text-3); min-height:16px; transition:color .15s;">
-          <!-- wird per JS befüllt -->
-        </div>
-      </div>
-
-      <!-- Schritte -->
-      <div>
-        <label class="form-label" style="margin-bottom:8px;">Schritte</label>
-
-        {% if actions %}
-        <!-- Ausgewählte Schritte (sortierbar per Drag & Drop) -->
-        <div id="sched-selected-steps"
-             style="min-height:40px; margin-bottom:8px; padding:6px;
-                    border:1px dashed var(--border-s); border-radius:var(--rad-lg);
-                    display:flex; flex-direction:column; gap:5px;">
-          {% set sel = job.steps if job and job.steps else [] %}
-          {% for step in sel %}
-          <div class="sched-step-item" data-key="{{ step }}" draggable="true"
-               style="display:flex; align-items:center; gap:8px; padding:5px 10px;
-                      background:rgba(99,102,241,0.08); border-radius:6px; cursor:grab; user-select:none;">
-            <svg width="10" height="10" viewBox="0 0 24 24" fill="currentColor" stroke="none" style="color:var(--text-3); flex-shrink:0;"><use href="#icon-drag-vertical"></use></svg>
-            <span style="flex:1; font-size:12px; color:var(--text-1);">{{ actions.get(step, step) }}</span>
-            <span style="font-size:11px; color:var(--text-3); font-family:monospace;">{{ step }}</span>
-            <button type="button" onclick="schedRemoveStep('{{ step }}')"
-                    style="background:none; border:none; color:var(--text-3); cursor:pointer; padding:0 2px; font-size:15px; line-height:1;">×</button>
-          </div>
-          {% endfor %}
-        </div>
-
-        <!-- Verfügbare Aktionen (alphabetisch sortiert) -->
-        <div style="display:flex; flex-wrap:wrap; gap:5px; align-items:center;">
-          <span style="font-size:11px; color:var(--text-3);">Hinzufügen:</span>
-          {% set sel = job.steps if job and job.steps else [] %}
-          {% for key, label in actions.items() | sort(attribute='1') %}
-          <button type="button"
-                  id="sched-add-{{ key | replace('.', '_') }}"
-                  class="btn btn-ghost btn-sm"
-                  onclick="schedAddStep('{{ key }}', '{{ label }}')"
-                  {% if key in sel %}style="display:none"{% endif %}>
-            + {{ label }}
-          </button>
-          {% endfor %}
-        </div>
-
-        <!-- Hidden Inputs (Reihenfolge) -->
-        <div id="sched-steps-inputs">
-          {% set sel = job.steps if job and job.steps else [] %}
-          {% for step in sel %}
-          <input type="hidden" name="steps" value="{{ step }}">
-          {% endfor %}
-        </div>
-
-        {% else %}
-        <div style="padding:10px 12px; border:1px dashed var(--border-s); border-radius:var(--rad-lg);
-                    font-size:13px; color:var(--text-3); text-align:center;">
-          Keine Aktionen registriert. Module müssen
-          <code>register_action()</code> aus <code>core.modules.scheduler.engine</code> aufrufen.
-        </div>
-        {% endif %}
-      </div>
-
-      <!-- Benachrichtigungen werden immer gesendet (Start + Ende) -->
-
-      {{ modal_footer(enabled=job.enabled if job else False, enabled_id='sched-enabled',
-                      save_label='Erstellen' if is_new else 'Speichern',
-                      save_type='button', save_id='sched-job-save') }}
-
-    </form>
   </div>
-</div>
+{% endblock %}
 
-<script>
+{% block footer %}
+  {{ modal_footer(enabled=job.enabled if job else False, enabled_id='sched-enabled',
+                  save_label='Erstellen' if is_new else 'Speichern',
+                  save_type='button', save_id='sched-job-save') }}
+{% endblock %}
+
+{% block submit_validation %}
+if (!schedJobValidate(form)) return;
+{% endblock %}
+
+{% block module_scripts %}
 (function () {
   {% set sel = job.steps if job and job.steps else [] %}
   var order = [{% for s in sel %}'{{ s }}'{% if not loop.last %},{% endif %}{% endfor %}];
@@ -231,7 +212,6 @@
 
   bindDrag();
 
-  // Validation
   function validateField(input) {
     var errorEl  = input.parentElement.querySelector('.form-error');
     var message  = '';
@@ -261,9 +241,7 @@
     });
   });
 
-  // ── Cron-Helper ─────────────────────────────────────────────────────────────
-
-  var DAYS = ['Sonntag','Montag','Dienstag','Mittwoch','Donnerstag','Freitag','Samstag'];
+  var DAYS   = ['Sonntag','Montag','Dienstag','Mittwoch','Donnerstag','Freitag','Samstag'];
   var MONTHS = ['','Januar','Februar','März','April','Mai','Juni',
                 'Juli','August','September','Oktober','November','Dezember'];
 
@@ -272,53 +250,26 @@
     if (!expr) return '';
     var p = expr.split(/\s+/);
     if (p.length !== 5) return 'Ungültiges Format – 5 Felder erwartet (Min Std Tag Mon Wochentag)';
-
     var min = p[0], hr = p[1], dom = p[2], mon = p[3], dow = p[4];
-
-    // Jede Minute
     if (expr === '* * * * *') return 'Jede Minute';
-
-    // Alle N Minuten
     if (/^\*\/\d+$/.test(min) && hr === '*' && dom === '*' && mon === '*' && dow === '*')
       return 'Alle ' + min.slice(2) + ' Minuten';
-
-    // Alle N Stunden
     if (min === '0' && /^\*\/\d+$/.test(hr) && dom === '*' && mon === '*' && dow === '*')
       return 'Alle ' + hr.slice(2) + ' Stunden';
-
-    // Zur vollen Stunde
     if (min === '0' && hr === '*' && dom === '*' && mon === '*' && dow === '*')
       return 'Jede Stunde (zur vollen Stunde)';
-
-    // Feste Uhrzeit ermitteln
     var timeStr = '';
-    if (/^\d+$/.test(min) && /^\d+$/.test(hr)) {
+    if (/^\d+$/.test(min) && /^\d+$/.test(hr))
       timeStr = hr.padStart(2,'0') + ':' + min.padStart(2,'0') + ' Uhr';
-    }
     if (!timeStr) return '';
-
-    // Täglich
-    if (dom === '*' && mon === '*' && dow === '*')
-      return 'Täglich um ' + timeStr;
-
-    // Mo–Fr oder ähnliche Bereiche
-    if (dom === '*' && mon === '*' && dow === '1-5')
-      return 'Mo–Fr um ' + timeStr;
-    if (dom === '*' && mon === '*' && dow === '6,7' || dow === '0,6')
-      return 'Sa + So um ' + timeStr;
-
-    // Bestimmter Wochentag
+    if (dom === '*' && mon === '*' && dow === '*') return 'Täglich um ' + timeStr;
+    if (dom === '*' && mon === '*' && dow === '1-5') return 'Mo–Fr um ' + timeStr;
     if (dom === '*' && mon === '*' && /^\d$/.test(dow))
       return 'Jeden ' + (DAYS[parseInt(dow)] || 'Wochentag ' + dow) + ' um ' + timeStr;
-
-    // Bestimmter Tag im Monat
     if (/^\d+$/.test(dom) && mon === '*' && dow === '*')
       return 'Monatlich am ' + dom + '. um ' + timeStr;
-
-    // Bestimmter Tag + Monat (jährlich)
     if (/^\d+$/.test(dom) && /^\d+$/.test(mon) && dow === '*')
       return 'Jährlich am ' + dom + '. ' + (MONTHS[parseInt(mon)] || mon) + ' um ' + timeStr;
-
     return 'Täglich um ' + timeStr + ' (mit Einschränkungen)';
   }
 
@@ -326,9 +277,8 @@
     var el = document.getElementById('cron-explain');
     if (!el) return;
     var text = cronExplain(val);
-    var isErr = text.startsWith('Ungültig');
-    el.textContent   = text;
-    el.style.color   = isErr ? '#f87171' : 'var(--text-3)';
+    el.textContent = text;
+    el.style.color = text.startsWith('Ungültig') ? '#f87171' : 'var(--text-3)';
   };
 
   window.cronSet = function (expr) {
@@ -336,27 +286,12 @@
     if (!input) return;
     input.value = expr;
     input.dispatchEvent(new Event('input'));
-    // Validierungsfehler zurücksetzen
     input.classList.remove('is-invalid');
     var err = input.parentElement.querySelector('.form-error');
     if (err) { err.textContent = ''; err.classList.remove('visible'); }
   };
 
-  // Initial-Erklärung beim Öffnen
   var initialCron = document.getElementById('cron-input');
   if (initialCron && initialCron.value) cronUpdate(initialCron.value);
-
-  // Speichern: Validierung + Schließen nach Erfolg
-  document.getElementById('sched-job-save').addEventListener('click', function () {
-    if (!schedJobValidate(form)) return;
-    htmx.trigger(form, 'submit');
-    form.addEventListener('htmx:afterRequest', function handler(e) {
-      if (e.detail.successful) {
-        document.getElementById('scheduler-job-modal').remove();
-      }
-      form.removeEventListener('htmx:afterRequest', handler);
-    });
-  });
-
 })();
-</script>
+{% endblock %}

@@ -38,7 +38,6 @@
         {% if extra_page_actions_template %}{% include extra_page_actions_template ignore missing %}{% endif %}
         {% block header_actions %}{% endblock %}
         {% if has_create | default(True) %}{{ ui.add_button(module=module, container_id=container_id, loading_id=loading_id | default('')) }}{% endif %}
-        {% if module_has_settings(module) %}{{ ui.settings_button(module=module) }}{% endif %}
       {% endif %}
     </div>
   </div>

@@ -131,29 +131,6 @@ def scheduler_job_delete_modal(job_id: str, request: Request):
         ),
     )
 
-
-@router.get(f"/ui/{KEY}/job/{{job_id}}/toggle", response_class=HTMLResponse)
-def scheduler_job_toggle_modal(job_id: str, request: Request):
-    from astrapi_core.modules.scheduler.engine import get_job
-
-    job = get_job(job_id) or {}
-    enabled = request.query_params.get("enabled", "True")
-    verb = "deaktivieren" if enabled == "True" else "aktivieren"
-    return render(
-        request,
-        "partials/confirm_modal.html",
-        dict(
-            description=job.get("label", job_id),
-            verb=verb,
-            confirm_url=f"/api/{KEY}/{job_id}/toggle",
-            method="patch",
-            reload_url=f"/ui/{KEY}/content",
-            container_id=request.query_params.get("container_id", _C_ID),
-            loading_id=request.query_params.get("loading_id", _L_ID),
-        ),
-    )
-
-
 # ── Apply-Routen (Form-Submit aus Modal) ───────────────────────────────────────
 
 

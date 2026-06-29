@@ -117,15 +117,6 @@
 {% endmacro %}
 
 
-{% macro settings_button(module=None) %}
-  <button
-    hx-get="/ui/{{ module }}/settings"
-    hx-target="body" hx-swap="beforeend"
-    class="btn-icon" title="Einstellungen"
-  >
-    <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor" stroke="none"><use href="#icon-settings"></use></svg>
-  </button>
-{% endmacro %}
 
 {% macro log_button(module=None, item=None) %}
   <button
@@ -138,63 +129,53 @@
   </button>
 {% endmacro %}
 
-{# ── Modal-Standard-Komponenten ──────────────────────────────────────────── #}
-{#                                                                            #}
-{# Jedes Modal soll denselben Aufbau haben:                                   #}
-{#   1. modal_wrapper  – Backdrop + innere Box (Außenstruktur)                #}
-{#   2. modal_title    – Icon + Überschrift (Header)                          #}
-{#   3. Inhalt         – Formular, Text, Karten …                             #}
-{#   4. modal_footer   – Toggle + Abbrechen/Speichern (Standard)              #}
-{#      oder modal_footer_simple – nur ein Schließen-Button                   #}
-{#                                                                            #}
-{# Verwendung mit modal_wrapper:                                              #}
-{#   {% call modal_wrapper("mein-modal", max_width="580px") %}               #}
-{#     {{ modal_title(title="Titel", icon="edit") }}                          #}
-{#     <!-- Inhalt -->                                                        #}
-{#     {{ modal_footer(save_label="Speichern") }}                             #}
-{#   {% endcall %}                                                            #}
+{# ── Button-Basis ─────────────────────────────────────────────────────────── #}
+{# Alle Text-Buttons bauen auf btn() auf.                                      #}
+{# Ausnahmen: Icon-Buttons (btn-icon), Sidebar-Nav, Pagination, Kontext-Menüs  #}
 
 {#
-  modal_wrapper(id, max_width, padding)
-  Rendert Backdrop + innere Modal-Box.  Inhalt via {% call %}-Block.
-    id        – HTML-ID des Backdrop-Elements (ganzer Modal)
-    max_width – CSS max-width der inneren Box   (default: "620px")
-    padding   – CSS padding der inneren Box     (default: "28px 32px")
+  btn(label, variant, size, type, onclick, attrs)
+  Basis-Baustein für alle Text-Buttons. Inhalt via label oder {% call %}.
+    variant – ghost | primary | danger  (default: ghost)
+    size    – sm | '' (leer = kein Modifier)  (default: sm)
+    attrs   – rohe HTML-Attribute als String, z.B. 'hx-get="..." hx-target="..."'
 #}
-{% macro modal_wrapper(id, max_width="620px", padding="28px 32px") %}
-<div id="{{ id }}" class="ds-modal-backdrop">
-  <div class="ds-modal" style="max-width:{{ max_width }}; padding:{{ padding }};">
-    {{ caller() }}
-  </div>
-</div>
+{% macro btn(label='', variant='ghost', size='sm', type='button', onclick=None, attrs='') %}
+<button type="{{ type }}"
+        class="btn btn-{{ variant }}{% if size %} btn-{{ size }}{% endif %}"
+        {% if onclick %}onclick="{{ onclick }}"{% endif %}
+        {% if attrs %}{{ attrs | safe }}{% endif %}>
+  {%- if caller is defined %}{{ caller() }}{%- else %}{{ label }}{%- endif %}
+</button>
 {% endmacro %}
+
+{% macro btn_cancel(label='Abbrechen') %}{{ btn(label, onclick='closeModal(this)') }}{% endmacro %}
+{% macro btn_close(label='Schließen') %}{{ btn(label, onclick='closeModal(this)') }}{% endmacro %}
+
+{#
+  btn_save(label, type, save_id, disabled)
+  Primär-Button für Formular-Submit.
+#}
+{% macro btn_save(label='Speichern', type='submit', save_id=None, disabled=False) %}
+{% set _id = ('id="' ~ save_id ~ '" ') if save_id else '' %}
+{{ btn(label, variant='primary', type=type, attrs=_id ~ ('disabled' if disabled else '')) }}
+{% endmacro %}
+
+{# ── Modal-Standard-Komponenten ──────────────────────────────────────────── #}
+{# Alle Modals erben von partials/modal_base.html (oder _form / _info).       #}
+{# Die Außenstruktur (Backdrop, Container, Escape-Key) ist dort definiert.    #}
 
 {#
   modal_title(title, icon, is_edit)
-  Rendert den Header eines Modals.
-    title   – Anzeigetext
-    icon    – 'edit' | 'create' | 'settings' | 'log' | 'bell' | 'warning' | 'info' | 'none'
-    is_edit – veraltet: Kurzform für icon='edit' (True) / icon='create' (False)
+  Rendert den Header eines Modals (nur Titel – X-Button kommt aus modal_base.html).
 #}
 {% macro modal_title(title='', icon=None, is_edit=False) %}
-<div class="ds-modal-title">
-  {{ title }}
-</div>
-<button type="button" class="ds-modal-close" onclick="closeModal(this)">
-  <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" stroke="none"><use href="#icon-close"></use></svg>
-</button>
+<div class="ds-modal-title">{{ title }}</div>
 {% endmacro %}
 
 {#
   modal_footer(enabled, enabled_id, save_label, save_disabled, has_toggle, save_id, save_type)
   Rendert den Standard-Footer eines Modals (Toggle + Abbrechen + Speichern).
-    enabled       – bool: aktueller Toggle-Zustand
-    enabled_id    – HTML-ID der versteckten Checkbox
-    save_label    – Text für den Speichern-Button
-    save_disabled – bool: Speichern-Button deaktivieren
-    has_toggle    – bool: Toggle anzeigen (default True)
-    save_id       – optionale HTML-ID für den Speichern-Button
-    save_type     – "submit" (default) oder "button" (bei JS-Validierung)
 #}
 {% macro modal_footer(enabled=True, enabled_id='modal-enabled', save_label='Speichern',
                       save_disabled=False, has_toggle=True, save_id=None, save_type='submit') %}
@@ -219,30 +200,45 @@
   </label>
   {% endif %}
   <div class="modal-actions">
-    <button type="button" class="btn btn-ghost btn-sm"
-            onclick="closeModal(this)">
-      Abbrechen
-    </button>
-    <button type="{{ save_type }}" class="btn btn-primary btn-sm"
-            {% if save_id %}id="{{ save_id }}"{% endif %}
-            {% if save_disabled %}disabled{% endif %}>
-      {{ save_label }}
-    </button>
+    {{ btn_cancel() }}
+    {{ btn_save(save_label, type=save_type, save_id=save_id, disabled=save_disabled) }}
   </div>
 </div>
 {% endmacro %}
 
 {#
   modal_footer_simple(close_label)
-  Rendert einen einfachen Footer mit nur einem Schließen-Button (z. B. Log-Modal).
-    close_label – Beschriftung des Schließen-Buttons (default: "Schließen")
+  Footer mit nur einem Schließen-Button.
 #}
 {% macro modal_footer_simple(close_label="Schließen") %}
 <div class="ds-modal-footer-simple">
-  <button type="button" class="btn btn-ghost btn-sm"
-          onclick="closeModal(this)">
-    {{ close_label }}
-  </button>
+  {{ btn_close(close_label) }}
+</div>
+{% endmacro %}
+
+{#
+  modal_footer_actions()
+  Footer mit extra Aktions-Buttons (via caller) VOR dem Schließen-Button.
+  Verwendung: {% call modal_footer_actions() %}[extra buttons]{% endcall %}
+#}
+{% macro modal_footer_actions() %}
+<div class="ds-modal-footer-simple">
+  {{ btn_close() }}
+  {{ caller() }}
+</div>
+{% endmacro %}
+
+{#
+  modal_footer_split()
+  Footer mit split-Layout: links caller-Inhalt (Aktionen + Info), rechts Schließen.
+  Verwendung: {% call modal_footer_split() %}[linker Inhalt]{% endcall %}
+#}
+{% macro modal_footer_split() %}
+<div class="ds-modal-footer">
+  <div style="display:flex; align-items:center; gap:10px;">
+    {{ caller() }}
+  </div>
+  {{ btn_close() }}
 </div>
 {% endmacro %}
 
@@ -421,15 +417,10 @@
   {%- endfor -%}
 </select>
 {%- elif ctrl.type == 'action_button' -%}
-<button class="btn btn-{{ ctrl.style or 'primary' }} btn-sm"
-        {%- if ctrl.hx_get %} hx-get="{{ ctrl.hx_get }}"{% endif %}
-        {%- if ctrl.hx_post %} hx-post="{{ ctrl.hx_post }}"{% endif %}
-        {%- if ctrl.hx_get or ctrl.hx_post %}
-        hx-target="{{ ctrl.hx_target or 'body' }}"
-        hx-swap="{{ ctrl.hx_swap or 'beforeend' }}"
-        {%- endif %}>
-  {{ ctrl.label }}
-</button>
+{%- set _attrs = (('hx-get="'  ~ ctrl.hx_get  ~ '" ') if ctrl.hx_get  else '')
+               ~ (('hx-post="' ~ ctrl.hx_post ~ '" ') if ctrl.hx_post else '')
+               ~ (('hx-target="' ~ (ctrl.hx_target or 'body') ~ '" hx-swap="' ~ (ctrl.hx_swap or 'beforeend') ~ '"') if (ctrl.hx_get or ctrl.hx_post) else '') -%}
+{{ btn(ctrl.label, variant=ctrl.style or 'primary', attrs=_attrs) }}
 {%- endif %}
 {% endmacro %}
 

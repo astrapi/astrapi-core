@@ -195,13 +195,11 @@ def load_modul(
     # settings.yaml laden (dict-Format mit modal_width + fields, oder Legacy-Liste)
     settings_yaml = _config_file(module_dir, "settings.yaml")
     settings_schema: list = []
-    settings_modal_width: int = 480
     if settings_yaml.exists():
         with open(settings_yaml, encoding="utf-8") as f:
             raw = yaml.safe_load(f) or {}
         if isinstance(raw, dict):
             settings_schema = raw.get("fields", [])
-            settings_modal_width = raw.get("modal_width", 480)
         else:
             settings_schema = raw  # Legacy: flache Liste
 
@@ -222,8 +220,6 @@ def load_modul(
         nav_default=bool(cfg.get("nav_default", False)),
         settings_defaults=merged_defaults,
         settings_schema=settings_schema,
-        settings_modal_width=settings_modal_width,
-        settings_button=bool(cfg.get("settings_button", False)),
         card_actions=_expand_card_actions(cfg.get("card_actions", []), key),
         module_root=module_dir,
         ui_header=ui_header,
@@ -242,6 +238,5 @@ def reload_settings(mod: "Module") -> None:
         raw = yaml.safe_load(f) or {}
     if isinstance(raw, dict):
         mod.settings_schema = raw.get("fields", [])
-        mod.settings_modal_width = raw.get("modal_width", 480)
     else:
         mod.settings_schema = raw

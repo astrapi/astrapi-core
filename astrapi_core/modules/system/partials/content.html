@@ -1,4 +1,5 @@
 {% import 'partials/components/ui_macros.html' as ui %}
+{% from 'partials/components/ui_macros.html' import btn, btn_save %}
 {% if not info.ok %}
 <div id="system-metrics">
   <div class="empty-state">
@@ -23,11 +24,8 @@
   <div class="sysinfo-card-header">
     <span>Anwendungen</span>
     {% if info.updater %}
-    <button class="btn btn-ghost btn-sm"
-            hx-post="/ui/system/check"
-            hx-target="#system-metrics" hx-swap="outerHTML">
-      Auf Updates prüfen
-    </button>
+    {{ btn('Auf Updates prüfen',
+           attrs='hx-post="/ui/system/check" hx-target="#system-metrics" hx-swap="outerHTML"') }}
     {% endif %}
   </div>
   <div style="padding:0 16px 12px;" data-debug-label="content-subitem">
@@ -47,12 +45,8 @@
           </td>
           <td>
             {% if pkg.update_available %}
-            <button class="btn btn-sm"
-                    style="background:var(--g); color:#fff; border:none; white-space:nowrap; font-size:11px; padding:3px 10px;"
-                    hx-post="/ui/system/update"
-                    hx-target="body" hx-swap="beforeend">
-              Update
-            </button>
+            {{ btn('Update', variant='primary', size='',
+                   attrs='style="white-space:nowrap; font-size:11px; padding:3px 10px;" hx-post="/ui/system/update" hx-target="body" hx-swap="beforeend"') }}
             {% endif %}
           </td>
         </tr>

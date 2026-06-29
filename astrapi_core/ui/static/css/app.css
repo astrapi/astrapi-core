@@ -468,7 +468,7 @@ input,select,textarea { font-family:var(--font); }
 .btn {
   display:inline-flex; align-items:center; justify-content:center; gap:8px;
   padding:8px 14px; border-radius:var(--rad-lg);
-  font-size:13px; font-weight:600; font-family:var(--font);
+  font-size:13px; font-weight:400; font-family:var(--font);
   line-height:1.2;
   border:1px solid transparent; cursor:pointer;
   white-space:nowrap;
@@ -499,6 +499,27 @@ input,select,textarea { font-family:var(--font); }
 }
 .btn:active { transform:translateY(1px); }
 .btn-sm { padding:7px 12px; font-size:12px; }
+
+/* ── Default-Button ──────────────────────────────────────────────────────── */
+/* Letzter direkter .btn im Footer = Default-Aktion, immer in Akzentfarbe.   */
+.ds-modal-footer-simple > .btn:last-child,
+.modal-actions          > .btn:last-child,
+.ds-modal-footer        > .btn:last-child,
+.form-actions           > .btn:last-child {
+  background:   rgba(37,99,235,0.10);
+  color:        var(--b);
+  border-color: rgba(37,99,235,0.28);
+  box-shadow:   none;
+  font-weight:  600;
+}
+.ds-modal-footer-simple > .btn:last-child:hover,
+.modal-actions          > .btn:last-child:hover,
+.ds-modal-footer        > .btn:last-child:hover,
+.form-actions           > .btn:last-child:hover {
+  background:   rgba(37,99,235,0.18);
+  border-color: rgba(37,99,235,0.50);
+}
+
 .btn[disabled],
 .btn-icon[disabled] {
   opacity:0.4;
