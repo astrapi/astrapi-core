@@ -5,37 +5,45 @@
     job          – dict | None (None = Neu-Anlage)
     actions      – dict[key, label]
     error        – str | None
-    container_id – ID des Listen-Containers
-    loading_id   – HTMX-Indikator
+    container_id – ID des Listen-Containers (nur noch als Fallback übergeben)
 #}
-{% extends "partials/modal_base_form.html" %}
-{% from "partials/components/ui_macros.html" import modal_title, modal_footer, btn, form_group, form_input %}
+{% extends "dialog_form.html" %}
 
 {% set is_new = job is none or job.get('id') is none %}
 
-{% block modal_id %}scheduler-job-modal{% endblock %}
-{% block modal_max_width %}580{% endblock %}
-
-{% block title %}
-  {{ modal_title(is_edit=not is_new, title='Job bearbeiten' if not is_new else 'Neuer Scheduler-Job') }}
-{% endblock %}
-
-{% block submit_url %}{% if is_new %}/ui/scheduler/job{% else %}/ui/scheduler/job/{{ job.id }}/update{% endif %}{% endblock %}
+{% block dialog_width %}580{% endblock %}
+{% block dialog_title %}{{ 'Job bearbeiten' if not is_new else 'Neuer Scheduler-Job' }}{% endblock %}
 {% block form_id %}scheduler-job-form{% endblock %}
-{% block submit_btn_id %}sched-job-save{% endblock %}
+{% block form_action %}{% if is_new %}/ui/scheduler/job{% else %}/ui/scheduler/job/{{ job.id }}/update{% endif %}{% endblock %}
 {% block form_style %}display:flex; flex-direction:column; gap:14px;{% endblock %}
+{% block form_attrs %}onsubmit="return schedJobValidate(this)"{% endblock %}
 
-{% block form_content %}
+{% block dialog_body %}
+  {% if error %}
+  <div style="padding:8px 12px;border-radius:6px;
+              background:var(--error-dim,#3a0000);color:var(--error,#ff6b6b);font-size:13px;">{{ error }}</div>
+  {% endif %}
+
   <!-- Name (volle Breite) -->
-  {% call form_group('Name', required=True) %}
-    {{ form_input('label', job.label if job else '', placeholder='z.B. Nightly Sync', required=True) }}
-  {% endcall %}
+  <div class="form-group">
+    <label class="form-label">Name <span class="required-mark">*</span></label>
+    <input class="form-input" type="text" name="label"
+           value="{{ job.label if job else '' }}"
+           placeholder="z.B. Nightly Sync" required
+           data-required="true" autocomplete="off">
+    <span class="form-error"></span>
+  </div>
 
   <!-- Cron-Ausdruck -->
-  {% call form_group('Cron-Ausdruck', required=True) %}
-    {{ form_input('cron', job.cron if job else '', placeholder='0 2 * * *', required=True,
-                  attrs='id="cron-input" autocomplete="off" oninput="cronUpdate(this.value)"') }}
-  {% endcall %}
+  <div class="form-group">
+    <label class="form-label">Cron-Ausdruck <span class="required-mark">*</span></label>
+    <input class="form-input" type="text" name="cron" id="cron-input"
+           value="{{ job.cron if job else '' }}"
+           placeholder="0 2 * * *" required
+           data-required="true" autocomplete="off"
+           oninput="cronUpdate(this.value)">
+    <span class="form-error"></span>
+  </div>
 
   <!-- Cron-Helper -->
   <div style="margin-top:-6px;">
@@ -50,7 +58,9 @@
         ('Wöchentlich Mo',  '0 3 * * 1'),
         ('Monatlich 1.',    '0 2 1 * *'),
       ] %}
-      {{ btn(label, size='', attrs='style="font-size:11px; padding:2px 8px;" onclick="cronSet(\'' ~ expr ~ '\')"') }}
+      <button type="button" class="btn btn-ghost"
+              style="font-size:11px; padding:2px 8px;"
+              onclick="cronSet('{{ expr }}')">{{ label }}</button>
       {% endfor %}
     </div>
     <div id="cron-explain"
@@ -85,10 +95,10 @@
       <span style="font-size:11px; color:var(--text-3);">Hinzufügen:</span>
       {% set sel = job.steps if job and job.steps else [] %}
       {% for key, label in actions.items() | sort(attribute='1') %}
-      {{ btn('+ ' ~ label,
-             attrs='id="sched-add-' ~ (key | replace('.', '_')) ~ '"'
-                    ~ ' onclick="schedAddStep(\'' ~ key ~ '\', \'' ~ label ~ '\')"'
-                    ~ (' style="display:none"' if key in sel else '')) }}
+      <button type="button" class="btn btn-ghost"
+              id="sched-add-{{ key | replace('.', '_') }}"
+              onclick="schedAddStep('{{ key }}', '{{ label }}')"
+              {{ 'style="display:none"' if key in sel else '' }}>+ {{ label }}</button>
       {% endfor %}
     </div>
 
@@ -109,17 +119,30 @@
   </div>
 {% endblock %}
 
-{% block footer %}
-  {{ modal_footer(enabled=job.enabled if job else False, enabled_id='sched-enabled',
-                  save_label='Erstellen' if is_new else 'Speichern',
-                  save_type='button', save_id='sched-job-save') }}
+{% block dialog_footer %}
+<div class="ds-modal-footer">
+  <label class="toggle-field">
+    <input type="hidden" name="enabled" value="0">
+    <input type="checkbox" name="enabled" value="1" id="sched-enabled"
+           style="display:none;" {{ 'checked' if (job.enabled if job else False) else '' }}>
+    <button type="button"
+            class="toggle-switch {{ 'toggle-on' if (job.enabled if job else False) else 'toggle-off' }}"
+            onclick="var cb=document.getElementById('sched-enabled');cb.checked=!cb.checked;this.classList.toggle('toggle-on',cb.checked);this.classList.toggle('toggle-off',!cb.checked);this.nextElementSibling.textContent=cb.checked?'Aktiviert':'Deaktiviert';">
+      <span class="toggle-knob"></span>
+    </button>
+    <span class="toggle-field-label">{{ 'Aktiviert' if (job.enabled if job else False) else 'Deaktiviert' }}</span>
+  </label>
+  <div class="modal-actions">
+    <button type="button" class="btn btn-sm btn-ghost" onclick="closeModal(this)">Abbrechen</button>
+    <button type="submit" class="btn btn-sm btn-primary" id="sched-job-save">
+      {{ 'Erstellen' if is_new else 'Speichern' }}
+    </button>
+  </div>
+</div>
 {% endblock %}
 
-{% block submit_validation %}
-if (!schedJobValidate(form)) return;
-{% endblock %}
-
-{% block module_scripts %}
+{% block dialog_scripts %}
+<script>
 (function () {
   {% set sel = job.steps if job and job.steps else [] %}
   var order = [{% for s in sel %}'{{ s }}'{% if not loop.last %},{% endif %}{% endfor %}];
@@ -223,12 +246,14 @@ if (!schedJobValidate(form)) return;
   };
 
   var form = document.getElementById('scheduler-job-form');
-  form.querySelectorAll('input[data-required]').forEach(function (input) {
-    input.addEventListener('blur', function () { validateField(input); });
-    input.addEventListener('input', function () {
-      if (input.classList.contains('is-invalid')) validateField(input);
+  if (form) {
+    form.querySelectorAll('input[data-required]').forEach(function (input) {
+      input.addEventListener('blur', function () { validateField(input); });
+      input.addEventListener('input', function () {
+        if (input.classList.contains('is-invalid')) validateField(input);
+      });
     });
-  });
+  }
 
   var DAYS   = ['Sonntag','Montag','Dienstag','Mittwoch','Donnerstag','Freitag','Samstag'];
   var MONTHS = ['','Januar','Februar','März','April','Mai','Juni',
@@ -283,4 +308,5 @@ if (!schedJobValidate(form)) return;
   var initialCron = document.getElementById('cron-input');
   if (initialCron && initialCron.value) cronUpdate(initialCron.value);
 })();
+</script>
 {% endblock %}

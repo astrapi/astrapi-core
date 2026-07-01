@@ -10,35 +10,35 @@
     method       – "post" oder "put"
     title        – Titel des Dialogs
     modal_width  – Breite des Modals in px (default: 620)
-    container_id – Fallback (wird nicht mehr für hx-target genutzt)
     loading_id   – HTMX-Indikator
 
   Schema-Felder können enthalten:
     type: section  – Gruppenüberschrift (label, cols)
     span: N        – Feld belegt N Spalten im Section-Grid
 #}
-{% extends "partials/modal_base_form.html" %}
-{% from "partials/components/ui_macros.html" import modal_title, modal_footer, form_group, form_input %}
+{% extends "dialog_form.html" %}
+{% from "partials/components/ui_macros.html" import form_group, form_input %}
 
 {% set enabled_field = schema | selectattr('name', 'equalto', 'enabled') | list | first %}
 {% set enabled_val   = (values if values is mapping else (item if item is mapping else {})).get('enabled', True) %}
 
-{% block modal_id %}create-edit-modal{% endblock %}
-{% block modal_max_width %}{{ modal_width | default(620) }}{% endblock %}
-
-{% block title %}{{ modal_title(is_edit=item is not none, title=title) }}{% endblock %}
+{% block dialog_width %}{{ modal_width | default(620) }}{% endblock %}
+{% block form_id %}create-edit-form{% endblock %}
 {% block form_method %}{{ method }}{% endblock %}
-{% block submit_url %}{{ submit_url }}{% endblock %}
-{% block form_attrs %}hx-indicator="#{{ loading_id }}"{% endblock %}
-{% block form_style %}gap:14px;{% endblock %}
+{% block form_action %}{{ submit_url }}{% endblock %}
+{% block form_style %}display:flex; flex-direction:column; gap:14px;{% endblock %}
+{% block form_attrs %}hx-indicator="#{{ loading_id }}" onsubmit="return createEditValidate(this)"{% endblock %}
 
-{% block pre_form %}
+{% block dialog_body %}
   {% if prefill_template %}
   <div style="margin-bottom:14px;">{% include prefill_template %}</div>
   {% endif %}
-{% endblock %}
 
-{% block form_content %}
+  {% if error %}
+  <div style="margin:8px 0;padding:8px 12px;border-radius:6px;
+              background:var(--error-dim,#3a0000);color:var(--error,#ff6b6b);font-size:13px;">{{ error }}</div>
+  {% endif %}
+
   {% set values = values if values is mapping else (item if item is mapping else {}) %}
   {% set render_fields = schema | rejectattr('name', 'equalto', 'enabled') | list %}
   {% set has_sections = render_fields | selectattr('type', 'equalto', 'section') | list | length > 0 %}
@@ -99,25 +99,30 @@
   {% endif %}
 {% endblock %}
 
-{% block footer %}
-  {{ modal_footer(enabled=enabled_val, enabled_id='modal-enabled',
-                  save_label='Speichern' if item else 'Erstellen',
-                  has_toggle=enabled_field, save_id='create-edit-submit',
-                  save_type='button') }}
+{% block dialog_footer %}
+<div class="ds-modal-footer{% if not enabled_field %} ds-modal-footer--end{% endif %}">
+  {% if enabled_field %}
+  <label class="toggle-field">
+    <input type="hidden" name="enabled" value="0">
+    <input type="checkbox" name="enabled" value="1" id="modal-enabled"
+           style="display:none;" {{ 'checked' if enabled_val else '' }}>
+    <button type="button"
+            class="toggle-switch {{ 'toggle-on' if enabled_val else 'toggle-off' }}"
+            onclick="var cb=document.getElementById('modal-enabled');cb.checked=!cb.checked;this.classList.toggle('toggle-on',cb.checked);this.classList.toggle('toggle-off',!cb.checked);this.nextElementSibling.textContent=cb.checked?'Aktiviert':'Deaktiviert';">
+      <span class="toggle-knob"></span>
+    </button>
+    <span class="toggle-field-label">{{ 'Aktiviert' if enabled_val else 'Deaktiviert' }}</span>
+  </label>
+  {% endif %}
+  <div class="modal-actions">
+    <button type="button" class="btn btn-sm btn-ghost" onclick="closeModal(this)">Abbrechen</button>
+    <button type="submit" class="btn btn-sm btn-primary">{{ 'Speichern' if item else 'Erstellen' }}</button>
+  </div>
+</div>
 {% endblock %}
 
-{% block submit_validation %}
-const inputs = form.querySelectorAll('input[data-required], input[type="number"], select[data-required]');
-let valid = true;
-inputs.forEach(input => { if (!validateField(input)) valid = false; });
-if (!valid) {
-  const firstError = form.querySelector('.form-error.visible');
-  if (firstError) firstError.scrollIntoView({ behavior: 'smooth', block: 'center' });
-  return;
-}
-{% endblock %}
-
-{% block module_scripts %}
+{% block dialog_scripts %}
+<script>
 function validateField(input) {
   const errorEl  = input.parentElement.querySelector('.form-error');
   let   message  = '';
@@ -141,12 +146,26 @@ function validateField(input) {
   return message === '';
 }
 
+function createEditValidate(form) {
+  const inputs = form.querySelectorAll('input[data-required], input[type="number"], select[data-required]');
+  let valid = true;
+  inputs.forEach(input => { if (!validateField(input)) valid = false; });
+  if (!valid) {
+    const firstError = form.querySelector('.form-error.visible');
+    if (firstError) firstError.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    return false;
+  }
+  return true;
+}
+
 (function () {
   const form = document.getElementById('create-edit-form');
+  if (!form) return;
   form.querySelectorAll('input[data-required], input[type="number"], select[data-required]')
     .forEach(input => {
       input.addEventListener('blur',  () => validateField(input));
       input.addEventListener('input', () => { if (input.classList.contains('is-invalid')) validateField(input); });
     });
 })();
+</script>
 {% endblock %}

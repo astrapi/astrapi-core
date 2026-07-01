@@ -8,34 +8,25 @@
     submit_url       – POST-Ziel
     selected_backend – Backend-Key (ntfy, …)
 #}
-{% extends "partials/modal_base_form.html" %}
-{% from "partials/components/ui_macros.html" import modal_title, modal_footer, form_input %}
+{% extends "dialog_form.html" %}
+{% from "partials/components/ui_macros.html" import form_input %}
 
 {% set is_edit = channel is not none %}
 {% set v = channel or {} %}
 {% set cur_backend = selected_backend or 'ntfy' %}
 
-{% block modal_id %}channel-modal{% endblock %}
-{% block modal_max_width %}520{% endblock %}
-{% block modal_padding %}22px 26px{% endblock %}
-
-{% block title %}{{ modal_title(is_edit=is_edit, title=title) }}{% endblock %}
-{% block submit_url %}{{ submit_url }}{% endblock %}
+{% block dialog_width %}520{% endblock %}
 {% block form_id %}ch-modal-form{% endblock %}
-{% block form_style %}display:flex; flex-direction:column; gap:16px; margin-top:18px;{% endblock %}
-{% block form_attrs %}
-  hx-on::before-request="if(!channelModalValidate(this)) event.preventDefault();"
-  hx-on::after-request="if(event.detail.successful){this.closest('.ds-modal-backdrop').remove()}"
-{% endblock %}
+{% block form_action %}{{ submit_url }}{% endblock %}
+{% block form_style %}display:flex; flex-direction:column; gap:16px;{% endblock %}
+{% block form_attrs %}hx-on::before-request="if(!channelModalValidate(this)) event.preventDefault();"{% endblock %}
 
-{% block form_content %}
+{% block dialog_body %}
   {%- set _oninput -%}
   oninput="this.classList.remove('is-invalid'); var _e=document.getElementById(this.id+'-error'); if(_e)_e.style.display='none';"
   {%- endset -%}
-  {# ── Backend (fest, nicht änderbar) ────────────────────────────────── #}
   <input type="hidden" name="backend" value="{{ cur_backend }}">
 
-  {# ── Name ─────────────────────────────────────────────────────────────── #}
   <div class="form-group">
     <label class="form-label">Name <span class="required-mark">*</span></label>
     {{ form_input('label', v.get('label', ''), placeholder='z. B. Mein ntfy-Server',
@@ -43,7 +34,6 @@
     <span id="ch-label-error" class="form-error" style="display:none;">Bitte einen Namen eingeben.</span>
   </div>
 
-  {# ── ntfy-spezifische Felder ──────────────────────────────────────────── #}
   {% if cur_backend == 'ntfy' %}
   <div style="display:flex; flex-direction:column; gap:12px; margin-top:4px;">
     <div class="form-group">
@@ -68,7 +58,6 @@
   </div>
   {% endif %}
 
-  {# ── E-Mail-spezifische Felder ─────────────────────────────────────── #}
   {% if cur_backend == 'email' %}
   <div style="display:flex; flex-direction:column; gap:12px; margin-top:4px;">
     <div style="display:grid; grid-template-columns:2fr 1fr; gap:12px;">
@@ -132,13 +121,27 @@
   {% endif %}
 {% endblock %}
 
-{% block footer %}
-  {{ modal_footer(enabled=v.get('enabled', True), enabled_id='channel-enabled',
-                  save_label='Speichern' if is_edit else 'Erstellen') }}
+{% block dialog_footer %}
+<div class="ds-modal-footer">
+  <label class="toggle-field">
+    <input type="hidden" name="enabled" value="0">
+    <input type="checkbox" name="enabled" value="1" id="channel-enabled"
+           style="display:none;" {{ 'checked' if v.get('enabled', True) else '' }}>
+    <button type="button"
+            class="toggle-switch {{ 'toggle-on' if v.get('enabled', True) else 'toggle-off' }}"
+            onclick="var cb=document.getElementById('channel-enabled');cb.checked=!cb.checked;this.classList.toggle('toggle-on',cb.checked);this.classList.toggle('toggle-off',!cb.checked);this.nextElementSibling.textContent=cb.checked?'Aktiviert':'Deaktiviert';">
+      <span class="toggle-knob"></span>
+    </button>
+    <span class="toggle-field-label">{{ 'Aktiviert' if v.get('enabled', True) else 'Deaktiviert' }}</span>
+  </label>
+  <div class="modal-actions">
+    <button type="button" class="btn btn-sm btn-ghost" onclick="closeModal(this)">Abbrechen</button>
+    <button type="submit" class="btn btn-sm btn-primary">{{ 'Speichern' if is_edit else 'Erstellen' }}</button>
+  </div>
+</div>
 {% endblock %}
 
-{# Channel-Modal nutzt hx-on::after-request für Schließen — keine extra JS-Handler nötig #}
-{% block extra_scripts %}
+{% block dialog_scripts %}
 <script>
 function channelModalValidate(form) {
   var ids = ['ch-label'

@@ -1,13 +1,16 @@
 {% extends "dialog_core.html" %}
 
 {% block dialog_content %}
-<form hx-post="{% block form_action %}{% endblock %}"
+<form id="{% block form_id %}dialog-form{% endblock %}"
+      hx-{% block form_method %}post{% endblock %}="{% block form_action %}{% endblock %}"
       hx-target="{% block form_target %}#main-content{% endblock %}"
       hx-swap="innerHTML"
-      style="display:flex; flex-direction:column; gap:12px;">
+      hx-on::after-request="if(event.detail.successful) this.closest('.ds-modal-backdrop').remove()"
+      {% block form_attrs %}{% endblock %}
+      style="{% block form_style %}display:flex; flex-direction:column; gap:12px;{% endblock %}">
   {% block dialog_body %}{% endblock %}
   {% block dialog_footer %}
-  <div class="ds-modal-footer-simple">
+  <div class="ds-modal-footer ds-modal-footer--end">
     <button type="button" class="btn btn-sm btn-ghost" onclick="closeModal(this)">Abbrechen</button>
     <button type="submit" class="btn btn-sm btn-primary">Speichern</button>
   </div>

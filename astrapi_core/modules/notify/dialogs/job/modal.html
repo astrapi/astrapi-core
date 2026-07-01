@@ -10,8 +10,8 @@
     all_sources  – Dict {key: label} der registrierten Quellen
     all_channels – Dict {ch_id: ch_dict} der verfügbaren Kanäle
 #}
-{% extends "partials/modal_base_form.html" %}
-{% from "partials/components/ui_macros.html" import modal_title, modal_footer, form_select, form_input %}
+{% extends "dialog_form.html" %}
+{% from "partials/components/ui_macros.html" import form_select, form_input %}
 
 {% set is_edit = job is not none %}
 {% set v = job or {} %}
@@ -19,18 +19,13 @@
 {% set sel_sources = v.get('sources') or [] %}
 {% set cur_channel = v.get('channel_id', '') %}
 
-{% block modal_id %}job-modal{% endblock %}
-{% block modal_max_width %}540{% endblock %}
-{% block modal_padding %}22px 26px{% endblock %}
-
-{% block title %}{{ modal_title(is_edit=is_edit, title=title) }}{% endblock %}
-{% block submit_url %}{{ submit_url }}{% endblock %}
+{% block dialog_width %}540{% endblock %}
 {% block form_id %}job-modal-form{% endblock %}
-{% block submit_btn_id %}job-modal-save{% endblock %}
-{% block form_style %}display:flex; flex-direction:column; gap:16px; margin-top:18px;{% endblock %}
+{% block form_action %}{{ submit_url }}{% endblock %}
+{% block form_style %}display:flex; flex-direction:column; gap:16px;{% endblock %}
+{% block form_attrs %}onsubmit="return jobModalValidate(this)"{% endblock %}
 
-{% block form_content %}
-  {# ── Name ─────────────────────────────────────────────────────────────── #}
+{% block dialog_body %}
   <div class="form-group">
     <label class="form-label">Name <span class="required-mark">*</span></label>
     {%- set _attrs -%}
@@ -40,7 +35,6 @@
     <span id="job-name-error" class="form-error" style="display:none;">Bitte einen Namen eingeben.</span>
   </div>
 
-  {# ── Kanal wählen ─────────────────────────────────────────────────────── #}
   <div class="form-group">
     <label class="form-label">Kanal <span class="required-mark">*</span></label>
     {% if all_channels %}
@@ -63,7 +57,6 @@
     {% endif %}
   </div>
 
-  {# ── Ereignisse ──────────────────────────────────────────────────────── #}
   <div class="form-group">
     <label class="form-label">Ereignisse <span class="required-mark">*</span></label>
     <div style="display:flex; flex-wrap:wrap; gap:8px; margin-top:4px;">
@@ -91,7 +84,6 @@
     <span id="job-ev-error" class="form-error" style="display:none;">Bitte mindestens ein Ereignis auswählen.</span>
   </div>
 
-  {# ── Quellen-Filter (optional) ───────────────────────────────────────── #}
   {% set has_sources = all_sources or scheduler_sources %}
   {% if has_sources %}
   <div class="form-group">
@@ -160,14 +152,31 @@
   {% endif %}
 {% endblock %}
 
-{% block footer %}
-  {{ modal_footer(enabled=v.get('enabled', True), enabled_id='job-enabled',
-                  save_label='Speichern' if is_edit else 'Erstellen',
-                  save_disabled=not all_channels,
-                  save_type='button', save_id='job-modal-save') }}
+{% block dialog_footer %}
+<div class="ds-modal-footer">
+  <label class="toggle-field">
+    <input type="hidden" name="enabled" value="0">
+    <input type="checkbox" name="enabled" value="1" id="job-enabled"
+           style="display:none;" {{ 'checked' if v.get('enabled', True) else '' }}>
+    <button type="button"
+            class="toggle-switch {{ 'toggle-on' if v.get('enabled', True) else 'toggle-off' }}"
+            onclick="var cb=document.getElementById('job-enabled');cb.checked=!cb.checked;this.classList.toggle('toggle-on',cb.checked);this.classList.toggle('toggle-off',!cb.checked);this.nextElementSibling.textContent=cb.checked?'Aktiviert':'Deaktiviert';">
+      <span class="toggle-knob"></span>
+    </button>
+    <span class="toggle-field-label">{{ 'Aktiviert' if v.get('enabled', True) else 'Deaktiviert' }}</span>
+  </label>
+  <div class="modal-actions">
+    <button type="button" class="btn btn-sm btn-ghost" onclick="closeModal(this)">Abbrechen</button>
+    <button type="submit" class="btn btn-sm btn-primary" id="job-modal-save"
+            {{ 'disabled' if not all_channels else '' }}>
+      {{ 'Speichern' if is_edit else 'Erstellen' }}
+    </button>
+  </div>
+</div>
 {% endblock %}
 
-{% block module_scripts %}
+{% block dialog_scripts %}
+<script>
 function jobModalValidate(form) {
   var nameEl    = document.getElementById('job-name');
   var channelEl = document.getElementById('job-channel');
@@ -190,8 +199,5 @@ function jobModalValidate(form) {
 
   return nameOk && channelOk && evOk && srcOk;
 }
-{% endblock %}
-
-{% block submit_validation %}
-if (!jobModalValidate(form)) return;
+</script>
 {% endblock %}
