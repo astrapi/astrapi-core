@@ -4,7 +4,7 @@
 
 {% block dialog_body %}
 <p class="ds-modal-copy">
-  Möchtest du <strong>{{ description }}</strong>{% if qualifier | default('wirklich') %} {{ qualifier | default('wirklich') }}{% endif %} {{ verb }}?
+  Möchtest du <strong>{{ description }}</strong>{% if qualifier %} {{ qualifier }}{% endif %} {{ verb }}?
 </p>
 {% endblock %}
 

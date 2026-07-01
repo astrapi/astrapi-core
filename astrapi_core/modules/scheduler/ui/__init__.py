@@ -119,15 +119,13 @@ def scheduler_job_delete_modal(job_id: str, request: Request):
     job = get_job(job_id)
     return render(
         request,
-        "partials/confirm_modal.html",
+        "dialog_confirm.html",
         dict(
+            title="Löschen",
             description=job["label"] if job else job_id,
             verb="löschen",
             confirm_url=f"/api/{KEY}/{job_id}",
             method="delete",
-            reload_url=f"/ui/{KEY}/content",
-            container_id=request.query_params.get("container_id", _C_ID),
-            loading_id=request.query_params.get("loading_id", _L_ID),
         ),
     )
 

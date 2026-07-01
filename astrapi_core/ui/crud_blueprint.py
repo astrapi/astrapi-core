@@ -293,15 +293,13 @@ def make_crud_router(
             item = store.get(item_id) or {}
             return render(
                 request,
-                "partials/confirm_modal.html",
+                "dialog_confirm.html",
                 dict(
+                    title="Löschen",
                     description=item.get(description_field, item_id),
                     verb="löschen",
                     confirm_url=f"/api/{key}/{item_id}",
                     method="delete",
-                    reload_url=f"/ui/{key}/content",
-                    container_id=request.query_params.get("container_id", _c_id),
-                    loading_id=request.query_params.get("loading_id", _l_id),
                 ),
             )
 

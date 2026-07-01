@@ -238,15 +238,13 @@ def delete_modal(channel_id: str, request: Request):
     channel = get_channel(channel_id) or {}
     return render(
         request,
-        "partials/confirm_modal.html",
+        "dialog_confirm.html",
         dict(
+            title="Löschen",
             description=channel.get("label", channel_id),
             verb="löschen",
             confirm_url=f"/api/{KEY}/{channel_id}",
             method="delete",
-            reload_url=f"/ui/{KEY}/content",
-            container_id=_CONTAINER_ID,
-            loading_id=_LOADING_ID,
         ),
     )
 
@@ -336,15 +334,13 @@ def delete_job_modal(job_id: str, request: Request):
     job = get_job(job_id) or {}
     return render(
         request,
-        "partials/confirm_modal.html",
+        "dialog_confirm.html",
         dict(
+            title="Löschen",
             description=job.get("label", job_id),
             verb="löschen",
             confirm_url=f"/api/{KEY}/jobs/{job_id}",
             method="delete",
-            reload_url=f"/ui/{KEY}/content",
-            container_id=_CONTAINER_ID,
-            loading_id=_LOADING_ID,
         ),
     )
 

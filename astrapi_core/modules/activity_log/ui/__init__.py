@@ -101,14 +101,13 @@ def activity_log_clear(request: Request):
 def clear_confirm(request: Request):
     return render(
         request,
-        "partials/confirm_modal.html",
+        "dialog_confirm.html",
         dict(
+            title="Löschen",
             description="Alle Activity-Log-Einträge",
             verb="löschen",
             confirm_url=f"/api/{KEY}/clear",
             method="delete",
-            container_id=f"mod-{KEY}",
-            loading_id=f"{KEY}-loading",
         ),
     )
 
