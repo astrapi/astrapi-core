@@ -1,9 +1,8 @@
-{% extends "partials/modal_base_form.html" %}
+{% extends "dialog_form.html" %}
 
-{% block modal_id %}create-edit-modal{% endblock %}
-{% block modal_max_width %}560{% endblock %}
+{% block form_id %}create-edit-form{% endblock %}
 
-{% block extra_styles %}
+{% block dialog_scripts %}
 <style>
 .pkg-search-results { border:1px solid var(--border); border-radius:6px; overflow:hidden; margin-top:4px; }
 .pkg-search-group   { padding:4px 10px; font-size:11px; font-weight:600; text-transform:uppercase;
