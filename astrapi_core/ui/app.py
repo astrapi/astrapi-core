@@ -138,14 +138,17 @@ def create(
     global_defaults.setdefault("PAGINATION_PAGE_SIZE", 15)
     seed_defaults(global_defaults, modules, failed_module_keys)
 
-    # ── Template-Loader: Modul > App > Core ──────────────────────────────────
+    # ── Template-Loader: Modul > App > Core > Dialogs ────────────────────────
     app_templates = app_root / "templates"
     core_templates = CORE_ROOT / "templates"
+    core_dialogs   = CORE_ROOT / "dialogs"
 
     base_loaders: list = []
     if app_templates.exists():
         base_loaders.append(FileSystemLoader(str(app_templates)))
     base_loaders.append(FileSystemLoader(str(core_templates)))
+    if core_dialogs.exists():
+        base_loaders.append(FileSystemLoader(str(core_dialogs)))
 
     all_loaders = list(base_loaders)
     # register_ui_modules fügt Modul-Loader vorne ein (höchste Priorität)
@@ -282,6 +285,11 @@ def create(
     # ── Projektspezifischer Hook ──────────────────────────────────────────────
     if extra_init:
         extra_init(api)
+
+    # ── Dev-Routen (nur im Debug-Modus) ──────────────────────────────────────
+    if is_debug():
+        from .dev_routes import router as _dev_router
+        api.include_router(_dev_router)
 
     # ── Scheduler starten ─────────────────────────────────────────────────────
     try:

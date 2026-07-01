@@ -830,6 +830,11 @@ input,select,textarea { font-family:var(--font); }
   letter-spacing:-0.02em;
   margin-bottom:20px;
 }
+.ds-modal-header {
+  display:flex; align-items:center; justify-content:space-between;
+}
+.ds-modal-header .ds-modal-title { margin-bottom:0; }
+.ds-modal-header .ds-modal-close { position:static; }
 .ds-modal-close {
   position:absolute; top:14px; right:14px;
   width:34px; height:34px; border-radius:50%;
@@ -843,10 +848,14 @@ input,select,textarea { font-family:var(--font); }
 /* Modal Footer – Standard (Toggle links + Buttons rechts) */
 .ds-modal-footer {
   display:flex; align-items:center; justify-content:space-between; gap:10px;
-  padding-top:14px; margin-top:6px; border-top:1px solid var(--border-s);
+  padding-top:28px; border-top:1px solid var(--border-s);
 }
 /* Variante ohne Toggle: Buttons rechtsbündig */
 .ds-modal-footer--end { justify-content:flex-end; }
+.ds-modal-copy {
+  color:var(--text-2); font-size:14px; line-height:1.6;
+  padding:28px 0;
+}
 /* Einfacher Footer: Buttons rechtsbündig mit einheitlichem Abstand */
 .ds-modal-footer-simple {
   display:flex; justify-content:flex-end; gap:8px;

@@ -1,0 +1,25 @@
+<div id="{% block dialog_id %}dialog{% endblock %}"
+     class="ds-modal-backdrop"
+     x-data
+     x-on:keydown.escape.window="$el.remove()">
+  <div class="ds-modal"
+       style="max-width:{% block dialog_width %}620{% endblock %}px;
+              padding:{% block dialog_padding %}20px 24px{% endblock %};">
+    <div class="ds-modal-header">
+      <span class="ds-modal-title">{% block dialog_title %}{{ title }}{% endblock %}</span>
+      <button type="button" class="ds-modal-close" onclick="closeModal(this)">
+        <svg width="14" height="14" viewBox="0 0 24 24"
+             fill="currentColor" stroke="none"><use href="#icon-close"></use></svg>
+      </button>
+    </div>
+    {% block dialog_content %}
+      {% block dialog_body %}{% endblock %}
+      {% block dialog_footer %}
+      <div class="ds-modal-footer ds-modal-footer--end">
+        <button type="button" class="btn btn-sm btn-ghost" onclick="closeModal(this)">Schließen</button>
+      </div>
+      {% endblock %}
+    {% endblock %}
+  </div>
+</div>
+{% block dialog_scripts %}{% endblock %}

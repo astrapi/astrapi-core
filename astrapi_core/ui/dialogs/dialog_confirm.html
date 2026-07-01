@@ -1,0 +1,21 @@
+{% extends "dialog_core.html" %}
+
+{% block dialog_width %}420{% endblock %}
+
+{% block dialog_body %}
+<p class="ds-modal-copy">
+  Möchtest du <strong>{{ description }}</strong>{% if qualifier | default('wirklich') %} {{ qualifier | default('wirklich') }}{% endif %} {{ verb }}?
+</p>
+{% endblock %}
+
+{% block dialog_footer %}
+<div class="ds-modal-footer ds-modal-footer--end">
+  <button type="button" class="btn btn-sm btn-ghost"
+          onclick="closeModal(this)">Abbrechen</button>
+  <button type="button" class="btn btn-sm btn-{{ btn_style | default('danger') }}"
+          hx-{{ method | default('post') }}="{{ confirm_url }}"
+          hx-on::after-request="this.closest('.ds-modal-backdrop').remove()">
+    {{ verb | capitalize }}
+  </button>
+</div>
+{% endblock %}
