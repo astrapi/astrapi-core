@@ -45,9 +45,9 @@
     {%- if _ui_content and _ui_content.type == 'custom' and _ui_content.template -%}
       {% include _ui_content.template %}
     {%- elif _ui_content and _ui_content.type == 'columns' -%}
-      {% include "partials/content_columns.html" %}
+      {% include "partials/oob/content_columns.html" %}
     {%- else -%}
-      {% include "partials/list_wrapper_inner.html" %}
+      {% include "partials/lists/list_wrapper_inner.html" %}
     {%- endif -%}
   {% endblock %}
 </div>

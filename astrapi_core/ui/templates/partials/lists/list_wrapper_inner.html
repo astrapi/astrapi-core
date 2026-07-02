@@ -1,8 +1,8 @@
 {#
-  core/ui/templates/partials/list_wrapper_inner.html
+  core/ui/templates/partials/lists/list_wrapper_inner.html
 
   Generisches Listen-Template für runnable CRUD-Module.
-  Status-Polling via HTMX OOB-Swaps (partials/status_oob.html).
+  Status-Polling via HTMX OOB-Swaps (partials/oob/status_oob.html).
 
   Variablen:
     cfg              – dict {item_id: item_dict} aus load_config/storage
@@ -180,5 +180,5 @@
 
 {# ── Mobile-Ansicht (Karten) ──────────────────────────────────────────────── #}
 <div class="mobile-view">
-  {% include [module + '/partials/mobile_cards.html', 'partials/mobile_cards_generic.html'] %}
+  {% include [module + '/partials/mobile_cards.html', 'partials/lists/mobile_cards_generic.html'] %}
 </div>{# /mobile-view #}

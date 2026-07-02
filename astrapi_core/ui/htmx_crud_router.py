@@ -68,7 +68,7 @@ def make_htmx_crud_router(
 
         content = render(
             request,
-            "partials/list_wrapper_inner.html",
+            "partials/lists/list_wrapper_inner.html",
             {
                 "cfg": load_config(key),
                 "module": key,

@@ -1,5 +1,5 @@
 {#
-  core/ui/templates/partials/content_columns.html
+  core/ui/templates/partials/oob/content_columns.html
 
   Rendert ContentColumns: mehrere ContentTable-Instanzen nebeneinander.
   Erwartet im Context:
@@ -11,7 +11,7 @@
   <div class="content-item on" data-debug-label="content-item">
     {% if col.title %}<div class="sysinfo-card-header">{{ col.title }}</div>{% endif %}
     {% with cfg=col_cfg, _col_obj=col %}
-      {% include "partials/list_wrapper_inner.html" %}
+      {% include "partials/lists/list_wrapper_inner.html" %}
     {% endwith %}
   </div>
 {% endfor %}

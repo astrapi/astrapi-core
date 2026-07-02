@@ -85,4 +85,4 @@ def render_toast_badge(request, ok: bool, msg: str):
             ok, msg = _do_test(item_id)
             return render_toast_badge(request, ok, msg)
     """
-    return render(request, "partials/toast_badge.html", {"ok": ok, "msg": msg, "toast": True})
+    return render(request, "partials/oob/toast_badge.html", {"ok": ok, "msg": msg, "toast": True})
