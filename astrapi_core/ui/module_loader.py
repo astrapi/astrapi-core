@@ -65,7 +65,7 @@ _CARD_ACTION_TYPES: dict[str, dict] = {
         "hx_swap": "innerHTML",
     },
     "power-on": {
-        "title": "Aufwecken (Wake on LAN)",
+        "title": "Ein- / Ausschalten",
         "icon": "power-on",
         "style": "run",
         "hx_get": "",
