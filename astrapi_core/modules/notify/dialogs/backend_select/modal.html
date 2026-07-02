@@ -4,17 +4,15 @@
     builtin_backends  – Liste von (key, label, description) der eingebauten Backends
     custom_backends   – Liste zusätzlich registrierter Backend-Keys
 #}
-{% extends "partials/modal_base.html" %}
-{% from "partials/components/ui_macros.html" import modal_title, btn_cancel %}
+{% extends "dialog_core.html" %}
 
 {% set total_backends = builtin_backends|length + custom_backends|length %}
 
-{% block modal_id %}backend-select-modal{% endblock %}
-{% block modal_class %}confirm-dialog{% endblock %}
-{% block modal_max_width %}{{ '500' if total_backends == 2 else '420' }}{% endblock %}
-{% block modal_padding %}{% endblock %}
+{% block dialog_id %}backend-select-modal{% endblock %}
+{% block dialog_width %}{{ '500' if total_backends == 2 else '420' }}{% endblock %}
+{% block dialog_title %}Neuer Kanal{% endblock %}
 
-{% block extra_styles %}
+{% block dialog_scripts %}
 <style>
   .bk-card {
     display: flex;
@@ -81,8 +79,7 @@
 </style>
 {% endblock %}
 
-{% block modal_inner %}
-  {{ modal_title(title="Neuer Kanal") }}
+{% block dialog_body %}
   <p style="text-align:center; font-size:12.5px; color:var(--text-3); margin-bottom:22px;">
     Wähle den Kanal-Typ
   </p>
@@ -153,8 +150,4 @@
     {% endfor %}
   </div>
   {% endif %}
-
-  <div style="display:flex; justify-content:center; margin-top:20px;">
-    {{ btn_cancel() }}
-  </div>
 {% endblock %}

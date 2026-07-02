@@ -1,12 +1,11 @@
 {# activity_log/dialogs/detail/modal.html #}
-{% extends "partials/modal_base_info.html" %}
-{% from "partials/components/ui_macros.html" import modal_title, btn, modal_footer_actions %}
+{% extends "dialog_info.html" %}
+{% from "partials/components/ui_macros.html" import btn %}
 
-{% block modal_max_width %}600{% endblock %}
+{% block dialog_width %}600{% endblock %}
+{% block dialog_title %}Activity Log – Details{% endblock %}
 
-{% block title %}{{ modal_title(title="Activity Log – Details") }}{% endblock %}
-
-{% block body %}
+{% block dialog_body %}
   <div style="display:grid; grid-template-columns:130px 1fr; gap:10px 16px; font-size:13px; padding:4px 0;">
 
     <div style="color:var(--text-3); font-weight:600;">Zeitpunkt</div>
@@ -96,11 +95,12 @@
   </div>
 {% endblock %}
 
-{% block footer %}
-  {% call modal_footer_actions() %}
-    {% if entry.log_type in ('job', 'scheduler') %}
-    {{ btn('Log anzeigen', variant='primary',
-           attrs='hx-get="/ui/activity_log/' ~ entry.id ~ '/log" hx-target="body" hx-swap="beforeend"') }}
-    {% endif %}
-  {% endcall %}
+{% block dialog_footer %}
+<div class="ds-modal-footer ds-modal-footer--end">
+  {% if entry.log_type in ('job', 'scheduler') %}
+  {{ btn('Log anzeigen', variant='primary',
+         attrs='hx-get="/ui/activity_log/' ~ entry.id ~ '/log" hx-target="body" hx-swap="beforeend"') }}
+  {% endif %}
+  <button type="button" class="btn btn-sm btn-ghost" onclick="closeModal(this)">Schließen</button>
+</div>
 {% endblock %}

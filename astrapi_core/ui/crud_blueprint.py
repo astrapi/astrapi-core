@@ -312,7 +312,7 @@ def make_crud_router(
             verb = "deaktivieren" if enabled == "True" else "aktivieren"
             return render(
                 request,
-                "partials/confirm_modal.html",
+                "dialog_confirm.html",
                 dict(
                     description=item.get(description_field, item_id),
                     verb=verb,

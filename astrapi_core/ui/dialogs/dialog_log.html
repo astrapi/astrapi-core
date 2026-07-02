@@ -16,17 +16,14 @@
     dates       – list[str]: verfügbare Datum-Dateien
     selected    – str: aktuell gewähltes Datum
 #}
-{% extends "partials/modal_base_info.html" %}
-{% from "partials/components/ui_macros.html" import modal_title, modal_footer_simple, form_select %}
+{% extends "dialog_core.html" %}
+{% from "partials/components/ui_macros.html" import form_select %}
 
-{% block modal_id %}log-modal{% endblock %}
-{% block modal_class %}ds-modal log-modal-inner{% endblock %}
-{% block modal_max_width %}1000{% endblock %}
-{% block modal_padding %}{% endblock %}
+{% block dialog_id %}log-modal{% endblock %}
+{% block dialog_width %}1000{% endblock %}
+{% block dialog_title %}Log – {{ description }}{% endblock %}
 
-{% block title %}{{ modal_title(title="Log – " + description) }}{% endblock %}
-
-{% block body %}
+{% block dialog_body %}
   {% if live %}
   <!-- ── LIVE-MODUS ─────────────────────────────────────── -->
   <div class="inline-cluster" style="margin-bottom:10px;">
@@ -72,9 +69,7 @@
   {% endif %}
 {% endblock %}
 
-{% block footer %}{{ modal_footer_simple(close_label="Schließen") }}{% endblock %}
-
-{% block extra_scripts %}
+{% block dialog_scripts %}
 {% if live %}
 <script>
 (function() {

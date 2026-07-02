@@ -210,7 +210,7 @@ def make_htmx_crud_router(
                 raise HTTPException(404, "Item not found")
             return get_templates().TemplateResponse(
                 request,
-                "partials/preview_modal.html",
+                "dialog_preview.html",
                 {
                     "description": entry.get("description", item_id),
                     "commands": preview_fn(item_id),

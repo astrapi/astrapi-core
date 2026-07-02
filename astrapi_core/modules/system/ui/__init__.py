@@ -87,7 +87,7 @@ def system_update_logs(request: Request, live: int = 0):
     dates = [{"id": str(r["id"]), "label": r["started_at"] or str(r["id"])} for r in runs]
     return render(
         request,
-        "partials/log_modal.html",
+        "dialog_log.html",
         {
             "module": KEY,
             "item_id": "update",

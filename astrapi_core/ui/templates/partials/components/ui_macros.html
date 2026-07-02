@@ -255,13 +255,12 @@
 </label>
 {% endmacro %}
 
-{# ── Modal-Standard-Komponenten ──────────────────────────────────────────── #}
-{# Alle Modals erben von partials/modal_base.html (oder _form / _info).       #}
-{# Die Außenstruktur (Backdrop, Container, Escape-Key) ist dort definiert.    #}
+{# ── Modal-Standard-Komponenten (legacy, nicht mehr in neuen Templates verwenden) ── #}
+{# Neue Templates erben von ui/dialogs/dialog_core.html (oder _form / _confirm).    #}
 
 {#
   modal_title(title, icon, is_edit)
-  Rendert den Header eines Modals (nur Titel – X-Button kommt aus modal_base.html).
+  Legacy-Makro – ersetzt durch {% block dialog_title %} in dialog_core.html.
 #}
 {% macro modal_title(title='', icon=None, is_edit=False) %}
 <div class="ds-modal-title">{{ title }}</div>

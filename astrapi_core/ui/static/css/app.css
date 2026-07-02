@@ -865,19 +865,6 @@ input,select,textarea { font-family:var(--font); }
   display:flex;
   gap:10px;
 }
-.confirm-dialog {
-  background:var(--card); border:1px solid var(--border-s);
-  border-radius:24px; box-shadow:var(--sh-m);
-  padding:28px 32px; width:100%; max-width:400px;
-  position:relative;
-}
-.confirm-icon {
-  width:44px; height:44px; border-radius:50%;
-  background:var(--err-bg); border:1px solid var(--err-bd);
-  display:flex; align-items:center; justify-content:center;
-  margin:0 auto 14px; color:var(--err);
-}
-
 /* ════════════════ CONTENT COLUMNS (generisch) ══════════════════ */
 .content-columns {
   display:grid;
@@ -985,7 +972,6 @@ input,select,textarea { font-family:var(--font); }
 .light-mode .log-warning { color:#9a6700; }
 .light-mode .log-error   { color:#a51d2d; }
 .light-mode .log-debug   { color:#5e5c64; }
-.log-modal-inner { max-width:760px; width:100%; }
 
 /* ── Cron-Builder ───────────────────────────────────────────── */
 .dow-btn {

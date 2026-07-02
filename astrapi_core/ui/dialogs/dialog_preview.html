@@ -6,15 +6,13 @@
     description – Anzeigename des Jobs
     commands    – list[dict(label, cmd)]  – Befehle mit Abschnitts-Label
 #}
-{% extends "partials/modal_base_info.html" %}
-{% from "partials/components/ui_macros.html" import modal_title, modal_footer_simple %}
+{% extends "dialog_core.html" %}
 
-{% block modal_id %}preview-modal{% endblock %}
-{% block modal_max_width %}800{% endblock %}
+{% block dialog_id %}preview-modal{% endblock %}
+{% block dialog_width %}800{% endblock %}
+{% block dialog_title %}Befehlsvorschau – {{ description }}{% endblock %}
 
-{% block title %}{{ modal_title(title="Befehlsvorschau – " + description) }}{% endblock %}
-
-{% block body %}
+{% block dialog_body %}
   {% if commands %}
     {% for entry in commands %}
     <div style="margin-bottom:14px;" x-data="{copied: false}">

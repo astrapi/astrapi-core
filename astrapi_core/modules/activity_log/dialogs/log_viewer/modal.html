@@ -1,22 +1,22 @@
 {# activity_log/dialogs/log_viewer/modal.html #}
-{% extends "partials/modal_base_info.html" %}
-{% from "partials/components/ui_macros.html" import modal_title, btn, modal_footer_actions %}
+{% extends "dialog_info.html" %}
+{% from "partials/components/ui_macros.html" import btn %}
 
-{% block modal_max_width %}1000{% endblock %}
-{% block modal_padding %}24px 28px; width:90%{% endblock %}
+{% block dialog_width %}1000{% endblock %}
+{% block dialog_padding %}24px 28px{% endblock %}
+{% block dialog_title %}Log: {{ entry.description }}{% endblock %}
 
-{% block title %}{{ modal_title(title="Log: " + entry.description) }}{% endblock %}
-
-{% block body %}
+{% block dialog_body %}
   <pre style="margin:0; padding:12px; background:var(--bg); color:var(--text-2);
               font-family:var(--mono); font-size:11px; line-height:1.5;
               overflow-x:auto; white-space:pre-wrap; word-break:break-word;
               max-height:65vh; overflow-y:auto; border-radius:4px;">{{ full_log }}</pre>
 {% endblock %}
 
-{% block footer %}
-  {% call modal_footer_actions() %}
-    {{ btn('Kopieren',
-           onclick="navigator.clipboard.writeText(this.closest('.ds-modal').querySelector('pre').innerText)") }}
-  {% endcall %}
+{% block dialog_footer %}
+<div class="ds-modal-footer-simple">
+  <button type="button" class="btn btn-ghost btn-sm" onclick="closeModal(this)">Schließen</button>
+  {{ btn('Kopieren',
+         onclick="navigator.clipboard.writeText(this.closest('.ds-modal').querySelector('pre').innerText)") }}
+</div>
 {% endblock %}
