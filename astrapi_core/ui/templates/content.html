@@ -13,7 +13,7 @@
   <div class="content-header" data-debug-label="content-header">
     <div class="content-header-title">{{ module_label(module) }}</div>
     <div class="content-header-actions">
-      {% if _ui_header and _ui_header.controls %}
+      {% if _ui_header is not none %}
         {% for ctrl in _ui_header.controls %}{{ ui.header_control(ctrl, module, container_id, loading_id | default('')) }}{% endfor %}
       {% else %}
         {% if filter_defs %}

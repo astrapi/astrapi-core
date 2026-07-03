@@ -2,7 +2,7 @@
 
 from pathlib import Path
 
-from astrapi_core.ui.controls import ContentCustom
+from astrapi_core.ui.controls import ContentCustom, Header
 from astrapi_core.ui.module_loader import load_modul
 
 _KEY = Path(__file__).parent.name
@@ -14,5 +14,6 @@ module = load_modul(
     _KEY,
     None,
     ui_router,
+    ui_header=Header([]),
     ui_content=ContentCustom(template="partials/lists/settings.html"),
 )
