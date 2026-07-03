@@ -33,8 +33,25 @@
     <span style="font-size:12px; color:var(--text-3);">Wird aktualisiert…</span>
   </div>
 
-  <div id="log-content" class="surface-code log-panel">
-    {% include "partials/dialogs/log_content.html" %}
+  <div style="position:relative;" x-data="{copied:false}">
+    <button type="button"
+            style="position:absolute;top:8px;right:8px;z-index:1;background:none;border:none;
+                   cursor:pointer;padding:4px;border-radius:4px;opacity:.6;color:var(--text-2);
+                   transition:opacity .15s;"
+            title="Kopieren"
+            x-on:mouseenter="$el.style.opacity=1"
+            x-on:mouseleave="$el.style.opacity=copied?1:.6"
+            x-on:click="navigator.clipboard.writeText(document.getElementById('log-content').innerText.trim());copied=true;setTimeout(()=>copied=false,1500)">
+      <template x-if="!copied">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor" stroke="none"><use href="#icon-copy"></use></svg>
+      </template>
+      <template x-if="copied">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor" stroke="none"><use href="#icon-check"></use></svg>
+      </template>
+    </button>
+    <div id="log-content" class="surface-code log-panel">
+      {% include "partials/dialogs/log_content.html" %}
+    </div>
   </div>
 
   {% else %}
@@ -57,8 +74,25 @@
     </div>
   {% endif %}
 
-  <div id="log-content" class="surface-code log-panel">
-    {% include "partials/dialogs/log_content.html" %}
+  <div style="position:relative;" x-data="{copied:false}">
+    <button type="button"
+            style="position:absolute;top:8px;right:8px;z-index:1;background:none;border:none;
+                   cursor:pointer;padding:4px;border-radius:4px;opacity:.6;color:var(--text-2);
+                   transition:opacity .15s;"
+            title="Kopieren"
+            x-on:mouseenter="$el.style.opacity=1"
+            x-on:mouseleave="$el.style.opacity=copied?1:.6"
+            x-on:click="navigator.clipboard.writeText(document.getElementById('log-content').innerText.trim());copied=true;setTimeout(()=>copied=false,1500)">
+      <template x-if="!copied">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor" stroke="none"><use href="#icon-copy"></use></svg>
+      </template>
+      <template x-if="copied">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor" stroke="none"><use href="#icon-check"></use></svg>
+      </template>
+    </button>
+    <div id="log-content" class="surface-code log-panel">
+      {% include "partials/dialogs/log_content.html" %}
+    </div>
   </div>
 
   {% if not dates and not lines %}
