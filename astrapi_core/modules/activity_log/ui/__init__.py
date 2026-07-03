@@ -141,14 +141,22 @@ def log_viewer(request: Request, log_id: int):
     entry = get_activity_log(log_id)
     if not entry:
         return HTMLResponse("<div>Log nicht gefunden</div>")
-    lines = get_log_lines(log_id)
-    full_log = (
-        "\n".join(f"[{r['level']}] {r['line']}" for r in lines)
-        if lines
-        else entry.get("full_log", "")
+    rows = get_log_lines(log_id)
+    lines = (
+        [f"{r['level']}: {r['line']}" for r in rows]
+        if rows
+        else [entry.get("full_log", "(kein Log vorhanden)")]
     )
     return render(
         request,
-        "activity_log/dialogs/log_viewer/modal.html",
-        {"entry": entry, "full_log": full_log},
+        "dialog_log.html",
+        {
+            "module": KEY,
+            "item_id": log_id,
+            "description": entry.get("description", str(log_id)),
+            "lines": lines,
+            "dates": [],
+            "selected": None,
+            "live": False,
+        },
     )
