@@ -1,6 +1,4 @@
 # core/modules/activity_log/ui/routes.py
-import json
-
 from fastapi import APIRouter, Request
 from fastapi.responses import HTMLResponse
 
@@ -14,8 +12,6 @@ from ..engine import (
     clear_activity_log,
     count_activity,
     enrich,
-    fmt_bytes,
-    fmt_duration,
     get_activity_log,
     get_log_lines,
     list_activity,
@@ -116,24 +112,6 @@ def clear_confirm(request: Request):
 def content(request: Request):
     return render(request, "content.html", _content_ctx(request))
 
-
-@router.get(f"/ui/{KEY}/{{log_id}}/detail", response_class=HTMLResponse)
-def detail(request: Request, log_id: int):
-    entry = get_activity_log(log_id)
-    if not entry:
-        return HTMLResponse("<div>Log-Eintrag nicht gefunden</div>")
-    entry["duration_fmt"] = fmt_duration(entry.get("duration_s"))
-    entry["bytes_fmt"] = fmt_bytes(entry.get("bytes_processed"))
-    if entry.get("metadata"):
-        try:
-            entry["metadata_dict"] = json.loads(entry["metadata"])
-        except Exception:
-            entry["metadata_dict"] = {}
-    return render(
-        request,
-        "activity_log/dialogs/detail/modal.html",
-        {"entry": entry},
-    )
 
 
 @router.get(f"/ui/{KEY}/{{log_id}}/log", response_class=HTMLResponse)

@@ -4,7 +4,5 @@ nav_group:   System
 nav_default: false
 
 card_actions:
-  - type: info
-    url: /ui/activity_log/{item}/detail
   - type: log
     url: /ui/activity_log/{item}/log

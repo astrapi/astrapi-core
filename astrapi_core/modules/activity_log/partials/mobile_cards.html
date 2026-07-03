@@ -44,12 +44,7 @@
       <div class="m-card-footer">
         <span class="badge-pill {{ _t.cls }}">{{ _t.label }}</span>
         <div class="m-card-footer-actions">
-          <button hx-get="/ui/activity_log/{{ item_name }}/detail"
-                  hx-target="body" hx-swap="beforeend"
-                  class="btn-icon" title="Detail">
-            {{ ui.icon('info') }}
-          </button>
-          <button hx-get="/ui/activity_log/{{ item_name }}/log"
+<button hx-get="/ui/activity_log/{{ item_name }}/log"
                   hx-target="body" hx-swap="beforeend"
                   class="btn-icon btn-icon-log" title="Log">
             {{ ui.icon('file-text') }}
