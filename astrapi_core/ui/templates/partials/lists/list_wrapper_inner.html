@@ -116,6 +116,15 @@
           {% endif %}
           <td class="col-actions">
             <div class="table-actions">
+              {%- set _n_actions = (_card_actions | length)
+                                 + (1 if has_edit | default(True) else 0)
+                                 + (1 if has_delete | default(True) else 0)
+                                 + (1 if extra_actions_template else 0) -%}
+              {% if _n_actions == 1 %}
+                {% for action in _card_actions %}{{ ui.card_action_button(action, item_name, item_data, container_id, loading_id) }}{% endfor %}
+                {% if has_edit | default(True) %}{{ ui.edit_button(module=module, item=item_name, container_id=container_id, loading_id=loading_id, item_prefix=_item_url_prefix) }}{% endif %}
+                {% if has_delete | default(True) %}{{ ui.delete_button(module=module, item=item_name, container_id=container_id, loading_id=loading_id, description=item_data.description or item_data.job or item_data.host or item_name, item_prefix=_item_url_prefix) }}{% endif %}
+              {% else %}
               <div class="table-ctx-menu"
                    x-data="{open: false, pos: {top:0, right:0}, toggle(btn){ const r=btn.getBoundingClientRect(); this.pos={top: r.bottom+2, right: window.innerWidth-r.right}; this.open=!this.open; }}"
                    @click.outside="open = false">
@@ -133,6 +142,7 @@
                   {% endif %}
                 </div>
               </div>
+              {% endif %}
             </div>
           </td>
         </tr>
