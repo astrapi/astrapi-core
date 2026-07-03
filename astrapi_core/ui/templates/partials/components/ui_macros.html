@@ -487,7 +487,7 @@
     container_id – Container-ID für Standard-HTMX-Target
     loading_id   – Loading-Indicator-ID
 #}
-{% macro header_control(ctrl, module, container_id, loading_id='') %}
+{% macro header_control(ctrl, module, container_id, loading_id='', filter_defs=[]) %}
 {%- if ctrl.type == 'filter_select' -%}
 {%- set _hx_get     = ctrl.hx_get     or ('/ui/' ~ module ~ '/content') -%}
 {%- set _hx_target  = ctrl.hx_target  or ('#' ~ container_id) -%}
@@ -496,9 +496,13 @@
 {%- set _data_key   = ctrl.data_attr  or ('data-filter-for="' ~ module ~ '"') -%}
 {%- set _opts = ctrl.options if ctrl.options else [] -%}
 {%- if not _opts and ctrl.options_fn -%}{%- set _opts = ctrl.options_fn() -%}{%- endif -%}
+{%- set _ns = namespace(active='') -%}
+{%- for fd in filter_defs -%}{%- if fd.param == ctrl.name -%}{%- set _ns.active = fd.active -%}{%- endif -%}{%- endfor -%}
 <select class="form-select table-filter-select"
         name="{{ ctrl.name }}"
         {{ _data_key }}
+        x-data="moduleFilter('{{ module }}__{{ ctrl.name }}')"
+        @change="save($el.value)"
         hx-get="{{ _hx_get }}"
         hx-target="{{ _hx_target }}"
         hx-swap="{{ _hx_swap }}"
@@ -506,7 +510,8 @@
         hx-include="{{ _hx_include }}">
   <option value="">{{ ctrl.all_label or 'Alle' }}</option>
   {%- for opt in _opts -%}
-  <option value="{{ opt.value }}"{{ ' selected' if opt.default else '' }}>{{ opt.label }}</option>
+  {%- set _sel = (opt.value|string == _ns.active|string and _ns.active != '') or (opt.default and not _ns.active) -%}
+  <option value="{{ opt.value }}"{{ ' selected' if _sel else '' }}>{{ opt.label }}</option>
   {%- endfor -%}
 </select>
 {%- elif ctrl.type == 'action_button' -%}
