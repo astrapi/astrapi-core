@@ -23,6 +23,20 @@
 {% block dialog_width %}1000{% endblock %}
 {% block dialog_title %}Log – {{ description }}{% endblock %}
 
+{% block dialog_header_extra %}
+{% if dates %}
+  {% call form_select('', attrs='style="width:auto;min-width:180px;" id="log-date-select"') %}
+    {% for run in dates %}
+      {% set val = run.id if run is mapping else run %}
+      {% set lbl = run.label if run is mapping else run %}
+      <option value="{{ val }}" {{ 'selected' if val == selected else '' }}>
+        {{ lbl }}{% if loop.first %} (aktuell){% endif %}
+      </option>
+    {% endfor %}
+  {% endcall %}
+{% endif %}
+{% endblock %}
+
 {% block dialog_body %}
   {% if live %}
   <!-- ── LIVE-MODUS ─────────────────────────────────────── -->
@@ -56,24 +70,6 @@
 
   {% else %}
   <!-- ── STATISCHER MODUS ───────────────────────────────── -->
-  {% if dates %}
-    <div class="inline-cluster" style="margin-bottom:10px; gap:10px;">
-      <label style="font-size:13px; color:var(--text-2); font-weight:500;">Run:</label>
-      {% call form_select('', attrs='style="width:auto; min-width:200px;" id="log-date-select"') %}
-        {% for run in dates %}
-          {% set val = run.id if run is mapping else run %}
-          {% set lbl = run.label if run is mapping else run %}
-          <option value="{{ val }}" {{ 'selected' if val == selected else '' }}>
-            {{ lbl }}{% if loop.first %} (aktuell){% endif %}
-          </option>
-        {% endfor %}
-      {% endcall %}
-      <span class="mono-inline">
-        {{ dates|length }} Run{{ 'S' if dates|length != 1 else '' }}
-      </span>
-    </div>
-  {% endif %}
-
   <div style="position:relative;" x-data="{copied:false}">
     <button type="button"
             style="position:absolute;top:8px;right:8px;z-index:1;background:none;border:none;

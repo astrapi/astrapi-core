@@ -7,6 +7,7 @@
               padding:{% block dialog_padding %}20px 24px{% endblock %};">
     <div class="ds-modal-header">
       <span class="ds-modal-title">{% block dialog_title %}{{ title }}{% endblock %}</span>
+      {% block dialog_header_extra %}{% endblock %}
       <button type="button" class="ds-modal-close" onclick="closeModal(this)">
         <svg width="14" height="14" viewBox="0 0 24 24"
              fill="currentColor" stroke="none"><use href="#icon-close"></use></svg>
