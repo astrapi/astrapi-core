@@ -107,8 +107,8 @@ _CARD_ACTION_TYPES: dict[str, dict] = {
         "hx_swap": "beforeend",
     },
     "stats": {
-        "title": "Statistiken",
-        "icon": "bar-chart",
+        "title": "Info",
+        "icon": "info",
         "style": "log",
         "hx_get": "/api/{module}/{item}/stats",
         "hx_target": "body",
