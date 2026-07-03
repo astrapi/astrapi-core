@@ -61,7 +61,7 @@
     {% include "partials/dialogs/log_content.html" %}
   </div>
 
-  {% if not dates %}
+  {% if not dates and not lines %}
     <div class="text-center" style="color:var(--text-3); font-size:13px; padding:20px 0;">
       Noch keine Logs vorhanden – erscheinen nach dem ersten Ausführen.
     </div>
