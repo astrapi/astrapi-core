@@ -460,6 +460,8 @@ input,select,textarea { font-family:var(--font); }
 .log-panel {
   height:420px;
   overflow-y:auto;
+  margin-top:16px;
+  margin-bottom:16px;
 }
 
 .section-top-space { margin-top:20px; }
