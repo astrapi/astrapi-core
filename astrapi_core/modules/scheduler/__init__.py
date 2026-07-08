@@ -29,7 +29,6 @@ module = load_modul(
                 "Neuer Job",
                 hx_get=f"/ui/{_KEY}/job/new",
                 hx_target="body",
-                style="primary",
             ),
         ]
     ),

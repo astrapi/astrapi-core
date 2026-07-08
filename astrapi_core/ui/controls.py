@@ -192,7 +192,7 @@ class HeaderControl:
 
     # Gemeinsame Felder
     label: str = ""
-    style: str = "primary"  # primary | danger | ghost | warning
+    style: str = "ghost"  # ghost | primary | danger | warning
 
     # HTMX
     hx_get: str = ""
@@ -255,7 +255,7 @@ class Header:
         hx_post: str = "",
         hx_target: str = "",
         hx_swap: str = "beforeend",
-        style: str = "primary",
+        style: str = "ghost",
     ) -> HeaderControl:
         return HeaderControl(
             type="action_button",
