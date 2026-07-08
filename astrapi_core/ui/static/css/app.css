@@ -486,6 +486,8 @@ input,select,textarea { font-family:var(--font); }
 .btn-success:hover { background:var(--g-h); border-color:var(--g-h); box-shadow:0 10px 24px rgba(34,197,94,0.18); }
 .btn-danger  { background:rgba(220,38,38,0.12); color:var(--r); border-color:rgba(220,38,38,0.25); }
 .btn-danger:hover  { background:rgba(220,38,38,0.20); border-color:rgba(220,38,38,0.40); box-shadow:none; }
+.btn-accent  { background:rgba(37,99,235,0.10); color:var(--b); border-color:rgba(37,99,235,0.28); box-shadow:none; font-weight:600; }
+.btn-accent:hover  { background:rgba(37,99,235,0.18); border-color:rgba(37,99,235,0.50); }
 .btn-ghost {
   background: var(--btn-2);
   color: var(--btn-2-t);
