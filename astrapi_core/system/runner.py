@@ -6,7 +6,7 @@ Module nutzen diese Funktionen in ihren ``run()``-Implementierungen:
     from astrapi_core.system.runner import run_all, run_logged
 
     def run():
-        run_all("borg", _get_config(), run_single)
+        return run_all("borg", _get_config(), run_single)
 
     # Einzelnen Eintrag mit Activity-Log-Kontext ausführen:
     run_logged("proxmox_lxc", str(item_id), name, lambda: _backup_lxc(...))
@@ -72,7 +72,7 @@ def run_all(
     config: dict,
     run_single_fn,
     desc_fn=None,
-) -> None:
+) -> str:
     """Führt ``run_single_fn`` für alle aktivierten Einträge in ``config`` aus.
 
     Args:
@@ -82,9 +82,8 @@ def run_all(
         desc_fn:      Optionales Callable ``(item_id, entry) -> str`` für den Anzeigenamen.
                       Standard: ``entry.get("description", item_id)``.
 
-    Raises:
-        RuntimeError: Wenn mindestens ein Eintrag mit Status ``"error"`` abgeschlossen hat.
-                      Dadurch wird der übergeordnete Scheduler-Job ebenfalls als fehlerhaft markiert.
+    Returns:
+        ``"ok"`` wenn alle Einträge erfolgreich, ``"error"`` wenn mindestens einer fehlgeschlagen.
     """
     failed: list[tuple[str, str]] = []
     for item_id, entry in config.items():
@@ -104,9 +103,7 @@ def run_all(
         if status == "error":
             failed.append((str(item_id), desc))
 
-    if failed:
-        rows = "\n".join(f"  - {desc}" for _, desc in failed)
-        raise RuntimeError(f"Fehler in {len(failed)} Job(s):\n{rows}")
+    return "error" if failed else "ok"
 
 
 def _notify(module: str, description: str, status: str, duration: int) -> None:

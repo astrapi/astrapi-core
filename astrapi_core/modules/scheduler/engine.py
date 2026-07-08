@@ -218,8 +218,12 @@ class Scheduler:
                 continue
             try:
                 log.info("Job '%s': Schritt '%s' startet", job_id, step_key)
-                action["fn"]()
-                log.info("Job '%s': Schritt '%s' abgeschlossen", job_id, step_key)
+                result = action["fn"]()
+                if result == "error":
+                    errors.append(step_key)
+                    log.warning("Job '%s': Schritt '%s' mit Fehler abgeschlossen", job_id, step_key)
+                else:
+                    log.info("Job '%s': Schritt '%s' abgeschlossen", job_id, step_key)
             except Exception as e:
                 import traceback as _tb
                 errors.append(f"{step_key}: {e}")
