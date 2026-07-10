@@ -17,6 +17,16 @@ import time
 
 log = logging.getLogger(__name__)
 
+_STATUS_ORDER = {"ok": 0, "warning": 1, "error": 2}
+
+
+def worst_status(a: str, b: str) -> str:
+    """Gibt den schwereren der beiden Status-Strings zurück.
+
+    Rangordnung: ok < warning < error.
+    """
+    return a if _STATUS_ORDER.get(a, 0) >= _STATUS_ORDER.get(b, 0) else b
+
 
 def run_logged(module: str, item_id: str, description: str, fn) -> str:
     """Führt ``fn`` mit vollständigem Activity-Log- und Tee-Kontext aus.
