@@ -89,7 +89,7 @@ class SettingsRegistry:
         try:
             import yaml as _yaml
 
-            class _SafeLoader(yaml.SafeLoader):
+            class _SafeLoader(_yaml.SafeLoader):
                 pass
 
             _SafeLoader.add_multi_constructor(
