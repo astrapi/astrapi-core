@@ -12,7 +12,7 @@ URL-Schema:
 
 from typing import Callable
 
-from fastapi import APIRouter, Request
+from fastapi import Request
 from fastapi.responses import HTMLResponse
 
 # Registry: key → fn(request) -> str

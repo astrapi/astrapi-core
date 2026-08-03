@@ -204,7 +204,7 @@ class Scheduler:
 
         # ── DB-Logging für Steps aktivieren ───────────────────────────────────
         try:
-            from astrapi_core.system.logger import set_active_log_id as _set_log_id, log as _hlog
+            from astrapi_core.system.logger import set_active_log_id as _set_log_id
             if activity_id is not None:
                 _set_log_id(activity_id)
         except Exception:

@@ -26,7 +26,6 @@ import logging
 import smtplib
 import ssl
 from email.message import EmailMessage
-from typing import Optional
 
 from ..engine import BaseNotifier
 

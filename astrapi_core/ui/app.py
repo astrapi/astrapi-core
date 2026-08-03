@@ -279,9 +279,6 @@ def create(
     _register_settings_routes(api, modules, app_cfg, skip_content=settings_has_router)
     _register_preferences_routes(api)
 
-    # ── Generische Modul-Settings-Modal-Routen ────────────────────────────────
-    _register_module_settings_routes(api, modules)
-
     # ── Projektspezifischer Hook ──────────────────────────────────────────────
     if extra_init:
         extra_init(api)
@@ -476,19 +473,6 @@ def _register_settings_routes(
                 f"Core-Modul '{key}' {'deaktiviert' if current != '0' else 'aktiviert'}. Neustart erforderlich."
             ),
         )
-
-
-# ─────────────────────────────────────────────────────────────────────────────
-# Generische Modul-Settings-Modal-Routen
-# ─────────────────────────────────────────────────────────────────────────────
-
-
-def _register_module_settings_routes(api, modules: list) -> None:
-    from astrapi_core.system.secrets import get_secret_safe, set_secret
-    from astrapi_core.ui.render import render
-
-    from .settings_registry import get_module
-    from .settings_registry import set_many as _set_many
 
 
 # ─────────────────────────────────────────────────────────────────────────────
