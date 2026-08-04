@@ -610,7 +610,11 @@ input,select,textarea { font-family:var(--font); }
 .content-items--table { display:block; overflow-x:hidden; }
 .ds-list-table-wrap-scroll { overflow-x:hidden; }
 .ds-list-table {
-  width:100%; border-collapse:collapse;
+  width:100%;
+  /* separate statt collapse: bei collapse ignorieren Browser border-radius
+     auf Zellen, die Zeilen-Hintergründe blieben eckig. border-spacing muss
+     dabei auf 0, sonst entstehen Lücken zwischen den Zellen. */
+  border-collapse:separate; border-spacing:0;
   table-layout:fixed;
   font-size:13px;
 }
@@ -638,6 +642,17 @@ input,select,textarea { font-family:var(--font); }
 .ds-list-table tbody tr.off:hover { background:var(--sel); }
 .ds-list-table tbody td {
   padding:8px 14px; vertical-align:middle; text-align:left;
+}
+/* Runde Ecken für den Zeilen-Hintergrund. Der Radius sitzt auf der ersten und
+   letzten Zelle, weil border-radius auf <tr> wirkungslos ist. Gilt für alle
+   Zeilen: bei transparentem Hintergrund unsichtbar, greift aber sowohl für
+   den Zebra-Streifen als auch für Hover und Auswahl.
+   --rad-lg wie .content-header und .content-footer, die die Liste einrahmen. */
+.ds-list-table tbody td:first-child {
+  border-top-left-radius:var(--rad-lg); border-bottom-left-radius:var(--rad-lg);
+}
+.ds-list-table tbody td:last-child {
+  border-top-right-radius:var(--rad-lg); border-bottom-right-radius:var(--rad-lg);
 }
 .ds-list-table tbody tr.on  td { color:var(--text-2); }
 .ds-list-table tbody tr.off td { color:var(--text-off); }
