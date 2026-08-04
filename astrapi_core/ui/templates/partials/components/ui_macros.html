@@ -140,12 +140,22 @@
     size    – sm | '' (leer = kein Modifier)  (default: sm)
     attrs   – rohe HTML-Attribute als String, z.B. 'hx-get="..." hx-target="..."'
 #}
-{% macro btn(label='', variant='ghost', size='sm', type='button', onclick=None, attrs='') %}
+{#
+  btn(label, variant, size, type, onclick, attrs, busy_label)
+
+  busy_label: Text während einer laufenden htmx-Anfrage. htmx setzt dafür die
+  Klasse .htmx-request auf das auslösende Element; die CSS-Regeln in app.css
+  blenden dann Label gegen Spinner + busy_label aus und sperren den Button.
+#}
+{% macro btn(label='', variant='ghost', size='sm', type='button', onclick=None, attrs='', busy_label=None) %}
 <button type="{{ type }}"
-        class="btn btn-{{ variant }}{% if size %} btn-{{ size }}{% endif %}"
+        class="btn btn-{{ variant }}{% if size %} btn-{{ size }}{% endif %}{% if busy_label %} btn--busy{% endif %}"
         {% if onclick %}onclick="{{ onclick }}"{% endif %}
         {% if attrs %}{{ attrs | safe }}{% endif %}>
-  {%- if caller is defined %}{{ caller() }}{%- else %}{{ label }}{%- endif %}
+  {%- if busy_label %}
+    <span class="btn__label">{%- if caller is defined %}{{ caller() }}{%- else %}{{ label }}{%- endif %}</span>
+    <span class="btn__busy"><span class="btn__spinner"></span>{{ busy_label }}</span>
+  {%- elif caller is defined %}{{ caller() }}{%- else %}{{ label }}{%- endif %}
 </button>
 {% endmacro %}
 

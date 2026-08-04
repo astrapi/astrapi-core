@@ -33,7 +33,7 @@
         {{ 'Update läuft…' if info.updater.status == 'running' else 'Prüfung läuft…' }}
       </span>
       {% else %}
-      {{ btn('Auf Updates prüfen',
+      {{ btn('Auf Updates prüfen', busy_label='Prüfe…',
              attrs='hx-post="/ui/system/check" hx-target="#system-metrics" hx-swap="outerHTML"') }}
       {% endif %}
     </span>
@@ -64,7 +64,7 @@
           </td>
           <td>
             {% if pkg.update_available and info.updater.status not in ('running', 'checking') %}
-            {{ btn('Update', variant='primary', size='',
+            {{ btn('Update', variant='primary', size='', busy_label='Starte…',
                    attrs='style="white-space:nowrap; font-size:11px; padding:3px 10px;" hx-post="/ui/system/update" hx-target="#system-metrics" hx-swap="outerHTML"') }}
             {% endif %}
           </td>
