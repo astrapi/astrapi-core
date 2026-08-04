@@ -40,8 +40,10 @@
     {% endif %}
   </div>
   {% if info.updater and info.updater.error %}
-  <div style="margin:0 16px 10px; padding:8px 12px; border-radius:var(--rad-lg);
-              background:var(--r-dim); color:var(--r); font-size:12px;">
+  {% set _warn = info.updater.status == 'warning' %}
+  <div style="margin:0 16px 10px; padding:8px 12px; border-radius:var(--rad-lg); font-size:12px;
+              background:{{ 'var(--warn-bg)' if _warn else 'var(--r-dim)' }};
+              color:{{ 'var(--warn)' if _warn else 'var(--r)' }};">
     {{ info.updater.error }}
   </div>
   {% endif %}

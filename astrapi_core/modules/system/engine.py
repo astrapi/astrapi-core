@@ -515,6 +515,40 @@ def run_update() -> bool:
     return True
 
 
+def _installed_versions_fresh(packages: list) -> dict:
+    """Liest die installierten Versionen in einem frischen Interpreter.
+
+    importlib.metadata cached im laufenden Prozess: nach einem pip-Upgrade
+    meldet es weiterhin den Stand vom Start. Nur ein eigener Prozess sieht,
+    was tatsaechlich auf der Platte liegt.
+    """
+    import json as _json
+    import subprocess as _sp
+
+    code = (
+        "import json,sys\n"
+        "from importlib.metadata import version, PackageNotFoundError\n"
+        "out={}\n"
+        "for p in sys.argv[1:]:\n"
+        "    try: out[p]=version(p)\n"
+        "    except PackageNotFoundError: out[p]=None\n"
+        "print(json.dumps(out))"
+    )
+    try:
+        r = _sp.run(
+            [sys.executable, "-c", code, *packages],
+            capture_output=True,
+            text=True,
+            timeout=30,
+        )
+        if r.returncode == 0:
+            return _json.loads(r.stdout)
+        _upd_log.warning("updater: Versionsabfrage rc=%s: %s", r.returncode, r.stderr.strip())
+    except Exception as e:
+        _upd_log.warning("updater: Versionsabfrage fehlgeschlagen: %s", e)
+    return {}
+
+
 def _do_update() -> None:
     # Alles ab hier im try: run_update() hat den Status bereits auf "running"
     # gesetzt. Kommt diese Funktion nicht bis zum finally, bleibt er dort
@@ -532,6 +566,7 @@ def _do_update() -> None:
             set_active_log_id,
             set_tee_context,
         )
+        from astrapi_core.system.logger import log as _core_log
 
         pkgs = _packages_to_update()
 
@@ -553,7 +588,12 @@ def _do_update() -> None:
         except Exception as e:
             _upd_log.warning("updater: Activity-Log nicht verfuegbar: %s", e)
 
-        cmd = [sys.executable, "-m", "pip", "install", "--upgrade"] + pkgs
+        vorher = _installed_versions_fresh(pkgs)
+
+        # --no-cache-dir: pips lokaler Cache soll nicht zwischen uns und dem
+        # Index stehen, sonst ist bei Problemen nie klar, woher der Stand kam.
+        cmd = [sys.executable, "-m", "pip", "install", "--upgrade", "--no-cache-dir"] + pkgs
+        _core_log("INFO", f"$ {' '.join(cmd)}")
         proc = _subprocess.Popen(
             cmd,
             stdout=_subprocess.PIPE,
@@ -564,21 +604,46 @@ def _do_update() -> None:
             bufsize=1,
         )
 
-        import logging as _l
-
-        _ul = _l.getLogger(__name__)
+        # core-log() statt logging.getLogger(): nur ersteres schreibt nach
+        # activity_log_lines und damit ins Log-Modal.
         for line in proc.stdout:
-            _ul.info(line.rstrip())
+            _core_log("INFO", line.rstrip())
 
         proc.wait()
 
         if proc.returncode == 0:
-            if log_id is not None:
-                update_activity_log(log_id, status="ok")
-            with _upd_lock:
-                _upd_state["status"] = "done"
-                _upd_state["packages"] = []
-            _schedule_restart()
+            nachher = _installed_versions_fresh(pkgs)
+            geaendert = [
+                f"{p}: {vorher.get(p) or '—'} → {nachher.get(p) or '—'}"
+                for p in pkgs
+                if vorher.get(p) != nachher.get(p)
+            ]
+
+            if geaendert:
+                for z in geaendert:
+                    _core_log("INFO", f"Aktualisiert – {z}")
+                if log_id is not None:
+                    update_activity_log(log_id, status="ok")
+                with _upd_lock:
+                    _upd_state["status"] = "done"
+                    _upd_state["packages"] = []
+                _schedule_restart()
+            else:
+                # pip beendet sich auch dann mit 0, wenn es nichts zu tun fand.
+                # Typischer Fall: die Pruefung liest die PyPI-JSON-API, die einen
+                # Upload sofort zeigt, waehrend pip den Simple-Index abfragt, der
+                # ueber ein CDN laeuft und ein paar Minuten hinterherhaengt.
+                msg = (
+                    "pip meldet Erfolg, aber keine Version hat sich geändert. "
+                    "Der Paket-Index von pip hinkt einem frischen Release meist "
+                    "ein paar Minuten hinterher – in Kürze erneut versuchen."
+                )
+                _core_log("WARNING", msg)
+                if log_id is not None:
+                    update_activity_log(log_id, status="warning", error_message=msg)
+                with _upd_lock:
+                    _upd_state["status"] = "warning"
+                    _upd_state["error"] = msg
         else:
             msg = f"pip fehlgeschlagen (exit code {proc.returncode})"
             if log_id is not None:
