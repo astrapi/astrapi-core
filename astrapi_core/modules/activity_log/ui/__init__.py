@@ -120,11 +120,13 @@ def log_viewer(request: Request, log_id: int):
     if not entry:
         return HTMLResponse("<div>Log nicht gefunden</div>")
     rows = get_log_lines(log_id)
-    lines = (
-        [f"{r['level']}: {r['line']}" for r in rows]
-        if rows
-        else [entry.get("full_log", "(kein Log vorhanden)")]
-    )
+    if rows:
+        lines = [f"{r['level']}: {r['line']}" for r in rows]
+    else:
+        # full_log ist eine echte Spalte und meist NULL – der Default von
+        # dict.get() greift nur bei fehlendem Schluessel, nicht bei None.
+        # Sonst landet [None] im Template und 'WARNING:' in None wirft.
+        lines = [entry.get("full_log") or "(kein Log vorhanden)"]
     return render(
         request,
         "dialog_log.html",
