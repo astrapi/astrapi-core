@@ -20,8 +20,11 @@
 </div>
 {% endblock %}
 
-{% block extra_js %}{% endblock %}
-
+{# Alles ab hier MUSS in einem Block stehen: index.html erbt von _base.html,
+   und Jinja verwirft im Kind-Template jeden Inhalt ausserhalb von Bloecken.
+   Der Script-Block stand frueher darunter und wurde nie ausgeliefert -- damit
+   fehlten openLogModal und das Run-Polling auf jeder Seite. #}
+{% block extra_js %}
 <script>
 /* ── Generisches Run-Polling + Log-Modal ──────────────────────────────────────
    Funktioniert mit allen Modulen die /ui/{module}/status oder
@@ -70,18 +73,47 @@
     }
   });
 
-  document.body.addEventListener('openLogModal', function(e) {
-    var mod    = e.detail.module;
-    var itemId = e.detail.itemId;
+  function _modalError(msg) {
+    console.error('[log-modal] ' + msg);
+    var old = document.getElementById('log-modal');
+    if (old) old.remove();
+    document.body.insertAdjacentHTML('beforeend',
+      '<div id="log-modal" class="modal-backdrop" onclick="this.remove()">' +
+      '<div class="modal" onclick="event.stopPropagation()" style="max-width:520px">' +
+      '<div class="modal-body" style="padding:20px">' +
+      '<div style="font-weight:600;margin-bottom:8px">Log konnte nicht geladen werden</div>' +
+      '<div style="color:var(--text-2);font-size:13px">' + msg + '</div>' +
+      '</div></div></div>');
+  }
+
+  /* Oeffnet das Log-Modal. Global, damit es auch direkt aus gerendertem
+     Inhalt heraus aufgerufen werden kann und nicht nur ueber ein Event, das
+     von einem moeglicherweise weggetauschten Element hochblubbern muss. */
+  window.openLogModal = function(mod, itemId) {
+    if (!mod || !itemId) return _modalError('Modul oder Item fehlt.');
     var listEl = document.getElementById('mod-' + mod);
     if (listEl) startPolling(mod, listEl);
-    fetch('/api/' + mod + '/' + itemId + '/logs?live=1')
-      .then(function(r) { return r.text(); })
+    var url = '/api/' + mod + '/' + itemId + '/logs?live=1';
+    fetch(url)
+      .then(function(r) {
+        // Ohne diese Pruefung verschluckt der Handler jeden 404/500 stumm –
+        // die Oberflaeche sieht dann aus, als haette der Klick nichts bewirkt.
+        if (!r.ok) throw new Error('HTTP ' + r.status + ' bei ' + url);
+        return r.text();
+      })
       .then(function(html) {
         var old = document.getElementById('log-modal');
         if (old) old.remove();
         document.body.insertAdjacentHTML('beforeend', html);
-      });
+        htmx.process(document.getElementById('log-modal'));
+      })
+      .catch(function(err) { _modalError(err.message); });
+  };
+
+  document.body.addEventListener('openLogModal', function(e) {
+    var d = e.detail || {};
+    window.openLogModal(d.module, d.itemId);
   });
 })();
 </script>
+{% endblock %}

@@ -627,6 +627,10 @@ def _do_update() -> None:
                 with _upd_lock:
                     _upd_state["status"] = "done"
                     _upd_state["packages"] = []
+                # Ohne diesen Hinweis bricht gleich die SSE-Verbindung ab und
+                # das Log-Modal meldet nur "Verbindung getrennt" – das sieht
+                # nach Fehler aus, ist aber der geplante Neustart.
+                _core_log("INFO", "Dienst startet in 2 Sekunden neu – Seite danach neu laden.")
                 _schedule_restart()
             else:
                 # pip beendet sich auch dann mit 0, wenn es nichts zu tun fand.
