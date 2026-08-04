@@ -449,45 +449,55 @@ def check_updates() -> list:
         _upd_state["status"] = "checking"
 
     packages = []
-    for pip_name in _packages_to_display():
-        installed = _installed_version(pip_name)
-        error = None
-        try:
-            latest = _latest_version(pip_name)
-        except Exception as e:
-            latest = None
-            error = str(e)
+    # try/finally: bleibt der Status auf "checking" haengen, lehnt run_update()
+    # danach jeden Update-Start stillschweigend ab.
+    try:
+        for pip_name in _packages_to_display():
+            installed = _installed_version(pip_name)
+            error = None
+            try:
+                latest = _latest_version(pip_name)
+            except Exception as e:
+                latest = None
+                error = str(e)
 
-        if latest is None:
-            update_available = False
-            latest_display = "—"
-        else:
-            latest_display = latest
-            if installed == "—":
-                update_available = True
+            if latest is None:
+                update_available = False
+                latest_display = "—"
             else:
-                try:
-                    from packaging.version import Version
+                latest_display = latest
+                if installed == "—":
+                    update_available = True
+                else:
+                    try:
+                        from packaging.version import Version
 
-                    update_available = Version(latest) > Version(installed)
-                except Exception:
-                    update_available = False
+                        update_available = Version(latest) > Version(installed)
+                    except Exception:
+                        update_available = False
 
-        packages.append(
-            {
-                "name": pip_name,
-                "pip_name": pip_name,
-                "installed": installed,
-                "latest": latest_display,
-                "update_available": update_available,
-                "error": error,
-            }
-        )
+            packages.append(
+                {
+                    "name": pip_name,
+                    "pip_name": pip_name,
+                    "installed": installed,
+                    "latest": latest_display,
+                    "update_available": update_available,
+                    "error": error,
+                }
+            )
 
-    with _upd_lock:
-        _upd_state["packages"] = packages
-        _upd_state["last_checked"] = datetime.now().strftime("%d.%m.%Y %H:%M")
-        _upd_state["status"] = "idle"
+        with _upd_lock:
+            _upd_state["packages"] = packages
+            _upd_state["last_checked"] = datetime.now().strftime("%d.%m.%Y %H:%M")
+    except Exception as e:
+        _upd_log.warning("updater: Update-Pruefung fehlgeschlagen: %s", e)
+        with _upd_lock:
+            _upd_state["error"] = f"Update-Prüfung fehlgeschlagen: {e}"
+        raise
+    finally:
+        with _upd_lock:
+            _upd_state["status"] = "idle"
 
     return packages
 
@@ -506,39 +516,51 @@ def run_update() -> bool:
 
 
 def _do_update() -> None:
-    import subprocess as _subprocess
-
-    from astrapi_core.system.activity_log import log_activity, update_activity_log
-    from astrapi_core.system.logger import (
-        clear_active_log_id,
-        clear_tee_context,
-        set_active_log_id,
-        set_tee_context,
-    )
-
-    pkgs = _packages_to_update()
-    log_id = log_activity(
-        log_type="system",
-        module="system",
-        item_id="update",
-        description=f"Update: {', '.join(pkgs)}",
-        status="running",
-        started_at=datetime.now().isoformat(),
-    )
-
-    with _upd_lock:
-        _upd_state["log_id"] = log_id
-
-    set_tee_context("system", "update")
-    set_active_log_id(log_id)
+    # Alles ab hier im try: run_update() hat den Status bereits auf "running"
+    # gesetzt. Kommt diese Funktion nicht bis zum finally, bleibt er dort
+    # stehen und jeder weitere Update-Start wird stillschweigend abgelehnt.
+    log_id = None
+    clear_active_log_id = clear_tee_context = None
 
     try:
+        import subprocess as _subprocess
+
+        from astrapi_core.system.activity_log import log_activity, update_activity_log
+        from astrapi_core.system.logger import (
+            clear_active_log_id,
+            clear_tee_context,
+            set_active_log_id,
+            set_tee_context,
+        )
+
+        pkgs = _packages_to_update()
+
+        # Das Activity-Log ist Beiwerk – schlaegt es fehl, laeuft das Update
+        # trotzdem, nur ohne Live-Ausgabe im Modal.
+        try:
+            log_id = log_activity(
+                log_type="system",
+                module="system",
+                item_id="update",
+                description=f"Update: {', '.join(pkgs)}",
+                status="running",
+                started_at=datetime.now().isoformat(),
+            )
+            with _upd_lock:
+                _upd_state["log_id"] = log_id
+            set_tee_context("system", "update")
+            set_active_log_id(log_id)
+        except Exception as e:
+            _upd_log.warning("updater: Activity-Log nicht verfuegbar: %s", e)
+
         cmd = [sys.executable, "-m", "pip", "install", "--upgrade"] + pkgs
         proc = _subprocess.Popen(
             cmd,
             stdout=_subprocess.PIPE,
             stderr=_subprocess.STDOUT,
             text=True,
+            encoding="utf-8",
+            errors="replace",
             bufsize=1,
         )
 
@@ -551,39 +573,61 @@ def _do_update() -> None:
         proc.wait()
 
         if proc.returncode == 0:
-            update_activity_log(log_id, status="ok")
+            if log_id is not None:
+                update_activity_log(log_id, status="ok")
             with _upd_lock:
                 _upd_state["status"] = "done"
                 _upd_state["packages"] = []
             _schedule_restart()
         else:
-            update_activity_log(
-                log_id,
-                status="error",
-                error_message=f"pip exit code {proc.returncode}",
-            )
+            msg = f"pip fehlgeschlagen (exit code {proc.returncode})"
+            if log_id is not None:
+                update_activity_log(log_id, status="error", error_message=msg)
             with _upd_lock:
                 _upd_state["status"] = "error"
-                _upd_state["error"] = f"pip fehlgeschlagen (exit code {proc.returncode})"
+                _upd_state["error"] = msg
 
     except Exception as e:
         err = str(e)
-        try:
-            update_activity_log(log_id, status="error", error_message=err)
-        except Exception:
-            pass
+        _upd_log.warning("updater: Update fehlgeschlagen: %s", err)
+        if log_id is not None:
+            try:
+                from astrapi_core.system.activity_log import (
+                    update_activity_log as _ual,
+                )
+
+                _ual(log_id, status="error", error_message=err)
+            except Exception:
+                pass
         with _upd_lock:
             _upd_state["status"] = "error"
             _upd_state["error"] = err
     finally:
-        clear_active_log_id()
-        clear_tee_context()
+        # Sicherheitsnetz: der Status darf "running" unter keinen Umstaenden
+        # ueberleben, sonst ist der Button dauerhaft wirkungslos.
+        with _upd_lock:
+            if _upd_state["status"] == "running":
+                _upd_state["status"] = "error"
+                if not _upd_state["error"]:
+                    _upd_state["error"] = "Update unerwartet abgebrochen"
+        for _fn in (clear_active_log_id, clear_tee_context):
+            if _fn is not None:
+                try:
+                    _fn()
+                except Exception:
+                    pass
 
 
 def _schedule_restart() -> None:
     import os
 
     _threading.Timer(2.0, lambda: os.execv(sys.executable, [sys.executable] + sys.argv)).start()
+
+
+def set_error(message: str) -> None:
+    """Hinterlegt eine Meldung, die beim nächsten Render angezeigt wird."""
+    with _upd_lock:
+        _upd_state["error"] = message
 
 
 def get_status() -> dict:

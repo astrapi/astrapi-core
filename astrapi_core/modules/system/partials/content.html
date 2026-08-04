@@ -24,10 +24,27 @@
   <div class="sysinfo-card-header">
     <span>Anwendungen</span>
     {% if info.updater %}
-    {{ btn('Auf Updates prüfen',
-           attrs='hx-post="/ui/system/check" hx-target="#system-metrics" hx-swap="outerHTML"') }}
+    <span style="display:flex; align-items:center; gap:10px;">
+      {% if info.updater.last_checked %}
+      <span style="color:var(--text-3); font-size:11px;">Geprüft: {{ info.updater.last_checked }}</span>
+      {% endif %}
+      {% if info.updater.status in ('running', 'checking') %}
+      <span style="color:var(--text-2); font-size:11px;">
+        {{ 'Update läuft…' if info.updater.status == 'running' else 'Prüfung läuft…' }}
+      </span>
+      {% else %}
+      {{ btn('Auf Updates prüfen',
+             attrs='hx-post="/ui/system/check" hx-target="#system-metrics" hx-swap="outerHTML"') }}
+      {% endif %}
+    </span>
     {% endif %}
   </div>
+  {% if info.updater and info.updater.error %}
+  <div style="margin:0 16px 10px; padding:8px 12px; border-radius:var(--rad-lg);
+              background:var(--r-dim); color:var(--r); font-size:12px;">
+    {{ info.updater.error }}
+  </div>
+  {% endif %}
   <div style="padding:0 16px 12px;" data-debug-label="content-subitem">
   <table class="ds-list-table">
     <tbody>
@@ -44,9 +61,9 @@
             {% endif %}
           </td>
           <td>
-            {% if pkg.update_available %}
+            {% if pkg.update_available and info.updater.status not in ('running', 'checking') %}
             {{ btn('Update', variant='primary', size='',
-                   attrs='style="white-space:nowrap; font-size:11px; padding:3px 10px;" hx-post="/ui/system/update" hx-target="body" hx-swap="beforeend"') }}
+                   attrs='style="white-space:nowrap; font-size:11px; padding:3px 10px;" hx-post="/ui/system/update" hx-target="#system-metrics" hx-swap="outerHTML"') }}
             {% endif %}
           </td>
         </tr>

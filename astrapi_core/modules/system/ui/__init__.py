@@ -71,7 +71,21 @@ def system_check(request: Request):
 
 @router.post(f"/ui/{KEY}/update", response_class=HTMLResponse)
 def system_update(request: Request):
-    _run_update()
+    started = _run_update()
+    if not started:
+        # run_update() lehnt ab, solange ein Update oder eine Pruefung laeuft.
+        # Ohne Rueckmeldung ist das vom Erfolgsfall nicht zu unterscheiden –
+        # der Button sah dann schlicht kaputt aus.
+        from ..engine import set_error as _set_error
+
+        laufend = _get_status().get("status")
+        _set_error(
+            "Es läuft bereits ein Update."
+            if laufend == "running"
+            else "Die Update-Prüfung läuft noch. Bitte einen Moment warten."
+        )
+        return render(request, f"{KEY}/partials/content.html", {"info": collect()})
+
     response = render(request, f"{KEY}/partials/content.html", {"info": collect()})
     response.headers["HX-Trigger"] = '{"openLogModal": {"module": "system", "itemId": "update"}}'
     return response
