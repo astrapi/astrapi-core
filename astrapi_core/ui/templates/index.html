@@ -77,6 +77,23 @@
     var d = e.detail || {};
     window.openLogModal(d.module, d.itemId);
   });
+
+  /* Startet das Status-Polling, nachdem ein Job angestossen wurde.
+     Der Poll-Div steht bereits im DOM (list_wrapper_inner.html rendert ihn
+     immer), hat aber keine hx-Attribute solange nichts laeuft. Er kann nicht
+     per hx-swap-oob nachgeliefert werden: die Antwort der Run-Route ist eine
+     <tr>, und fremde Elemente wirft der HTML-Parser dort heraus.
+     Abgeschaltet wird er wieder von status_oob.html, sobald nichts laeuft. */
+  document.body.addEventListener('jobStarted', function(e) {
+    var mod = (e.detail || {}).module;
+    if (!mod) return;
+    var div = document.getElementById('poll-' + mod);
+    if (!div || div.getAttribute('hx-trigger')) return;   // laeuft schon
+    div.setAttribute('hx-get', '/ui/' + mod + '/status');
+    div.setAttribute('hx-trigger', 'every 2s');
+    div.setAttribute('hx-swap', 'none');
+    htmx.process(div);
+  });
 })();
 </script>
 {% endblock %}
