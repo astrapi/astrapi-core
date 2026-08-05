@@ -92,7 +92,16 @@ class Col:
 
     @classmethod
     def remote_host(cls, remote_key: str, label: str, sortable: bool = False) -> "Col":
-        return cls(type="remote_host", key=remote_key, label=label, sortable=sortable)
+        # remote_key muss gesetzt werden: das Makro liest col.remote_key, nicht
+        # col.key. Ohne das war der Wert immer leer und die Spalte zeigte fuer
+        # jeden Eintrag "Lokal".
+        return cls(
+            type="remote_host",
+            key=remote_key,
+            label=label,
+            remote_key=remote_key,
+            sortable=sortable,
+        )
 
     @classmethod
     def join(cls, key: str, label: str, sep: str = ", ", css: str = "col-version") -> "Col":
