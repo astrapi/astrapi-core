@@ -3,9 +3,12 @@
 # Generische SQLite-Verbindungsverwaltung.
 # Die App konfiguriert den DB-Pfad einmalig beim Start via configure().
 #
+import logging
 import sqlite3
 import threading
 from pathlib import Path
+
+_logger = logging.getLogger(__name__)
 
 _db_path: Path | None = None
 _local = threading.local()
@@ -92,6 +95,42 @@ def create_all_registered_tables() -> None:
     for cfg in _TABLE_CONFIG.values():
         con.execute(cfg["ddl"])
     con.commit()
+
+
+def reset_stale_status(
+    statuses: "tuple[str, ...]" = ("running", "building"),
+    new_status: str = "error",
+) -> int:
+    """Setzt haengengebliebene Laufzeit-Status in allen registrierten Tabellen zurueck.
+
+    Beim Start eines Item-Laufs wird last_status auf "running" gesetzt und am
+    Ende auf das Ergebnis. Wird der Prozess dazwischen beendet – Neustart,
+    Absturz, Update –, bleibt der Eintrag fuer immer auf "running" stehen und
+    die Liste zeigt einen Spinner fuer etwas, das laengst nicht mehr laeuft.
+
+    Beim Start kann per Definition nichts laufen, also sind solche Eintraege
+    abgebrochene Laeufe. Gibt die Anzahl der korrigierten Zeilen zurueck.
+    """
+    con = _conn()
+    platzhalter = ",".join("?" for _ in statuses)
+    gesamt = 0
+    for key in _TABLE_CONFIG:
+        try:
+            spalten = [r[1] for r in con.execute(f'PRAGMA table_info("{key}")').fetchall()]
+            if "last_status" not in spalten:
+                continue
+            cur = con.execute(
+                f'UPDATE "{key}" SET last_status = ? '
+                f"WHERE last_status IN ({platzhalter})",
+                (new_status, *statuses),
+            )
+            gesamt += cur.rowcount or 0
+        except Exception as e:
+            _logger.warning("reset_stale_status: Tabelle %s: %s", key, e)
+    if gesamt:
+        con.commit()
+        _logger.info("reset_stale_status: %d abgebrochene Laeufe zurueckgesetzt", gesamt)
+    return gesamt
 
 
 def _to_list(val) -> list:
