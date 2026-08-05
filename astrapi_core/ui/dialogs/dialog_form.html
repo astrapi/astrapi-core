@@ -5,7 +5,11 @@
       hx-{% block form_method %}post{% endblock %}="{% block form_action %}{% endblock %}"
       hx-target="{% block form_target %}#main-content{% endblock %}"
       hx-swap="innerHTML"
-      hx-on::after-request="if(event.detail.successful) this.closest('.ds-modal-backdrop').remove()"
+      {# event.target === this ist zwingend: htmx-Events blubbern. Ohne die
+         Pruefung schliesst auch jede Anfrage aus einem verschachtelten
+         hx-Element das Modal – etwa die Paketsuche in archlinux/debian, die
+         350 ms nach dem ersten Buchstaben feuert. #}
+      hx-on::after-request="if(event.target === this && event.detail.successful) this.closest('.ds-modal-backdrop').remove()"
       {% block form_attrs %}{% endblock %}
       style="{% block form_style %}display:flex; flex-direction:column; gap:12px;{% endblock %}">
   {% block dialog_body %}{% endblock %}
