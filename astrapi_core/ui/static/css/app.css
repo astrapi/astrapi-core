@@ -658,8 +658,11 @@ input,select,textarea { font-family:var(--font); }
 .ds-list-table tbody tr.off td { color:var(--text-off); }
 
 .ds-list-table .col-name     { width:250px; min-width:250px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
-/* proxmox_hosts hat keine flex-Spalte – col-name muss den Restplatz übernehmen */
-.ds-list-table[data-module="proxmox_hosts"] .col-name { width:auto; min-width:0; }
+/* proxmox_client hat keine flex-Spalte – col-name muss den Restplatz übernehmen.
+   Der Selektor hing bis 2026-08-05 am alten Modulnamen "proxmox_hosts" und lief
+   seit der Umbenennung (T-023) ins Leere: col-name behielt ihre festen 250px und
+   die rechten Spalten wurden gequetscht. */
+.ds-list-table[data-module="proxmox_client"] .col-name { width:auto; min-width:0; }
 .ds-list-table .col-trunc   { overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
 .ds-list-table .col-type     { width:60px;  min-width:60px; }
 .ds-list-table .col-version  { width:150px; min-width:150px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; font-family:var(--mono,monospace); font-size:.85em; }
