@@ -1,9 +1,12 @@
 {% from 'partials/components/ui_macros.html' import form_group, form_input, form_select, form_textarea, toggle_field %}
 
 {% if field.type == "boolean" %}
+{# label aus dem Schema durchreichen: mit label='' stand im Dialog nur ein
+   nackter Schalter ohne Beschriftung – im Zwei-Spalten-Raster sah der aus wie
+   ein versehentlich stehengebliebenes Element. #}
 {{ toggle_field(field.name,
                checked=values and values[field.name],
-               label='',
+               label=field.label | default('', true),
                field_id='field-' ~ field.name) }}
 
 {% elif field.type == "text" %}
