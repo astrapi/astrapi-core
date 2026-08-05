@@ -18,7 +18,12 @@
     has_delete       – bool (default True)  Löschen-Button im Ctx-Menu
 
   Tabellen-Struktur (immer gleich):
-    col-name | [modul-spezifische Spalten] | col-last-run (130px) | col-status (60px) | col-actions (38px)
+    col-name | [modul-spezifische Spalten] | col-last-run (160px) | col-status (100px) | col-actions (60px)
+
+    Die drei rechten Spalten kommen ausschliesslich von hier, kein Modul setzt
+    sie selbst. Die Breiten stehen in app.css; zur Laufzeit koennen sie pro
+    Modul durch gespeicherte Nutzerbreiten ueberschrieben werden
+    (data-col-widths aus ui.col_widths.<modul>, siehe js/app.js).
 
   Deklarativ (wenn module_obj(module).ui_content gesetzt):
     Spalten-Header und -Zellen werden aus ui_content.columns gerendert
