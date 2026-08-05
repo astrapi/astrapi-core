@@ -210,23 +210,35 @@ class Scheduler:
         except Exception:
             pass
 
+        # Innerhalb des Job-Laufs ueber core.system.log() protokollieren, nicht
+        # ueber logging.getLogger(): nur ersteres schreibt nach
+        # activity_log_lines und damit ins Log-Modal. Vorher aktivierte
+        # set_active_log_id() zwar das DB-Logging, alle Meldungen liefen aber
+        # daran vorbei -- Fehler tauchten nur in der Benachrichtigung auf.
+        from astrapi_core.system.logger import log as _jlog
+
+        _jlog("INFO", f"=== Scheduler '{label}' gestartet ({len(steps)} Schritte) ===")
+
         for step_key in steps:
             action = self._actions.get(step_key)
             if action is None:
-                errors.append(f"Unbekannte Aktion: {step_key}")
+                msg = f"Unbekannte Aktion: {step_key}"
+                errors.append(msg)
+                _jlog("ERROR", msg)
                 log.warning("Unbekannte Aktion '%s' in Job '%s'", step_key, job_id)
                 continue
             try:
-                log.info("Job '%s': Schritt '%s' startet", job_id, step_key)
+                _jlog("INFO", f"Schritt '{step_key}' startet")
                 result = action["fn"]()
                 if result == "error":
                     errors.append(step_key)
-                    log.warning("Job '%s': Schritt '%s' mit Fehler abgeschlossen", job_id, step_key)
+                    _jlog("WARNING", f"Schritt '{step_key}' mit Fehler abgeschlossen")
                 else:
-                    log.info("Job '%s': Schritt '%s' abgeschlossen", job_id, step_key)
+                    _jlog("INFO", f"Schritt '{step_key}' abgeschlossen")
             except Exception as e:
                 import traceback as _tb
                 errors.append(f"{step_key}: {e}")
+                _jlog("ERROR", f"Schritt '{step_key}' fehlgeschlagen: {e}")
                 log.error(
                     "Job '%s': Schritt '%s' fehlgeschlagen:\n%s",
                     job_id, step_key, _tb.format_exc(),
