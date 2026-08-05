@@ -222,4 +222,108 @@
 
 
 </div>{# /data-collected-at #}
+
+{# ── Update-Fortschritt ──────────────────────────────────────────────────
+   Bewusst kein Log-Modal: die pip-Ausgabe kommt blockweise gepuffert und
+   taugt nicht als Fortschrittsanzeige. Hier nur der Zustand, danach Neustart
+   abwarten und Seite neu laden. Das Skript ist idempotent – content.html
+   wird bei jeder Prüfung neu eingetauscht. #}
+<script>
+(function () {
+  var LAUFEND = {{ 'true' if info.updater and info.updater.status == 'running' else 'false' }};
+
+  window.systemUpdateWatch = window.systemUpdateWatch || (function () {
+    var timer = null, modal = null;
+
+    function box(inhalt, mitSchliessen) {
+      if (!modal) {
+        modal = document.createElement('div');
+        modal.id = 'system-update-modal';
+        modal.className = 'ds-modal-backdrop';
+        document.body.appendChild(modal);
+      }
+      modal.innerHTML =
+        '<div class="ds-modal" style="max-width:460px;padding:24px 28px;">' +
+        '<div class="ds-modal-header"><span class="ds-modal-title">Update</span></div>' +
+        '<div style="padding:14px 0 4px;">' + inhalt + '</div>' +
+        (mitSchliessen
+          ? '<div class="ds-modal-footer ds-modal-footer--end">' +
+            '<button type="button" class="btn btn-sm btn-ghost" ' +
+            'onclick="document.getElementById(\'system-update-modal\').remove()">Schließen</button></div>'
+          : '') +
+        '</div>';
+    }
+
+    function zeile(text) {
+      return '<div style="display:flex;align-items:center;gap:10px;">' +
+             '<span class="btn__spinner" style="color:var(--b);"></span>' +
+             '<span>' + text + '</span></div>';
+    }
+
+    function fertig(changed) {
+      // Ueberdauert den Neustart, damit die neu geladene Seite es melden kann.
+      try { sessionStorage.setItem('astrapiUpdateDone', JSON.stringify(changed || [])); }
+      catch (e) { /* privater Modus o.ae. – dann eben ohne Meldung */ }
+      box(zeile('Update installiert. Dienst startet neu …'), false);
+      warteAufNeustart();
+    }
+
+    function warteAufNeustart() {
+      var versuche = 0;
+      var t = setInterval(function () {
+        versuche++;
+        fetch('/api/system/update/status', { cache: 'no-store' })
+          .then(function (r) { if (r.ok) { clearInterval(t); location.reload(); } })
+          .catch(function () { /* noch unten – weiter warten */ });
+        if (versuche > 60) { clearInterval(t); box(
+          '<div>Der Dienst meldet sich nicht zurück. Bitte Seite manuell neu laden.</div>', true); }
+      }, 1000);
+    }
+
+    function start() {
+      if (timer) return;
+      box(zeile('Update wird installiert …'), false);
+      timer = setInterval(function () {
+        fetch('/api/system/update/status', { cache: 'no-store' })
+          .then(function (r) { return r.json(); })
+          .then(function (st) {
+            if (st.status === 'running') return;
+            clearInterval(timer); timer = null;
+            if (st.status === 'done') { fertig(st.changed); return; }
+            var farbe = st.status === 'warning' ? 'var(--warn)' : 'var(--r)';
+            box('<div style="color:' + farbe + ';">' +
+                (st.error || 'Update beendet: ' + st.status) + '</div>', true);
+          })
+          .catch(function () {
+            // Verbindung weg: der Dienst startet vermutlich gerade neu.
+            clearInterval(timer); timer = null; fertig(null);
+          });
+      }, 1000);
+    }
+
+    return { start: start };
+  })();
+
+  if (LAUFEND) window.systemUpdateWatch.start();
+
+  // Nach dem Neustart: melden, was installiert wurde.
+  try {
+    var roh = sessionStorage.getItem('astrapiUpdateDone');
+    if (roh !== null) {
+      sessionStorage.removeItem('astrapiUpdateDone');
+      var liste = JSON.parse(roh) || [];
+      var text = liste.length
+        ? liste.map(function (c) { return c.name + ' ' + c.from + ' → ' + c.to; }).join(', ')
+        : 'Update abgeschlossen.';
+      var hinweis = document.createElement('div');
+      hinweis.style.cssText =
+        'margin:0 0 16px;padding:10px 14px;border-radius:var(--rad-lg);' +
+        'background:var(--g-dim,rgba(22,163,74,0.14));color:var(--g);font-size:13px;';
+      hinweis.textContent = '✔ Installiert: ' + text;
+      var ziel = document.getElementById('system-metrics');
+      if (ziel) ziel.insertBefore(hinweis, ziel.firstChild);
+    }
+  } catch (e) { /* egal */ }
+})();
+</script>
 {% endif %}

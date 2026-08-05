@@ -340,11 +340,15 @@ _app_root: "_Path | None" = None
 _app_package: "str | None" = None
 
 _upd_state: dict = {
-    "status": "idle",  # idle | checking | running | done | error
+    "status": "idle",  # idle | checking | running | done | warning | error
     "log_id": None,
     "last_checked": None,
     "packages": [],
     "error": None,
+    # Was der letzte Lauf tatsaechlich veraendert hat, z.B.
+    # [{"name": "astrapi-core", "from": "26.8.3", "to": "26.8.4"}].
+    # Die UI liest das vor dem Neustart aus und meldet es danach.
+    "changed": [],
 }
 _upd_lock = _threading.Lock()
 
@@ -510,6 +514,7 @@ def run_update() -> bool:
         _upd_state["status"] = "running"
         _upd_state["error"] = None
         _upd_state["log_id"] = None
+        _upd_state["changed"] = []
 
     _threading.Thread(target=_do_update, daemon=True, name="system-updater-thread").start()
     return True
@@ -614,19 +619,20 @@ def _do_update() -> None:
         if proc.returncode == 0:
             nachher = _installed_versions_fresh(pkgs)
             geaendert = [
-                f"{p}: {vorher.get(p) or '—'} → {nachher.get(p) or '—'}"
+                {"name": p, "from": vorher.get(p) or "—", "to": nachher.get(p) or "—"}
                 for p in pkgs
                 if vorher.get(p) != nachher.get(p)
             ]
 
             if geaendert:
                 for z in geaendert:
-                    _core_log("INFO", f"Aktualisiert – {z}")
+                    _core_log("INFO", f"Aktualisiert – {z['name']}: {z['from']} → {z['to']}")
                 if log_id is not None:
                     update_activity_log(log_id, status="ok")
                 with _upd_lock:
                     _upd_state["status"] = "done"
                     _upd_state["packages"] = []
+                    _upd_state["changed"] = geaendert
                 # Ohne diesen Hinweis bricht gleich die SSE-Verbindung ab und
                 # das Log-Modal meldet nur "Verbindung getrennt" – das sieht
                 # nach Fehler aus, ist aber der geplante Neustart.
@@ -690,7 +696,10 @@ def _do_update() -> None:
 def _schedule_restart() -> None:
     import os
 
-    _threading.Timer(2.0, lambda: os.execv(sys.executable, [sys.executable] + sys.argv)).start()
+    # 3 s statt 2: die Oberflaeche pollt den Status im Sekundentakt und muss
+    # das abgeschlossene Ergebnis noch abholen koennen, bevor der Prozess
+    # ersetzt wird – danach ist _upd_state weg (nur im Speicher).
+    _threading.Timer(3.0, lambda: os.execv(sys.executable, [sys.executable] + sys.argv)).start()
 
 
 def set_error(message: str) -> None:
@@ -708,6 +717,7 @@ def get_status() -> dict:
             "last_checked": _upd_state["last_checked"],
             "packages": list(_upd_state["packages"]),
             "error": _upd_state["error"],
+            "changed": list(_upd_state["changed"]),
         }
 
 

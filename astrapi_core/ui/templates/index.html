@@ -78,12 +78,11 @@
     var old = document.getElementById('log-modal');
     if (old) old.remove();
     document.body.insertAdjacentHTML('beforeend',
-      '<div id="log-modal" class="modal-backdrop" onclick="this.remove()">' +
-      '<div class="modal" onclick="event.stopPropagation()" style="max-width:520px">' +
-      '<div class="modal-body" style="padding:20px">' +
-      '<div style="font-weight:600;margin-bottom:8px">Log konnte nicht geladen werden</div>' +
-      '<div style="color:var(--text-2);font-size:13px">' + msg + '</div>' +
-      '</div></div></div>');
+      '<div id="log-modal" class="ds-modal-backdrop" onclick="this.remove()">' +
+      '<div class="ds-modal" onclick="event.stopPropagation()" style="max-width:520px;padding:20px 24px;">' +
+      '<div class="ds-modal-header"><span class="ds-modal-title">Log nicht verfügbar</span></div>' +
+      '<div style="color:var(--text-2);font-size:13px;padding:12px 0;">' + msg + '</div>' +
+      '</div></div>');
   }
 
   /* Oeffnet das Log-Modal. Global, damit es auch direkt aus gerendertem

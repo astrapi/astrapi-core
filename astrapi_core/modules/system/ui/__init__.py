@@ -86,9 +86,21 @@ def system_update(request: Request):
         )
         return render(request, f"{KEY}/partials/content.html", {"info": collect()})
 
-    response = render(request, f"{KEY}/partials/content.html", {"info": collect()})
-    response.headers["HX-Trigger"] = '{"openLogModal": {"module": "system", "itemId": "update"}}'
-    return response
+    # Kein Log-Modal mehr: die pip-Ausgabe kam blockweise gepuffert an und war
+    # als Fortschrittsanzeige unbrauchbar. Das gerenderte Partial startet
+    # stattdessen die Fortschritts-Anzeige, die /api/system/update/status pollt.
+    return render(request, f"{KEY}/partials/content.html", {"info": collect()})
+
+
+@router.get(f"/api/{KEY}/update/status")
+def system_update_status():
+    """Status des Updaters als JSON – Grundlage der Fortschrittsanzeige."""
+    st = _get_status()
+    return {
+        "status": st["status"],
+        "error": st["error"],
+        "changed": st["changed"],
+    }
 
 
 @router.get(f"/api/{KEY}/update/logs", response_class=HTMLResponse)
