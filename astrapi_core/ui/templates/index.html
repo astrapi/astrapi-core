@@ -26,62 +26,18 @@
    fehlten openLogModal und das Run-Polling auf jeder Seite. #}
 {% block extra_js %}
 <script>
-/* ── Generisches Run-Polling + Log-Modal ──────────────────────────────────────
-   Funktioniert mit allen Modulen die /ui/{module}/status oder
-   /api/{module}/status und /api/{module}/{item}/logs?live=1 bereitstellen.
-   Versucht zuerst /ui/, fällt bei 404 auf /api/ zurück.
+/* ── Log-Modal ────────────────────────────────────────────────────────────────
+   Oeffnet das Live-Log fuer /api/{module}/{item}/logs?live=1. Ausgeloest per
+   HX-Trigger "openLogModal" aus den Run-Routen oder direkt ueber
+   window.openLogModal(modul, item).
 
-   Unterstützte List-Container-IDs:
-     id="mod-{module}"       (Framework-Standard)
+   Kein Status-Polling hier: das bringt list_wrapper_inner.html selbst mit
+   (Poll-Div mit hx-trigger="every 2s"), und partials/oob/status_oob.html
+   haelt ihn per hx-swap-oob am Leben bzw. schaltet ihn ab, sobald nichts mehr
+   laeuft. Eine zweite Schleife in JavaScript wuerde dieselben OOB-Fragmente
+   per innerHTML in den Container schreiben und das Listenlayout zerlegen.
 ─────────────────────────────────────────────────────────────────────────────*/
 (function() {
-  var _timers = {};
-
-  function _moduleFromEl(el) {
-    var id = el && el.id || '';
-    if (!id.startsWith('mod-')) return null;
-    var mod = id.slice(4);
-    return mod || null;
-  }
-
-  function _poll(mod, el) {
-    fetch('/ui/' + mod + '/status')
-      .then(function(r) { return r.ok ? r : fetch('/api/' + mod + '/status'); })
-      .then(function(r) { return r.text(); })
-      .then(function(html) {
-        el.innerHTML = html; htmx.process(el);
-        // innerHTML loest kein htmx:afterSettle aus – ohne diese Pruefung
-        // liefe das Polling nach dem letzten fertigen Job endlos weiter.
-        if (!el.querySelector(RUNNING_SEL)) stopPolling(mod);
-      })
-      .catch(function() {});
-  }
-
-  function startPolling(mod, el) {
-    if (_timers[mod]) return;
-    _timers[mod] = setInterval(function() { _poll(mod, el); }, 2500);
-  }
-
-  function stopPolling(mod) {
-    clearInterval(_timers[mod]);
-    delete _timers[mod];
-  }
-
-  /* Klasse, die status_inline() fuer laufende Eintraege vergibt. Vorher wurde
-     hier .status-inline--running gesucht -- die Klasse wird nirgends erzeugt,
-     nur in app.css eingefaerbt. Das Polling ist deshalb nie angesprungen. */
-  var RUNNING_SEL = '.badge-status-running';
-
-  document.body.addEventListener('htmx:afterSettle', function(e) {
-    var el  = e.target;
-    var mod = _moduleFromEl(el);
-    if (!mod) return;
-    if (el.querySelector(RUNNING_SEL)) {
-      startPolling(mod, el);
-    } else {
-      stopPolling(mod);
-    }
-  });
 
   function _modalError(msg) {
     console.error('[log-modal] ' + msg);
@@ -100,8 +56,6 @@
      von einem moeglicherweise weggetauschten Element hochblubbern muss. */
   window.openLogModal = function(mod, itemId) {
     if (!mod || !itemId) return _modalError('Modul oder Item fehlt.');
-    var listEl = document.getElementById('mod-' + mod);
-    if (listEl) startPolling(mod, listEl);
     var url = '/api/' + mod + '/' + itemId + '/logs?live=1';
     fetch(url)
       .then(function(r) {
@@ -123,21 +77,6 @@
     var d = e.detail || {};
     window.openLogModal(d.module, d.itemId);
   });
-
-  /* Beim ersten Laden feuert kein htmx:afterSettle – laeuft beim Oeffnen der
-     Seite bereits ein Job, muss das Polling trotzdem anspringen. */
-  function _initialPoll() {
-    var container = document.querySelectorAll('[id^="mod-"]');
-    for (var i = 0; i < container.length; i++) {
-      var el = container[i], mod = _moduleFromEl(el);
-      if (mod && el.querySelector(RUNNING_SEL)) startPolling(mod, el);
-    }
-  }
-  if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', _initialPoll);
-  } else {
-    _initialPoll();
-  }
 })();
 </script>
 {% endblock %}
