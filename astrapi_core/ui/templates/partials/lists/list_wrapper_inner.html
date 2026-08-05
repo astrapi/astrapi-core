@@ -46,12 +46,14 @@
   {%- set has_toggle      = _ui_content.has_toggle -%}
 {%- endif -%}
 
-{% if running %}
-<div id="poll-{{ module }}" hx-get="/ui/{{ module }}/status"
+{# Immer rendern, auch wenn gerade nichts laeuft: status_oob.html tauscht
+   diesen Div per hx-swap-oob aus, um das Polling ein- und auszuschalten.
+   Fehlt er im DOM, findet der OOB-Austausch kein Ziel und wird verworfen –
+   dann startet nach einem Klick auf "Ausfuehren" nie ein Poll. #}
+<div id="poll-{{ module }}" style="display:none"
+     {% if running %}hx-get="/ui/{{ module }}/status"
      hx-trigger="every 2s"
-     hx-swap="none"
-     style="display:none"></div>
-{% endif %}
+     hx-swap="none"{% endif %}></div>
 
 {# ── Desktop-Ansicht (Tabelle) ────────────────────────────────────────────── #}
 <div class="desktop-view">
