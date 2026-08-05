@@ -48,7 +48,12 @@
     fetch('/ui/' + mod + '/status')
       .then(function(r) { return r.ok ? r : fetch('/api/' + mod + '/status'); })
       .then(function(r) { return r.text(); })
-      .then(function(html) { el.innerHTML = html; htmx.process(el); })
+      .then(function(html) {
+        el.innerHTML = html; htmx.process(el);
+        // innerHTML loest kein htmx:afterSettle aus – ohne diese Pruefung
+        // liefe das Polling nach dem letzten fertigen Job endlos weiter.
+        if (!el.querySelector(RUNNING_SEL)) stopPolling(mod);
+      })
       .catch(function() {});
   }
 
@@ -62,11 +67,16 @@
     delete _timers[mod];
   }
 
+  /* Klasse, die status_inline() fuer laufende Eintraege vergibt. Vorher wurde
+     hier .status-inline--running gesucht -- die Klasse wird nirgends erzeugt,
+     nur in app.css eingefaerbt. Das Polling ist deshalb nie angesprungen. */
+  var RUNNING_SEL = '.badge-status-running';
+
   document.body.addEventListener('htmx:afterSettle', function(e) {
     var el  = e.target;
     var mod = _moduleFromEl(el);
     if (!mod) return;
-    if (el.querySelector('.status-inline--running')) {
+    if (el.querySelector(RUNNING_SEL)) {
       startPolling(mod, el);
     } else {
       stopPolling(mod);
@@ -113,6 +123,21 @@
     var d = e.detail || {};
     window.openLogModal(d.module, d.itemId);
   });
+
+  /* Beim ersten Laden feuert kein htmx:afterSettle – laeuft beim Oeffnen der
+     Seite bereits ein Job, muss das Polling trotzdem anspringen. */
+  function _initialPoll() {
+    var container = document.querySelectorAll('[id^="mod-"]');
+    for (var i = 0; i < container.length; i++) {
+      var el = container[i], mod = _moduleFromEl(el);
+      if (mod && el.querySelector(RUNNING_SEL)) startPolling(mod, el);
+    }
+  }
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', _initialPoll);
+  } else {
+    _initialPoll();
+  }
 })();
 </script>
 {% endblock %}
