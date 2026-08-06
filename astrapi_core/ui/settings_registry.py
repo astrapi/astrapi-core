@@ -3,8 +3,6 @@ core/ui/settings_registry.py  –  Einstellungs-Registry (SQLite-backed)
 
 Alle Einstellungen werden in der zentralen SQLite-Datenbank gespeichert
 (kvstore-Tabelle, collection="_settings", Werte als JSON).
-
-Beim ersten Start werden bestehende settings.yaml-Daten automatisch migriert.
 """
 
 from __future__ import annotations
@@ -28,83 +26,14 @@ class SettingsRegistry:
     def __init__(self):
         self._data_dir: Path | None = None
         self._lock = threading.Lock()
-        self._migrated = False
 
     def reset(self) -> None:
         with self._lock:
             self._data_dir = None
-            self._migrated = False
 
     def init(self, app_root: Path) -> None:
         self._data_dir = app_root / "data"
         self._data_dir.mkdir(exist_ok=True)
-        self._maybe_migrate()
-
-    # ── Migrationen ────────────────────────────────────────────────
-
-    def _maybe_migrate(self) -> None:
-        if self._migrated or self._data_dir is None:
-            return
-        self._migrated = True
-        self._migrate_settings_table()
-        self._migrate_yaml()
-
-    def _migrate_settings_table(self) -> None:
-        """Migriert alte settings-Tabelle (≤v26.4.19) → kvstore._settings."""
-        try:
-            from astrapi_core.system.db import _conn, kv_list, kv_set_many
-
-            if kv_list(_COLLECTION):
-                return
-            cur = (
-                _conn()
-                .execute("SELECT name FROM sqlite_master WHERE type='table' AND name='settings'")
-                .fetchone()
-            )
-            if not cur:
-                return
-            rows = _conn().execute("SELECT key, value FROM settings").fetchall()
-            if not rows:
-                return
-            kv_set_many(_COLLECTION, {row["key"]: json.dumps(row["value"]) for row in rows})
-            print(f"[settings] Migriert: {len(rows)} Einträge (settings-Tabelle → kvstore)")
-        except Exception as e:
-            print(f"[settings] settings-Tabelle-Migration fehlgeschlagen: {e}")
-
-    def _migrate_yaml(self) -> None:
-        """Migriert settings.yaml (≤v26.3.x) → kvstore._settings."""
-        if self._data_dir is None:
-            return
-        yaml_path = self._data_dir / "settings.yaml"
-        if not yaml_path.exists():
-            return
-        try:
-            from astrapi_core.system.db import kv_list
-
-            if kv_list(_COLLECTION):
-                yaml_path.rename(yaml_path.with_suffix(".yaml.migrated"))
-                return
-        except Exception:
-            return  # DB noch nicht konfiguriert
-        try:
-            import yaml as _yaml
-
-            class _SafeLoader(_yaml.SafeLoader):
-                pass
-
-            _SafeLoader.add_multi_constructor(
-                "tag:yaml.org,2002:python/",
-                lambda loader, suffix, node: None,
-            )
-            raw = _yaml.load(yaml_path.read_text(encoding="utf-8"), Loader=_SafeLoader) or {}
-            if raw:
-                from astrapi_core.system.db import kv_set_many
-
-                kv_set_many(_COLLECTION, {k: json.dumps(v) for k, v in raw.items()})
-            yaml_path.rename(yaml_path.with_suffix(".yaml.migrated"))
-            print(f"[settings] Migriert: {len(raw)} Einstellungen → SQLite")
-        except Exception as e:
-            print(f"[settings] YAML-Migration fehlgeschlagen: {e}")
 
     # ── Interne Helfer ─────────────────────────────────────────────
 
