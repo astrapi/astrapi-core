@@ -49,13 +49,15 @@ def build_connection_string(host: str, ssh_user: str = "backupadm") -> str:
     return f"{ssh_user or 'backupadm'}@{host}"
 
 
-def run_cmd(cmd, connection: str, env=None, timeout=TIMEOUT_BACKUP, ssh_connect_timeout=10):
+def run_cmd(cmd, connection: str, env=None, stdin: str | None = None,
+            timeout=TIMEOUT_BACKUP, ssh_connect_timeout=10):
     if isinstance(cmd, list):
         cmd = " ".join(cmd)
     if connection == "local":
-        return run_cmd_local(cmd, env, timeout=timeout)
+        return run_cmd_local(cmd, env, timeout=timeout, stdin=stdin)
     else:
-        return run_cmd_remote(cmd, connection, env, timeout=timeout, ssh_connect_timeout=ssh_connect_timeout)
+        return run_cmd_remote(cmd, connection, timeout=timeout,
+                               ssh_connect_timeout=ssh_connect_timeout, stdin=stdin)
 
 
 def _log_output(result) -> None:
@@ -68,11 +70,11 @@ def _log_output(result) -> None:
             _logger.info(line)
 
 
-def run_cmd_local(cmd, env=None, timeout=TIMEOUT_BACKUP):
+def run_cmd_local(cmd, env=None, timeout=TIMEOUT_BACKUP, stdin: str | None = None):
     final_cmd = ["bash", "-c", cmd]
     try:
         result = subprocess.run(
-            final_cmd, check=True, env=env,
+            final_cmd, check=True, env=env, input=stdin,
             stdout=subprocess.PIPE, stderr=subprocess.PIPE,
             text=True, timeout=timeout,
         )
@@ -83,13 +85,25 @@ def run_cmd_local(cmd, env=None, timeout=TIMEOUT_BACKUP):
         raise
 
 
-def run_cmd_remote(cmd, connection, env=None, timeout=TIMEOUT_BACKUP, ssh_connect_timeout=10):
+def run_cmd_remote(cmd, connection, timeout=TIMEOUT_BACKUP, ssh_connect_timeout=10,
+                    stdin: str | None = None):
+    """Führt cmd per SSH auf connection aus.
+
+    SSH leitet die Umgebung des lokalen Prozesses NICHT automatisch an die
+    Remote-Shell weiter (nur was per SendEnv/AcceptEnv erlaubt ist, meist nur
+    LANG/LC_*). Ein env-Parameter hier wäre deshalb wirkungslos -- es gibt
+    bewusst keinen. Geheimnisse gehören nicht als "VAR=wert"-Prefix in cmd
+    (landet auf dem Zielhost in ps/proc/<pid>/cmdline, siehe T-052), sondern
+    per stdin: Tools wie borg/proxmox-backup-client lesen Passphrase/Passwort
+    ueber eine "_FD"-Variable (z.B. BORG_PASSPHRASE_FD=0) von einem
+    File-Descriptor. Nur die FD-Nummer steht dann in cmd, kein Geheimnis.
+    """
     final_cmd = ["ssh", "-o", "BatchMode=yes",
                  "-o", f"ConnectTimeout={ssh_connect_timeout}",
                  connection, cmd]
     try:
         result = subprocess.run(
-            final_cmd, check=True,
+            final_cmd, check=True, input=stdin,
             stdout=subprocess.PIPE, stderr=subprocess.PIPE,
             text=True, timeout=timeout,
         )
