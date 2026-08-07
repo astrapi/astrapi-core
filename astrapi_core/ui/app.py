@@ -73,6 +73,33 @@ def _load_module_file(name: str, path: Path):
     return mod
 
 
+_ACTIVITY_LOG_RETENTION_INTERVAL = 24 * 60 * 60  # einmal taeglich
+
+
+def _start_activity_log_retention_loop() -> None:
+    """Setzt die Activity-Log-Aufbewahrung durch, sofort und danach taeglich.
+
+    Analog zu start_watchdog() (system/systemd.py) und dem Refresh-Thread in
+    astrapi_packages/modules/debian/utils/pkg_cache.py: ein Daemon-Thread mit
+    einer Sleep-Schleife, weil die App-Prozesse oft wochenlang ohne Neustart
+    laufen -- ein Aufruf nur beim Start wuerde in der Praxis nie greifen.
+    """
+    import threading
+    import time
+
+    def _loop():
+        while True:
+            try:
+                from astrapi_core.system.activity_log import enforce_activity_log_retention
+
+                enforce_activity_log_retention(get_activity_log_retention_days())
+            except Exception:
+                pass
+            time.sleep(_ACTIVITY_LOG_RETENTION_INTERVAL)
+
+    threading.Thread(target=_loop, daemon=True, name="activity-log-retention").start()
+
+
 def create(
     api,
     app_root: Path,
@@ -140,15 +167,11 @@ def create(
     global_defaults.setdefault("ACTIVITY_LOG_RETENTION_DAYS", 90)
     seed_defaults(global_defaults, modules, failed_module_keys)
 
-    # Aufbewahrung durchsetzen (T-113/T-114): abgeschlossene Activity-Log-
-    # Eintraege aelter als die konfigurierte Dauer werden beim Start entfernt.
-    # Beiwerk -- ein Fehler hier darf den App-Start nicht verhindern.
-    try:
-        from astrapi_core.system.activity_log import enforce_activity_log_retention
-
-        enforce_activity_log_retention(get_activity_log_retention_days())
-    except Exception:
-        pass
+    # Aufbewahrung durchsetzen (T-113/T-114): ein einmaliger Aufruf beim Start
+    # reicht nicht -- die Prozesse laufen oft wochen- bis monatelang ohne
+    # Neustart. Stattdessen ein Hintergrund-Thread, der sofort einmal prueft
+    # und danach taeglich erneut (Aufbewahrung ist ohnehin nur tagegenau).
+    _start_activity_log_retention_loop()
 
     # ── Template-Loader: Modul > App > Core > Dialogs ────────────────────────
     app_templates = app_root / "templates"
