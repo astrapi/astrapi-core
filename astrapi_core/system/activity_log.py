@@ -4,7 +4,7 @@
 # Speichert Job-Läufe und ihre Log-Zeilen in SQLite.
 #
 import json
-from datetime import datetime
+from datetime import datetime, timedelta
 
 from astrapi_core.system.db import _conn
 
@@ -43,9 +43,7 @@ _ACTIVITY_LOG_DDL = """
         parent_log_id   INTEGER,
 
         scheduler_job_id TEXT,
-        next_run        TEXT,
-
-        archived_at     TEXT
+        next_run        TEXT
     )
 """
 
@@ -222,7 +220,7 @@ def list_activity(
 ) -> list:
     """Liest Activity-Log mit optionalen Filtern. Neueste zuerst."""
     _init_activity_log()
-    query = "SELECT * FROM activity_log WHERE archived_at IS NULL"
+    query = "SELECT * FROM activity_log WHERE 1=1"
     params = []
     if log_type:
         query += " AND log_type = ?"
@@ -258,7 +256,7 @@ def count_activity(
 ) -> int:
     """Zählt Activity-Log-Einträge mit optionalen Filtern."""
     _init_activity_log()
-    query = "SELECT COUNT(*) FROM activity_log WHERE archived_at IS NULL"
+    query = "SELECT COUNT(*) FROM activity_log WHERE 1=1"
     params = []
     if log_type:
         query += " AND log_type = ?"
@@ -288,35 +286,39 @@ def get_activity_log(log_id: int) -> dict | None:
     return dict(row) if row else None
 
 
-def clear_activity_log() -> int:
-    """Löscht abgeschlossene activity_log- und activity_log_lines-Einträge.
+def _purge_activity_log(where_extra: str = "", params: tuple = ()) -> int:
+    """Löscht activity_log-Einträge (und ihre Zeilen) nach `where_extra`.
 
-    Laufende Einträge (status="running") werden verschont. Ohne diese Prüfung
-    reisst das Löschen einem laufenden Job die Zeile unter den Fuessen weg:
-    log() schreibt per active_log_id weiter Zeilen an eine nicht mehr
-    existierende log_id (verwaiste, für immer unsichtbare activity_log_lines-
-    Zeilen), und das abschliessende update_activity_log() am Ende des Laufs
-    trifft keine Zeile mehr -- ein UPDATE ... WHERE id=? gegen eine geloeschte
-    Zeile betrifft still 0 Zeilen. Das Ergebnis des Laufs (ok/error, Dauer,
-    Fehlermeldung) geht damit komplett verloren, ohne dass irgendwo ein Fehler
-    auftritt.
+    Laufende Einträge (status="running") werden IMMER verschont, unabhängig
+    von `where_extra`. Ohne diese Prüfung reisst das Löschen einem laufenden
+    Job die Zeile unter den Füssen weg: log() schreibt per active_log_id
+    weiter Zeilen an eine nicht mehr existierende log_id (verwaiste, für
+    immer unsichtbare activity_log_lines-Zeilen), und das abschliessende
+    update_activity_log() am Ende des Laufs trifft keine Zeile mehr -- ein
+    UPDATE ... WHERE id=? gegen eine gelöschte Zeile betrifft still 0 Zeilen.
+    Das Ergebnis des Laufs (ok/error, Dauer, Fehlermeldung) geht damit
+    komplett verloren, ohne dass irgendwo ein Fehler auftritt.
 
-    Der sqlite_sequence-Reset (IDs wieder bei 1 beginnen) laeuft nur, wenn
-    danach wirklich nichts mehr in der Tabelle steht -- sonst koennten
-    kuenftige IDs mit noch vorhandenen laufenden Eintraegen kollidieren.
+    Der sqlite_sequence-Reset (IDs wieder bei 1 beginnen) läuft nur, wenn
+    danach wirklich nichts mehr in der Tabelle steht -- sonst könnten
+    künftige IDs mit noch vorhandenen laufenden Einträgen kollidieren.
 
-    Gibt die Anzahl geloeschter Eintraege zurueck.
+    Gibt die Anzahl gelöschter Einträge zurück.
     """
     _init_activity_log()
     _init_log_lines()
+    where = "status != 'running'" + (f" AND {where_extra}" if where_extra else "")
     count = _conn().execute(
-        "SELECT COUNT(*) FROM activity_log WHERE status != 'running'"
+        f"SELECT COUNT(*) FROM activity_log WHERE {where}", params
     ).fetchone()[0]
+    if count == 0:
+        return 0
     _conn().execute(
-        "DELETE FROM activity_log_lines WHERE log_id IN "
-        "(SELECT id FROM activity_log WHERE status != 'running')"
+        f"DELETE FROM activity_log_lines WHERE log_id IN "
+        f"(SELECT id FROM activity_log WHERE {where})",
+        params,
     )
-    _conn().execute("DELETE FROM activity_log WHERE status != 'running'")
+    _conn().execute(f"DELETE FROM activity_log WHERE {where}", params)
     remaining = _conn().execute("SELECT COUNT(*) FROM activity_log").fetchone()[0]
     if remaining == 0:
         _conn().execute(
@@ -324,6 +326,26 @@ def clear_activity_log() -> int:
         )
     _conn().commit()
     return count
+
+
+def clear_activity_log() -> int:
+    """Löscht alle abgeschlossenen activity_log-Einträge (siehe _purge_activity_log)."""
+    return _purge_activity_log()
+
+
+def enforce_activity_log_retention(days: int) -> int:
+    """Löscht abgeschlossene activity_log-Einträge älter als `days` Tage.
+
+    days <= 0 deaktiviert die Aufbewahrungsgrenze (nichts wird gelöscht) --
+    das ist die alte, unbegrenzte Aufbewahrung. Ersetzt das nie gebaute
+    manuelle Archivieren (archived_at, T-113): statt Einträge von Hand aus
+    der Ansicht auszublenden, verschwinden sie automatisch, wenn sie alt genug
+    sind. Löst damit auch T-114 (unbegrenztes Wachstum).
+    """
+    if days <= 0:
+        return 0
+    cutoff = (datetime.now() - timedelta(days=days)).isoformat()
+    return _purge_activity_log("created_at < ?", (cutoff,))
 
 
 def get_latest_activity_log_id(module: str, item_id: str) -> int | None:

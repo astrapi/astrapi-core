@@ -34,6 +34,13 @@
                              type='number', attrs='min="5" max="200"') }}
                 <div style="font-size:11px; color:var(--text-3); margin-top:4px;">Gilt für alle Listen-Ansichten in der App</div>
               </div>
+              <div class="form-group" style="margin:0;">
+                <label class="form-label">Activity-Log Aufbewahrung (Tage)</label>
+                {{ form_input('ACTIVITY_LOG_RETENTION_DAYS',
+                             settings.get('ACTIVITY_LOG_RETENTION_DAYS', 90),
+                             type='number', attrs='min="0" max="3650"') }}
+                <div style="font-size:11px; color:var(--text-3); margin-top:4px;">Ältere abgeschlossene Einträge werden beim Start entfernt; 0 = unbegrenzt</div>
+              </div>
             </div>
             <div class="form-actions">
               {{ btn_save() }}

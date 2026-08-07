@@ -31,6 +31,7 @@ from .module_registry import (
 from .page_factory import register_pages
 from .settings_registry import (
     all_settings,
+    get_activity_log_retention_days,
     seed_defaults,
     set_many,
 )
@@ -136,7 +137,18 @@ def create(
     global_defaults.setdefault("TIMEZONE", "Europe/Berlin")
     global_defaults.setdefault("DATE_FORMAT", "DD.MM.YYYY")
     global_defaults.setdefault("PAGINATION_PAGE_SIZE", 15)
+    global_defaults.setdefault("ACTIVITY_LOG_RETENTION_DAYS", 90)
     seed_defaults(global_defaults, modules, failed_module_keys)
+
+    # Aufbewahrung durchsetzen (T-113/T-114): abgeschlossene Activity-Log-
+    # Eintraege aelter als die konfigurierte Dauer werden beim Start entfernt.
+    # Beiwerk -- ein Fehler hier darf den App-Start nicht verhindern.
+    try:
+        from astrapi_core.system.activity_log import enforce_activity_log_retention
+
+        enforce_activity_log_retention(get_activity_log_retention_days())
+    except Exception:
+        pass
 
     # ── Template-Loader: Modul > App > Core > Dialogs ────────────────────────
     app_templates = app_root / "templates"

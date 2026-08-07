@@ -152,3 +152,12 @@ def get_page_size() -> int:
         return int(_registry.get("PAGINATION_PAGE_SIZE", 15))
     except (TypeError, ValueError):
         return 15
+
+
+def get_activity_log_retention_days() -> int:
+    """Gibt die konfigurierte Aufbewahrungsdauer des Activity-Logs in Tagen zurück
+    (Default: 90, 0 = deaktiviert / unbegrenzt)."""
+    try:
+        return int(_registry.get("ACTIVITY_LOG_RETENTION_DAYS", 90))
+    except (TypeError, ValueError):
+        return 90
