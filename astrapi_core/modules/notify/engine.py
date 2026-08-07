@@ -34,6 +34,7 @@ Eigenes Backend registrieren (in main.py, vor App-Start):
 from __future__ import annotations
 
 import logging
+import time
 from abc import ABC, abstractmethod
 from typing import Callable, Optional
 
@@ -44,6 +45,14 @@ log = logging.getLogger(__name__)
 KEY = "notify"
 store = SqliteStorage("notify_channels")
 job_store = SqliteStorage("notify_jobs")
+
+# Versuche + Wartezeit fuer send() (T-115). Bewusst kurz gehalten: send()
+# laeuft in Job-/Build-Threads, die auf den Abschluss warten -- ein paar
+# Sekunden pro fehlschlagendem Kanal sind vertretbar, minutenlanges Warten auf
+# eine laengere Downtime des Backends nicht. Deckt den haeufigen Fall (kurzer
+# Netzwerk-Ruckler) ab, nicht einen laengeren Ausfall.
+_SEND_ATTEMPTS = 3
+_SEND_RETRY_DELAY_S = 2
 
 # Ereignis-Konstanten
 
@@ -210,6 +219,44 @@ class NotifyEngine:
         log.warning("notify: Unbekanntes Backend '%s' - Kanal wird uebersprungen", backend_key)
         return None
 
+    def _send_with_retry(
+        self,
+        notifier: BaseNotifier,
+        title: str,
+        message: str,
+        priority: str,
+        tags: list[str],
+        job_id: str,
+        channel_id: str,
+    ) -> bool:
+        """Versucht bis zu _SEND_ATTEMPTS mal, mit kurzer Pause dazwischen.
+
+        Nur fuer send() (den Alarm-Pfad) gedacht. test_channel()/test_job()
+        rufen notifier.send() bewusst direkt auf, ohne Retry -- beim
+        interaktiven "Testen"-Knopf soll das Ergebnis sofort da sein, kein
+        Warten auf Wiederholungsversuche.
+        """
+        last_error: str | None = None
+        for attempt in range(1, _SEND_ATTEMPTS + 1):
+            try:
+                if notifier.send(title, message, priority, tags):
+                    if attempt > 1:
+                        log.info(
+                            "notify: Job '%s' (Kanal '%s') im %d. Versuch erfolgreich",
+                            job_id, channel_id, attempt,
+                        )
+                    return True
+                last_error = "Backend lieferte einen Fehler (kein HTTP 2xx)"
+            except Exception as e:
+                last_error = str(e)
+            if attempt < _SEND_ATTEMPTS:
+                time.sleep(_SEND_RETRY_DELAY_S)
+        log.error(
+            "notify: Job '%s' (Kanal '%s') nach %d Versuch(en) fehlgeschlagen: %s",
+            job_id, channel_id, _SEND_ATTEMPTS, last_error,
+        )
+        return False
+
     def send(
         self,
         title: str,
@@ -254,23 +301,13 @@ class NotifyEngine:
             if notifier is None:
                 continue
 
-            try:
-                ok = notifier.send(title, message, eff_priority, eff_tags)
-                if ok:
-                    sent += 1
-                    log.debug(
-                        "notify: '%s' via Job '%s' (Kanal '%s') gesendet", title, job_id, channel_id
-                    )
-                else:
-                    log.warning(
-                        "notify: Job '%s' (Kanal '%s') lieferte Fehler fuer '%s'",
-                        job_id,
-                        channel_id,
-                        title,
-                    )
-            except Exception as e:
-                log.error(
-                    "notify: Job '%s' (Kanal '%s') Fehler beim Senden: %s", job_id, channel_id, e
+            ok = self._send_with_retry(
+                notifier, title, message, eff_priority, eff_tags, job_id, channel_id
+            )
+            if ok:
+                sent += 1
+                log.debug(
+                    "notify: '%s' via Job '%s' (Kanal '%s') gesendet", title, job_id, channel_id
                 )
 
         return sent
