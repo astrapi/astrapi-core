@@ -40,8 +40,6 @@ _ACTIVITY_LOG_DDL = """
         full_log        TEXT,
         metadata        TEXT,
 
-        parent_log_id   INTEGER,
-
         scheduler_job_id TEXT,
         next_run        TEXT
     )
@@ -100,7 +98,6 @@ def log_activity(
     items_count: int = None,
     changed_count: int = None,
     metadata: dict = None,
-    parent_log_id: int = None,
     mode: str = None,
     scheduler_job_id: str = None,
     next_run: str = None,
@@ -116,9 +113,9 @@ def log_activity(
             status, severity, mode, duration_s,
             error_message, error_code, error_traceback,
             full_log, bytes_processed, items_count, changed_count,
-            metadata, parent_log_id,
+            metadata,
             scheduler_job_id, next_run
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     """,
         (
             now,
@@ -140,7 +137,6 @@ def log_activity(
             items_count,
             changed_count,
             json.dumps(metadata) if metadata else None,
-            parent_log_id,
             scheduler_job_id,
             next_run,
         ),
