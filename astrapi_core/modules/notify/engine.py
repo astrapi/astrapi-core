@@ -257,6 +257,31 @@ class NotifyEngine:
         )
         return False
 
+    def _job_matches(self, job: dict, event: str, source: Optional[str]) -> tuple[bool, str]:
+        """Prüft, ob ein Job für ein Ereignis/eine Quelle feuern würde.
+
+        Einzige Stelle für die Entscheidung "wird gesendet oder nicht" -- von
+        send() UND test_job() genutzt (T-116). Vorher lief test_job() direkt
+        über den Kanal, ohne enabled/events/sources zu prüfen: ein
+        deaktivierter oder falsch gefilterter Job leuchtete beim Testen
+        gruen, waehrend er im Ernstfall nie gefeuert haette. Mit einer
+        gemeinsamen Funktion koennen die beiden Pfade nicht mehr auseinanderlaufen.
+
+        Gibt (True, "") zurueck wenn der Job feuern wuerde, sonst (False, Grund).
+        """
+        if not job.get("enabled", False):
+            return False, "Job ist deaktiviert."
+        job_events = job.get("events") or []
+        if event not in job_events:
+            return False, f"Job reagiert nicht auf Ereignistyp '{event}'."
+        job_sources = job.get("sources") or []
+        if job_sources and source is not None and source not in job_sources:
+            return (
+                False,
+                f"Job ist auf Quellen {job_sources} eingeschränkt, '{source}' ist nicht darunter.",
+            )
+        return True, ""
+
     def send(
         self,
         title: str,
@@ -278,13 +303,8 @@ class NotifyEngine:
         sent = 0
 
         for job_id, job in jobs.items():
-            if not job.get("enabled", False):
-                continue
-            job_events = job.get("events") or []
-            if event not in job_events:
-                continue
-            job_sources = job.get("sources") or []
-            if job_sources and source is not None and source not in job_sources:
+            matches, _ = self._job_matches(job, event, source)
+            if not matches:
                 continue
 
             channel_id = job.get("channel_id", "")
@@ -336,14 +356,35 @@ class NotifyEngine:
             return False, str(e)
 
     def test_job(self, job_id: str) -> tuple[bool, str]:
-        """Sendet eine Testbenachrichtigung ueber den Kanal eines bestimmten Jobs."""
+        """Prüft einen Job wie send() ihn behandeln würde (T-116).
+
+        Vorher testete das nur die Zustellung über den verknüpften Kanal --
+        ein deaktivierter Job oder einer ohne passenden Events-/Sources-Filter
+        leuchtete beim Testen trotzdem gruen, obwohl send() ihn im Ernstfall
+        nie erreicht haette. Jetzt laeuft dieselbe Filterentscheidung
+        (_job_matches) mit, angewendet auf ein Ereignis/eine Quelle aus der
+        eigenen Konfiguration des Jobs.
+        """
         job = job_store.get(job_id)
         if job is None:
             return False, f"Job '{job_id}' nicht gefunden."
+
+        job_events = job.get("events") or []
+        if not job_events:
+            return False, "Job hat keinen Ereignistyp ausgewählt -- würde nie feuern."
+        job_sources = job.get("sources") or []
+        test_source = job_sources[0] if job_sources else None
+
+        matches, reason = self._job_matches(job, job_events[0], test_source)
+        if not matches:
+            return False, reason
+
         channel_id = job.get("channel_id", "")
         channel = store.get(channel_id)
         if channel is None:
             return False, f"Kanal '{channel_id}' nicht gefunden (Job '{job_id}')."
+        if not channel.get("enabled", False):
+            return False, f"Kanal '{channel_id}' ist deaktiviert."
 
         notifier = self._notifier_for_channel(channel)
         if notifier is None:
