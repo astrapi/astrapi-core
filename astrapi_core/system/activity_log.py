@@ -289,15 +289,39 @@ def get_activity_log(log_id: int) -> dict | None:
 
 
 def clear_activity_log() -> int:
-    """Löscht alle activity_log und activity_log_lines Einträge. Gibt Anzahl zurück."""
+    """Löscht abgeschlossene activity_log- und activity_log_lines-Einträge.
+
+    Laufende Einträge (status="running") werden verschont. Ohne diese Prüfung
+    reisst das Löschen einem laufenden Job die Zeile unter den Fuessen weg:
+    log() schreibt per active_log_id weiter Zeilen an eine nicht mehr
+    existierende log_id (verwaiste, für immer unsichtbare activity_log_lines-
+    Zeilen), und das abschliessende update_activity_log() am Ende des Laufs
+    trifft keine Zeile mehr -- ein UPDATE ... WHERE id=? gegen eine geloeschte
+    Zeile betrifft still 0 Zeilen. Das Ergebnis des Laufs (ok/error, Dauer,
+    Fehlermeldung) geht damit komplett verloren, ohne dass irgendwo ein Fehler
+    auftritt.
+
+    Der sqlite_sequence-Reset (IDs wieder bei 1 beginnen) laeuft nur, wenn
+    danach wirklich nichts mehr in der Tabelle steht -- sonst koennten
+    kuenftige IDs mit noch vorhandenen laufenden Eintraegen kollidieren.
+
+    Gibt die Anzahl geloeschter Eintraege zurueck.
+    """
     _init_activity_log()
     _init_log_lines()
-    count = _conn().execute("SELECT COUNT(*) FROM activity_log").fetchone()[0]
-    _conn().execute("DELETE FROM activity_log_lines")
-    _conn().execute("DELETE FROM activity_log")
+    count = _conn().execute(
+        "SELECT COUNT(*) FROM activity_log WHERE status != 'running'"
+    ).fetchone()[0]
     _conn().execute(
-        "DELETE FROM sqlite_sequence WHERE name IN ('activity_log','activity_log_lines')"
+        "DELETE FROM activity_log_lines WHERE log_id IN "
+        "(SELECT id FROM activity_log WHERE status != 'running')"
     )
+    _conn().execute("DELETE FROM activity_log WHERE status != 'running'")
+    remaining = _conn().execute("SELECT COUNT(*) FROM activity_log").fetchone()[0]
+    if remaining == 0:
+        _conn().execute(
+            "DELETE FROM sqlite_sequence WHERE name IN ('activity_log','activity_log_lines')"
+        )
     _conn().commit()
     return count
 
