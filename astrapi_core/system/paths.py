@@ -4,14 +4,14 @@
 Jede App ruft einmalig beim Start configure(app_name) auf:
 
     from astrapi_core.system.paths import configure
-    configure("backupctl")
+    configure("astrapi-backup")
 
 Danach stehen work_dir(), db_path() und log_dir() zur Verfügung.
 Das Arbeitsverzeichnis wird über einen CLI-Parameter oder eine
 Umgebungsvariable gesetzt:
 
-    backupctl --work-dir /opt/backupctl
-    # → setzt BACKUPCTL_WORK_DIR=/opt/backupctl
+    astrapi-backup --work-dir /opt/astrapi-backup
+    # → setzt ASTRAPI_BACKUP_WORK_DIR=/opt/astrapi-backup
 
 Ist weder Parameter noch Env-Variable gesetzt, schlägt work_dir() mit
 einem RuntimeError fehl – kein stiller Fallback.
@@ -29,17 +29,26 @@ def configure(app_name: str) -> None:
 
 
 def _env_var() -> str:
+    """Leitet den Namen der Work-Dir-Variable aus dem App-Namen ab.
+
+    Bindestriche werden zu Unterstrichen: die App-Namen enthalten seit der
+    Umbenennung von "backupctl" auf "astrapi-backup" einen Bindestrich, und
+    `upper()` allein liesse ihn stehen. Ein solcher Name ist kein gueltiger
+    Bezeichner -- die Shell lehnt `NAME-X=wert befehl` ab, systemd verwirft
+    ein `Environment=` damit stillschweigend. Nur `env "NAME-X=wert"` haette
+    funktioniert (T-128).
+    """
     if _app_name is None:
         raise RuntimeError(
             "astrapi_core.system.paths nicht konfiguriert – configure(app_name) aufrufen!"
         )
-    return f"{_app_name.upper()}_WORK_DIR"
+    return f"{_app_name.upper().replace('-', '_')}_WORK_DIR"
 
 
 def work_dir() -> Path:
     """Gibt das konfigurierte Arbeitsverzeichnis zurück.
 
-    Liest die Env-Variable {APP_NAME}_WORK_DIR (z.B. BACKUPCTL_WORK_DIR).
+    Liest die Env-Variable {APP_NAME}_WORK_DIR (z.B. ASTRAPI_BACKUP_WORK_DIR).
     Schlägt fehl wenn nicht gesetzt.
     """
     val = os.environ.get(_env_var(), "").strip()
@@ -68,7 +77,7 @@ def add_work_dir_argument(parser) -> None:
         from astrapi_core.system.paths import add_work_dir_argument
         add_work_dir_argument(parser)
         args = parser.parse_args()
-        # BACKUPCTL_WORK_DIR ist jetzt gesetzt
+        # ASTRAPI_BACKUP_WORK_DIR ist jetzt gesetzt
     """
     parser.add_argument(
         "--work-dir",
