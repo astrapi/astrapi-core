@@ -50,14 +50,15 @@ def build_connection_string(host: str, ssh_user: str = "backupadm") -> str:
 
 
 def run_cmd(cmd, connection: str, env=None, stdin: str | None = None,
-            timeout=TIMEOUT_BACKUP, ssh_connect_timeout=10):
+            timeout=TIMEOUT_BACKUP, ssh_connect_timeout=10, ssh_port: int = None):
     if isinstance(cmd, list):
         cmd = " ".join(cmd)
     if connection == "local":
         return run_cmd_local(cmd, env, timeout=timeout, stdin=stdin)
     else:
         return run_cmd_remote(cmd, connection, timeout=timeout,
-                               ssh_connect_timeout=ssh_connect_timeout, stdin=stdin)
+                               ssh_connect_timeout=ssh_connect_timeout, stdin=stdin,
+                               ssh_port=ssh_port)
 
 
 def _log_output(result) -> None:
@@ -86,7 +87,7 @@ def run_cmd_local(cmd, env=None, timeout=TIMEOUT_BACKUP, stdin: str | None = Non
 
 
 def run_cmd_remote(cmd, connection, timeout=TIMEOUT_BACKUP, ssh_connect_timeout=10,
-                    stdin: str | None = None):
+                    stdin: str | None = None, ssh_port: int = None):
     """Führt cmd per SSH auf connection aus.
 
     SSH leitet die Umgebung des lokalen Prozesses NICHT automatisch an die
@@ -99,8 +100,10 @@ def run_cmd_remote(cmd, connection, timeout=TIMEOUT_BACKUP, ssh_connect_timeout=
     File-Descriptor. Nur die FD-Nummer steht dann in cmd, kein Geheimnis.
     """
     final_cmd = ["ssh", "-o", "BatchMode=yes",
-                 "-o", f"ConnectTimeout={ssh_connect_timeout}",
-                 connection, cmd]
+                 "-o", f"ConnectTimeout={ssh_connect_timeout}"]
+    if ssh_port and int(ssh_port) != 22:
+        final_cmd += ["-p", str(ssh_port)]
+    final_cmd += [connection, cmd]
     try:
         result = subprocess.run(
             final_cmd, check=True, input=stdin,

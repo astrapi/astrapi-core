@@ -55,3 +55,33 @@ def test_run_cmd_remote_secret_landet_nicht_in_argv():
         final_cmd = args[0]
         assert "super-geheimes-passwort" not in " ".join(final_cmd)
         assert kwargs["input"] == "super-geheimes-passwort"
+
+
+def test_run_cmd_remote_ohne_ssh_port_bleibt_unveraendert():
+    """T-051: kein ssh_port angegeben -- kein -p in argv, wie bisher."""
+    with patch("astrapi_core.system.cmd.subprocess.run") as mock_run:
+        mock_run.side_effect = _fake_completed
+        run_cmd_remote("echo hi", "user@host")
+        args, _ = mock_run.call_args
+        assert "-p" not in args[0]
+
+
+def test_run_cmd_remote_port_22_baut_kein_p_flag():
+    """T-051: Standardport 22 explizit gesetzt -- kein zusaetzliches -p noetig."""
+    with patch("astrapi_core.system.cmd.subprocess.run") as mock_run:
+        mock_run.side_effect = _fake_completed
+        run_cmd_remote("echo hi", "user@host", ssh_port=22)
+        args, _ = mock_run.call_args
+        assert "-p" not in args[0]
+
+
+def test_run_cmd_remote_nicht_standard_port_wird_durchgereicht():
+    """T-051: ssh_port != 22 -- -p <port> muss vor der Verbindung in argv stehen."""
+    with patch("astrapi_core.system.cmd.subprocess.run") as mock_run:
+        mock_run.side_effect = _fake_completed
+        run_cmd_remote("echo hi", "user@host", ssh_port=2222)
+        args, _ = mock_run.call_args
+        final_cmd = args[0]
+        assert "-p" in final_cmd
+        assert final_cmd[final_cmd.index("-p") + 1] == "2222"
+        assert final_cmd.index("-p") < final_cmd.index("user@host")
