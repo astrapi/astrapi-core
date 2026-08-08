@@ -428,7 +428,3 @@ def send_simple(message: str, priority: str | None = None) -> None:
         )
     except Exception as e:
         log.error("notify: send_simple fehlgeschlagen: %s", e)
-
-
-# Rückwärtskompatibilität
-test = _engine.test_channel
