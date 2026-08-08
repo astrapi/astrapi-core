@@ -349,6 +349,9 @@ _upd_state: dict = {
     # [{"name": "astrapi-core", "from": "26.8.3", "to": "26.8.4"}].
     # Die UI liest das vor dem Neustart aus und meldet es danach.
     "changed": [],
+    # Ob ein Client den "done"-Status schon abgeholt hat - Kriterium fuer
+    # _schedule_restart(), siehe dort.
+    "seen": True,
 }
 _upd_lock = _threading.Lock()
 
@@ -643,10 +646,11 @@ def _do_update() -> None:
                     _upd_state["status"] = "done"
                     _upd_state["packages"] = []
                     _upd_state["changed"] = geaendert
+                    _upd_state["seen"] = False
                 # Ohne diesen Hinweis bricht gleich die SSE-Verbindung ab und
                 # das Log-Modal meldet nur "Verbindung getrennt" – das sieht
                 # nach Fehler aus, ist aber der geplante Neustart.
-                _core_log("INFO", "Dienst startet in 2 Sekunden neu – Seite danach neu laden.")
+                _core_log("INFO", "Dienst startet neu, sobald die Oberfläche das Ergebnis abgeholt hat – Seite danach neu laden.")
                 _schedule_restart()
             else:
                 # pip beendet sich auch dann mit 0, wenn es nichts zu tun fand.
@@ -703,13 +707,61 @@ def _do_update() -> None:
                     pass
 
 
-def _schedule_restart() -> None:
+_RESTART_MAX_WAIT = 15.0  # Sicherheitsnetz, falls kein Client mehr pollt (Tab zu o.ae.)
+
+
+def _wait_for_seen_then_restart() -> None:
+    """Wartet bis ein Client den "done"-Status abgeholt hat (get_status()
+    setzt "seen"), hoechstens _RESTART_MAX_WAIT Sekunden. Vorher lief hier
+    eine geratene feste Wartezeit (2s, dann 3s) - kein Kriterium, nur eine
+    Vermutung, dass die Oberflaeche bis dahin einmal gepollt hat."""
+    waited = 0.0
+    while waited < _RESTART_MAX_WAIT:
+        with _upd_lock:
+            if _upd_state["seen"]:
+                break
+        time.sleep(0.3)
+        waited += 0.3
+    _restart_process()
+
+
+def _restart_process() -> None:
+    """Startet den Dienst neu. Bevorzugt `systemctl restart <package>` -
+    systemd-konform, sauberer Prozesswechsel, sichtbarer Restart-Status.
+    Schlaegt das fehl (kein systemd, Unit-Name weicht ab, keine Berechtigung
+    o.ae.), faellt es auf os.execv zurueck - das ersetzt den Prozess zwar nur
+    in-place statt ihn ueber den Service-Manager neu zu starten, funktioniert
+    aber garantiert, unabhaengig von Unit-Namen und Berechtigungen."""
     import os
 
-    # 3 s statt 2: die Oberflaeche pollt den Status im Sekundentakt und muss
-    # das abgeschlossene Ergebnis noch abholen koennen, bevor der Prozess
-    # ersetzt wird – danach ist _upd_state weg (nur im Speicher).
-    _threading.Timer(3.0, lambda: os.execv(sys.executable, [sys.executable] + sys.argv)).start()
+    if _app_package:
+        try:
+            r = subprocess.run(
+                ["systemctl", "restart", _app_package],
+                capture_output=True,
+                text=True,
+                timeout=10,
+            )
+            if r.returncode == 0:
+                # systemd hat den Stop-Job ausgeloest - dieser Prozess bekommt
+                # gleich SIGTERM und laeuft nicht weiter bis hierher zurueck.
+                return
+            _upd_log.warning(
+                "updater: systemctl restart %s fehlgeschlagen (rc=%s): %s "
+                "- falle zurueck auf os.execv",
+                _app_package, r.returncode, r.stderr.strip(),
+            )
+        except Exception as e:
+            _upd_log.warning(
+                "updater: systemctl restart nicht verfuegbar (%s) - falle zurueck auf os.execv", e
+            )
+    os.execv(sys.executable, [sys.executable] + sys.argv)
+
+
+def _schedule_restart() -> None:
+    _threading.Thread(
+        target=_wait_for_seen_then_restart, daemon=True, name="system-restart-wait"
+    ).start()
 
 
 def set_error(message: str) -> None:
@@ -719,8 +771,16 @@ def set_error(message: str) -> None:
 
 
 def get_status() -> dict:
-    """Gibt den aktuellen Updater-Status zurück."""
+    """Gibt den aktuellen Updater-Status zurück.
+
+    Markiert nebenbei "seen": ein Aufruf, waehrend kein Lauf mehr aktiv ist
+    (status nicht running/checking), zaehlt als abgeholt - Kriterium fuer
+    _schedule_restart(), das damit nicht mehr blind eine feste Zeit warten
+    muss (siehe dort).
+    """
     with _upd_lock:
+        if _upd_state["status"] not in ("running", "checking"):
+            _upd_state["seen"] = True
         return {
             "status": _upd_state["status"],
             "log_id": _upd_state["log_id"],
