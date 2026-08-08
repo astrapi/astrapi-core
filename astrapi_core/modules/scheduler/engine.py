@@ -323,8 +323,6 @@ class Scheduler:
             "cron":          cfg.get("cron", ""),
             "enabled":       cfg.get("enabled", False),
             "steps":         cfg.get("steps", []),
-            "notify_start":  cfg.get("notify_start", True),
-            "notify_end":    cfg.get("notify_end",   True),
             "next_run":      next_run,
             "last_run":      status.get("last_run", ""),
             "last_status":   status.get("last_status", ""),
@@ -342,30 +340,24 @@ class Scheduler:
         cfg = _jobs_store().get(job_id)
         return self._enrich(job_id, cfg) if cfg else None
 
-    def create_job(self, job_id: str, label: str, cron: str, enabled: bool, steps: list[str],
-                   notify_start: bool = True, notify_end: bool = True) -> dict:
+    def create_job(self, job_id: str, label: str, cron: str, enabled: bool, steps: list[str]) -> dict:
         _jobs_store().create(job_id, {
             "label":        label,
             "cron":         cron,
             "enabled":      enabled,
             "steps":        steps,
-            "notify_start": notify_start,
-            "notify_end":   notify_end,
         })
         self._register_job_notify_source(job_id, label)
         if self._get_sch().running:
             self._sync_job(job_id)
         return self._enrich(job_id, _jobs_store().get(job_id))
 
-    def update_job(self, job_id: str, label: str, cron: str, enabled: bool, steps: list[str],
-                   notify_start: bool = True, notify_end: bool = True) -> dict:
+    def update_job(self, job_id: str, label: str, cron: str, enabled: bool, steps: list[str]) -> dict:
         _jobs_store().update(job_id, {
             "label":        label,
             "cron":         cron,
             "enabled":      enabled,
             "steps":        steps,
-            "notify_start": notify_start,
-            "notify_end":   notify_end,
         })
         self._register_job_notify_source(job_id, label)  # Label ggf. aktualisiert
         if self._get_sch().running:

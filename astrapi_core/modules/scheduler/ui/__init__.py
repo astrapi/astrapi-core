@@ -142,8 +142,6 @@ async def scheduler_job_create(request: Request):
     cron = form.get("cron", "").strip()
     enabled = "1" in form.getlist("enabled")
     steps = list(form.getlist("steps"))
-    notify_start = "1" in form.getlist("notify_start")
-    notify_end = "1" in form.getlist("notify_end")
 
     if not label or not cron:
         return render(
@@ -156,8 +154,6 @@ async def scheduler_job_create(request: Request):
                     "cron": cron,
                     "enabled": enabled,
                     "steps": steps,
-                    "notify_start": notify_start,
-                    "notify_end": notify_end,
                 },
                 actions=get_registered_actions(),
                 error="Name und Cron-Ausdruck sind Pflichtfelder.",
@@ -168,9 +164,7 @@ async def scheduler_job_create(request: Request):
         )
 
     job_id = uuid.uuid4().hex[:12]
-    create_job(
-        job_id, label, cron, enabled, steps, notify_start=notify_start, notify_end=notify_end
-    )
+    create_job(job_id, label, cron, enabled, steps)
     return render(request, "content.html", _list_ctx())
 
 
@@ -184,8 +178,6 @@ async def scheduler_job_save(job_id: str, request: Request):
     cron = form.get("cron", "").strip()
     enabled = "1" in form.getlist("enabled")
     steps = list(form.getlist("steps"))
-    notify_start = "1" in form.getlist("notify_start")
-    notify_end = "1" in form.getlist("notify_end")
 
     if not label or not cron:
         from astrapi_core.modules.scheduler.engine import get_job
@@ -197,8 +189,6 @@ async def scheduler_job_save(job_id: str, request: Request):
                 "cron": cron,
                 "enabled": enabled,
                 "steps": steps,
-                "notify_start": notify_start,
-                "notify_end": notify_end,
             }
         )
         return render(
@@ -214,9 +204,7 @@ async def scheduler_job_save(job_id: str, request: Request):
             status_code=422,
         )
 
-    update_job(
-        job_id, label, cron, enabled, steps, notify_start=notify_start, notify_end=notify_end
-    )
+    update_job(job_id, label, cron, enabled, steps)
     return render(request, "content.html", _list_ctx())
 
 
