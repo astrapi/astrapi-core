@@ -7,8 +7,9 @@ Projekte konfigurieren den Health-Check:
     configure(health_fn=my_check_fn)   # () -> (ok: bool, details: dict)
 """
 
-import os
 import time
+
+from astrapi_core.system.systemd import watchdog_active
 
 _START_TIME: float = time.time()
 _health_fn = None
@@ -39,7 +40,7 @@ def get_status() -> dict:
     m, s     = divmod(rem, 60)
     uptime_str = f"{h}h {m}m {s}s" if h else f"{m}m {s}s"
 
-    systemd_active = bool(os.environ.get("NOTIFY_SOCKET"))
+    systemd_active = watchdog_active()
 
     health_ok      = None
     health_details = {}
