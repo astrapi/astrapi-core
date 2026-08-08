@@ -152,9 +152,6 @@ def load_modules(app_root: Path) -> list:
     app/overrides/   – Module die Core-Module überschreiben/ergänzen
     app/modules/      – reine App-Module
     Reihenfolge im Ergebnis: core zuerst, dann app-exklusive.
-
-    Core-Module können per Einstellung deaktiviert werden:
-      core.module.<key>.enabled = "0"  →  Modul wird nicht geladen
     """
     import importlib as _il
 
@@ -163,18 +160,6 @@ def load_modules(app_root: Path) -> list:
     ext_mods, ext_failed = _load_from_dir(app_root / "overrides", "app.overrides")
     app_mods, app_failed = _load_from_dir(app_root / "modules", "app.modules")
     failed_keys: set[str] = core_failed | ext_failed | app_failed
-
-    # Deaktivierte Core-Module herausfiltern (Einstellung: core.module.<key>.enabled != "0")
-    try:
-        from astrapi_core.ui.settings_registry import get as _settings_get
-
-        core_mods = {
-            k: v
-            for k, v in core_mods.items()
-            if _settings_get(f"core.module.{k}.enabled", "1") != "0"
-        }
-    except Exception:
-        pass
 
     # module_root erben: Overrides ohne eigene Templates übernehmen Core-Pfad
     def _inherit_root(overrides: dict, base: dict) -> None:
@@ -366,43 +351,6 @@ def build_nav_items(modules: list, app_root: Path) -> list[dict]:
 
     _set_default(items)
     return items
-
-
-def list_available_core_modules() -> list:
-    """Gibt alle verfügbaren Core-Module mit key, label und enabled-Status zurück.
-
-    Liest die modul.yaml für den Anzeigenamen. Der enabled-Status kommt aus der
-    Settings-Registry (core.module.<key>.enabled != '0' → aktiv).
-    """
-    import yaml as _yaml
-
-    try:
-        from astrapi_core.ui.settings_registry import get as _settings_get
-    except Exception:
-
-        def _settings_get(k, d=None):
-            return d
-
-    result = []
-    if not CORE_MOD_DIR.exists():
-        return result
-    for entry in sorted(CORE_MOD_DIR.iterdir()):
-        if not entry.is_dir() or entry.name.startswith("_"):
-            continue
-        key = entry.name
-        enabled = _settings_get(f"core.module.{key}.enabled", "1") != "0"
-        label = key.replace("_", " ").title()
-        nav_hidden = False
-        modul_yaml = entry / "modul.yaml"
-        if modul_yaml.exists():
-            try:
-                data = _yaml.safe_load(modul_yaml.read_text(encoding="utf-8")) or {}
-                label = data.get("label", label)
-                nav_hidden = bool(data.get("nav_hidden", False))
-            except Exception:
-                pass
-        result.append({"key": key, "label": label, "enabled": enabled, "nav_hidden": nav_hidden})
-    return result
 
 
 def _set_default(items: list[dict]) -> None:

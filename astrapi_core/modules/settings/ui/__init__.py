@@ -53,7 +53,6 @@ def _ctx(flash: str = "") -> dict:
     from astrapi_core.system.secrets import get_secret_safe as _get_secret
     from astrapi_core.ui.field_resolver import resolve_options_endpoint as _resolve
     from astrapi_core.ui.module_registry import _instance as _registry
-    from astrapi_core.ui.module_registry import list_available_core_modules
     from astrapi_core.ui.settings_registry import all_settings
     from astrapi_core.ui.settings_registry import get_module as _get_mod
 
@@ -85,7 +84,6 @@ def _ctx(flash: str = "") -> dict:
         "settings": all_settings(),
         "modules": modules,
         "flash_message": flash,
-        "core_module_list": list_available_core_modules(),
         "mod_settings": mod_settings,
     }
 
@@ -98,12 +96,81 @@ def _ssh_ctx(flash: str = "", flash_ok: bool = True) -> dict:
     }
 
 
+def _content_ctx(flash: str = "") -> dict:
+    return {"module": KEY, "has_create": False, "container_id": "mod-settings", **_ctx(flash)}
+
+
 @router.get(f"/ui/{KEY}/content", response_class=HTMLResponse)
 def settings_content(request: Request):
+    return render(request, "content.html", _content_ctx())
+
+
+def _content_string(request: Request) -> str:
+    """Rendert den Content serverseitig fuer die generische Shell aus
+    page_factory.py, siehe register_content_renderer() unten."""
+    from astrapi_core.ui.render import render_string
+
+    return render_string(request, "content.html", _content_ctx())
+
+
+from astrapi_core.ui.page_factory import register_content_renderer  # noqa: E402
+
+register_content_renderer(KEY, _content_string)
+
+
+@router.post(f"/ui/{KEY}/save/global", response_class=HTMLResponse)
+async def settings_save_global(request: Request):
+    from astrapi_core.ui.settings_registry import set_many
+
+    form = await request.form()
+    set_many(dict(form))
+    return render(
+        request, "partials/lists/settings.html", _ctx("Globale Einstellungen gespeichert.")
+    )
+
+
+@router.post(f"/ui/{KEY}/save/module/{{module_key}}", response_class=HTMLResponse)
+async def settings_save_module(module_key: str, request: Request):
+    from astrapi_core.system.secrets import set_secret as _set_secret
+    from astrapi_core.ui.module_registry import _instance as _registry
+    from astrapi_core.ui.settings_registry import set_many
+
+    mod = _registry.get(module_key)
+    if mod is None:
+        return HTMLResponse("Modul nicht gefunden", status_code=404)
+
+    schema = mod.settings_schema or []
+    password_keys = {f["key"] for f in schema if f.get("type") == "password"}
+    list_keys = {f["key"] for f in schema if f.get("type") == "list"}
+
+    form = await request.form()
+    prefixed = {}
+    for lk in list_keys:
+        items, i = [], 0
+        while True:
+            val = form.get(f"{lk}_{i}")
+            if val is None:
+                break
+            if val.strip():
+                items.append(val.strip())
+            i += 1
+        prefixed[f"module.{module_key}.{lk}"] = items
+
+    handled = {f"{lk}_{i}" for lk in list_keys for i in range(50)}
+    for k, v in form.multi_items():
+        if k in handled:
+            continue
+        if k in password_keys:
+            if v.strip():
+                _set_secret(f"module.{module_key}.{k}", v.strip())
+        else:
+            prefixed[f"module.{module_key}.{k}"] = v
+
+    set_many(prefixed)
     return render(
         request,
-        "content.html",
-        {"module": KEY, "has_create": False, "container_id": "mod-settings", **_ctx()},
+        "partials/lists/settings.html",
+        _ctx(f'Einstellungen für "{mod.label}" gespeichert.'),
     )
 
 
