@@ -151,9 +151,39 @@ def _systemd_service(name: str) -> dict:
 
 # ── Datensammlung ─────────────────────────────────────────────────────────────
 
+_COLLECT_TIMEOUT = 20.0
+
 
 def collect() -> dict:
-    """Sammelt alle Systemdaten (ohne Cache)."""
+    """Sammelt alle Systemdaten (ohne Cache), mit Timeout-Schutz.
+
+    _collect_uncapped() läuft synchron in einem eigenen Thread: hostname/uname
+    haben zwar über _run() bereits ein Timeout, `open("/proc/cpuinfo")` und vor
+    allem psutil.disk_usage() auf den (seit T-109 frei konfigurierbaren)
+    extra_disks-Mountpoints nicht - ein haengendes NFS-Mount dort wuerde sonst
+    den Request-Handler unbegrenzt blockieren. Der Thread selbst kann dabei
+    nicht abgebrochen werden (uninterruptible I/O), laeuft als Daemon-Thread
+    aber harmlos im Hintergrund weiter, statt die Antwort zu verzoegern.
+    """
+    result: dict = {}
+    done = _threading.Event()
+
+    def _work():
+        result["data"] = _collect_uncapped()
+        done.set()
+
+    _threading.Thread(target=_work, daemon=True, name="system-collect").start()
+    if not done.wait(timeout=_COLLECT_TIMEOUT):
+        return {
+            "ok": False,
+            "error": f"Sammeln der Systemdaten dauert länger als {_COLLECT_TIMEOUT:.0f}s "
+            "– evtl. ein hängender Mount unter den zusätzlichen Festplatten.",
+        }
+    return result["data"]
+
+
+def _collect_uncapped() -> dict:
+    """Eigentliche Datensammlung, siehe collect() für den Timeout-Schutz."""
     try:
         import psutil
     except ImportError:
