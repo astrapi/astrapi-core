@@ -143,35 +143,39 @@ class Scheduler:
         sch.start()
 
     def _sync_jobs(self) -> None:
-        """Synchronisiert APScheduler-Jobs mit der Job-Storage."""
-        sch = self._get_sch()
-        for apjob in sch.get_jobs():
-            sch.remove_job(apjob.id)
-
+        """Registriert alle in der Job-Storage konfigurierten Jobs neu. Nur beim
+        Scheduler-Start nötig, wo noch kein Job registriert ist - fuer CRUD auf
+        einzelnen Jobs siehe _sync_job()."""
         try:
             jobs = _jobs_store().list()
         except Exception as e:
             log.warning("scheduler_jobs Storage nicht verfügbar: %s", e)
             return
+        for job_id in jobs:
+            self._sync_job(job_id)
 
-        for job_id, cfg in jobs.items():
-            if not cfg.get("enabled", False):
-                continue
-            cron = cfg.get("cron", "").strip()
-            if not cron:
-                continue
-            try:
-                sch.add_job(
-                    func=self._run_job,
-                    trigger=CronTrigger.from_crontab(cron, timezone=_get_timezone()),
-                    id=job_id,
-                    name=cfg.get("label", job_id),
-                    kwargs={"job_id": job_id},
-                    replace_existing=True,
-                    misfire_grace_time=300,
-                )
-            except Exception as e:
-                log.error("Fehler beim Registrieren von Job '%s': %s", job_id, e)
+    def _sync_job(self, job_id: str) -> None:
+        """Registriert oder entfernt einen einzelnen APScheduler-Job passend zu
+        seiner aktuellen Konfiguration, ohne die übrigen Jobs anzufassen."""
+        sch = self._get_sch()
+        cfg = _jobs_store().get(job_id)
+        cron = (cfg or {}).get("cron", "").strip()
+        if not cfg or not cfg.get("enabled", False) or not cron:
+            if sch.get_job(job_id):
+                sch.remove_job(job_id)
+            return
+        try:
+            sch.add_job(
+                func=self._run_job,
+                trigger=CronTrigger.from_crontab(cron, timezone=_get_timezone()),
+                id=job_id,
+                name=cfg.get("label", job_id),
+                kwargs={"job_id": job_id},
+                replace_existing=True,
+                misfire_grace_time=300,
+            )
+        except Exception as e:
+            log.error("Fehler beim Registrieren von Job '%s': %s", job_id, e)
 
     # ── Job Execution ──────────────────────────────────────────────────────────
 
@@ -350,7 +354,7 @@ class Scheduler:
         })
         self._register_job_notify_source(job_id, label)
         if self._get_sch().running:
-            self._sync_jobs()
+            self._sync_job(job_id)
         return self._enrich(job_id, _jobs_store().get(job_id))
 
     def update_job(self, job_id: str, label: str, cron: str, enabled: bool, steps: list[str],
@@ -365,7 +369,7 @@ class Scheduler:
         })
         self._register_job_notify_source(job_id, label)  # Label ggf. aktualisiert
         if self._get_sch().running:
-            self._sync_jobs()
+            self._sync_job(job_id)
         return self._enrich(job_id, _jobs_store().get(job_id))
 
     def delete_job(self, job_id: str) -> None:
@@ -383,7 +387,7 @@ class Scheduler:
         current = _jobs_store().get(job_id) or {}
         _jobs_store().update(job_id, {"enabled": not current.get("enabled", False)})
         if self._get_sch().running:
-            self._sync_jobs()
+            self._sync_job(job_id)
 
 
 # Modul-level Singleton
