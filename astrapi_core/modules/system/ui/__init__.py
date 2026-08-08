@@ -65,7 +65,15 @@ def system_metrics(request: Request):
 
 @router.post(f"/ui/{KEY}/check", response_class=HTMLResponse)
 def system_check(request: Request):
-    _check_updates()
+    started = _check_updates()
+    if not started:
+        # check_updates() lehnt ab, solange eine Pruefung oder ein Update laeuft.
+        from ..engine import set_error as _set_error
+
+        laufend = _get_status().get("status")
+        _set_error(
+            "Es läuft bereits ein Update." if laufend == "running" else "Es läuft bereits eine Prüfung."
+        )
     return render(request, f"{KEY}/partials/content.html", {"info": collect()})
 
 

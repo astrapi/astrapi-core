@@ -306,6 +306,36 @@
 
   if (LAUFEND) window.systemUpdateWatch.start();
 
+  // check_updates() laeuft seit T-106 in einem Hintergrund-Thread und die
+  // Route liefert sofort zurueck, waehrend status="checking" steht. Ohne
+  // dieses Polling wuerde "Prüfung läuft…" bis zum naechsten manuellen
+  // Reload stehen bleiben.
+  var PRUEFT = {{ 'true' if info.updater and info.updater.status == 'checking' else 'false' }};
+
+  window.systemCheckWatch = window.systemCheckWatch || (function () {
+    var timer = null;
+    function start() {
+      if (timer) return;
+      timer = setInterval(function () {
+        fetch('/api/system/update/status', { cache: 'no-store' })
+          .then(function (r) { return r.json(); })
+          .then(function (st) {
+            if (st.status === 'checking') return;
+            clearInterval(timer); timer = null;
+            if (window.htmx) {
+              htmx.ajax('GET', '/ui/system/metrics', { target: '#system-metrics', swap: 'outerHTML' });
+            } else {
+              location.reload();
+            }
+          })
+          .catch(function () { clearInterval(timer); timer = null; });
+      }, 1000);
+    }
+    return { start: start };
+  })();
+
+  if (PRUEFT) window.systemCheckWatch.start();
+
   // Nach dem Neustart: melden, was installiert wurde.
   try {
     var roh = sessionStorage.getItem('astrapiUpdateDone');

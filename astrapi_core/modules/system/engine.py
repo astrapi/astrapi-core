@@ -447,11 +447,24 @@ def _latest_version(package: str) -> "str | None":
         return None
 
 
-def check_updates() -> list:
-    """Prüft synchron via Simple-Index, ob Updates verfügbar sind."""
+def check_updates() -> bool:
+    """Startet die Update-Pruefung in einem Hintergrund-Thread.
+
+    Gibt False zurueck, wenn bereits eine Pruefung oder ein Update laeuft
+    (analog run_update()) - vorher lief die Pruefung synchron im
+    Request-Handler und blockierte ihn bis zu 14x15s lang.
+    """
     with _upd_lock:
+        if _upd_state["status"] in ("running", "checking"):
+            return False
         _upd_state["status"] = "checking"
 
+    _threading.Thread(target=_do_check_updates, daemon=True, name="system-check-thread").start()
+    return True
+
+
+def _do_check_updates() -> None:
+    """Eigentliche Update-Pruefung, siehe check_updates() fuer den Thread-Start."""
     packages = []
     # try/finally: bleibt der Status auf "checking" haengen, lehnt run_update()
     # danach jeden Update-Start stillschweigend ab.
@@ -498,12 +511,9 @@ def check_updates() -> list:
         _upd_log.warning("updater: Update-Pruefung fehlgeschlagen: %s", e)
         with _upd_lock:
             _upd_state["error"] = f"Update-Prüfung fehlgeschlagen: {e}"
-        raise
     finally:
         with _upd_lock:
             _upd_state["status"] = "idle"
-
-    return packages
 
 
 def run_update() -> bool:
