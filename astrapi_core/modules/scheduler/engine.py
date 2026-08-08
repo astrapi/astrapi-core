@@ -55,6 +55,11 @@ class Scheduler:
         self._sch: BackgroundScheduler | None = None
         self._actions: dict[str, dict] = {}
         self._lock = threading.Lock()
+        # Mutex gegen parallele Ausfuehrung desselben Jobs: Cron-Trigger und
+        # der manuelle "Jetzt ausfuehren"-Button rufen _run_job() unabhaengig
+        # voneinander auf, ohne dass APScheduler das gegenseitig sperrt.
+        self._running_jobs: set[str] = set()
+        self._running_lock = threading.Lock()
 
     def reset(self) -> None:
         """Stoppt den Scheduler und setzt den internen Zustand zurück."""
@@ -66,6 +71,8 @@ class Scheduler:
                     pass
             self._sch = None
             self._actions = {}
+        with self._running_lock:
+            self._running_jobs = set()
 
     def _get_sch(self) -> BackgroundScheduler:
         if self._sch is None:
@@ -180,7 +187,22 @@ class Scheduler:
     # ── Job Execution ──────────────────────────────────────────────────────────
 
     def _run_job(self, job_id: str) -> None:
-        """Führt alle Steps eines Jobs sequenziell aus."""
+        """Führt alle Steps eines Jobs sequenziell aus. Ueberspringt den Lauf,
+        wenn fuer denselben job_id bereits eine Ausfuehrung laeuft (Cron-Trigger
+        und manueller "Jetzt ausfuehren"-Button koennen sich sonst ueberlappen)."""
+        with self._running_lock:
+            if job_id in self._running_jobs:
+                log.warning("Job '%s' läuft bereits, übersprungen", job_id)
+                return
+            self._running_jobs.add(job_id)
+        try:
+            self._run_job_locked(job_id)
+        finally:
+            with self._running_lock:
+                self._running_jobs.discard(job_id)
+
+    def _run_job_locked(self, job_id: str) -> None:
+        """Eigentliche Job-Ausfuehrung, siehe _run_job() fuer den Mutex davor."""
         cfg = _jobs_store().get(job_id)
         if not cfg:
             log.warning("Job '%s' nicht gefunden", job_id)
