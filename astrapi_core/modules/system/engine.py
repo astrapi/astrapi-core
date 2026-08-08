@@ -247,7 +247,15 @@ def collect() -> dict:
         disk_paths = list(_extra_disks)
         try:
             from astrapi_core.ui.settings_registry import get_module as _get_module
-            for _p in _get_module("system", "extra_disks", "").split(","):
+
+            _extra = _get_module("system", "extra_disks", [])
+            if isinstance(_extra, str):
+                # Alte Werte aus der Zeit vor T-109 (type: text, kommagetrennt).
+                # Nicht migriert, wie bei aehnlichen Faellen ueblich - hier
+                # nur defensiv gelesen, statt bei jedem Zeichen der Zeichenkette
+                # einzeln nachzusehen.
+                _extra = [p.strip() for p in _extra.split(",") if p.strip()]
+            for _p in _extra:
                 _p = _p.strip()
                 if _p and _p not in disk_paths:
                     disk_paths.append(_p)

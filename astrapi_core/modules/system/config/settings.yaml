@@ -5,7 +5,7 @@ fields:
 
   - key: extra_disks
     label: Zusätzlicher Speicher
-    type: text
-    placeholder: "/storage, /backup"
-    default: ""
-    description: "Kommagetrennte Mountpoints für zusätzliche Festplatten-Karten"
+    type: list
+    description: "Mountpoints für zusätzliche Festplatten-Karten"
+    mono: true
+    default: []
