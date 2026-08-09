@@ -456,8 +456,8 @@
 {%- elif col.type == 'badge_enum' -%}
 {%- set _bd = col.values.get(_val | string, {}) if col.values and _val else {} -%}
 <td class="{{ col.cls }}">
-  {%- if _bd %}<span class="badge-pill {{ _bd.cls | default('badge-muted') }}">{{ _bd.label | default(_val) }}</span>
-  {%- elif _val %}<span class="badge-pill badge-muted">{{ _val }}</span>
+  {%- if _bd %}<span class="badge-pill {{ _bd.cls | default('badge-grey') }}">{{ _bd.label | default(_val) }}</span>
+  {%- elif _val %}<span class="badge-pill badge-grey">{{ _val }}</span>
   {%- else %}—{% endif -%}
 </td>
 {%- elif col.type == 'badge_list' -%}
@@ -467,7 +467,7 @@
   <div style="display:flex;flex-wrap:wrap;gap:3px;">
     {%- for v in _list -%}
     {%- set _bd = col.values.get(v | string, {}) if col.values else {} -%}
-    <span class="badge-pill {{ _bd.cls | default('badge-muted') }}">{{ _bd.label | default(v) }}</span>
+    <span class="badge-pill {{ _bd.cls | default('badge-grey') }}">{{ _bd.label | default(v) }}</span>
     {%- endfor -%}
   </div>
   {%- else %}—{% endif -%}
@@ -484,7 +484,7 @@
 {%- set _upd = item_data.get(col.remote_key) if col.remote_key else '' -%}
 <td class="{{ col.cls }}">
   {{- _val or '—' -}}
-  {%- if _upd and _upd != _val %}<span class="badge-pill badge-warn" style="margin-left:6px" title="Neue Version verfügbar: {{ _upd }}">{{ _upd }}</span>{% endif -%}
+  {%- if _upd and _upd != _val %}<span class="badge-pill badge-amber" style="margin-left:6px" title="Neue Version verfügbar: {{ _upd }}">{{ _upd }}</span>{% endif -%}
 </td>
 {%- elif col.type == 'status' -%}
 <td class="{{ col.cls }}">{{ status_inline(_val) }}</td>

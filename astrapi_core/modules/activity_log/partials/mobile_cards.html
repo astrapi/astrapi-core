@@ -9,16 +9,16 @@
 #}
 {% import 'partials/components/ui_macros.html' as ui %}
 {%- set _type_map = {
-  'job':       {'label': 'job',   'cls': 'badge-muted'},
-  'scheduler': {'label': 'sched', 'cls': 'badge-muted'},
+  'job':       {'label': 'job',   'cls': 'badge-grey'},
+  'scheduler': {'label': 'sched', 'cls': 'badge-grey'},
   'error':     {'label': 'err',   'cls': 'badge-status-err'},
   'warning':   {'label': 'warn',  'cls': 'badge-status-warn'},
-  'system':    {'label': 'sys',   'cls': 'badge-muted'},
+  'system':    {'label': 'sys',   'cls': 'badge-grey'},
 } -%}
 
 {% if cfg %}
   {% for item_name, item_data in cfg.items() %}
-    {%- set _t = _type_map.get(item_data.get('log_type'), {'label': item_data.get('log_type') or '?', 'cls': 'badge-muted'}) -%}
+    {%- set _t = _type_map.get(item_data.get('log_type'), {'label': item_data.get('log_type') or '?', 'cls': 'badge-grey'}) -%}
     {%- set _title = item_data.get('description') or item_data.get('item_id') or item_data.get('module') or item_name -%}
     <div class="m-card on">
 
