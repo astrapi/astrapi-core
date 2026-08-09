@@ -82,6 +82,7 @@ def run_all(
     config: dict,
     run_single_fn,
     desc_fn=None,
+    mark_pending_fn=None,
 ) -> str:
     """Führt ``run_single_fn`` für alle aktivierten Einträge in ``config`` aus.
 
@@ -91,14 +92,25 @@ def run_all(
         run_single_fn: Callable ``(item_id, entry)`` – die ``run_single``-Funktion des Moduls.
         desc_fn:      Optionales Callable ``(item_id, entry) -> str`` für den Anzeigenamen.
                       Standard: ``entry.get("description", item_id)``.
+        mark_pending_fn: Optionales Callable ``(item_id, entry)``, das vor dem eigentlichen
+                      Lauf für **alle** aktivierten Einträge aufgerufen wird – markiert die
+                      ganze Liste als "für diesen Job-Lauf eingeplant", bevor der erste
+                      Eintrag drankommt. Storage ist je Modul verschieden (core-Config-Tabelle
+                      vs. eigener Store), deshalb kein fester Mechanismus, sondern ein Callback.
 
     Returns:
         ``"ok"`` wenn alle Einträge erfolgreich, ``"error"`` wenn mindestens einer fehlgeschlagen.
     """
+    enabled = {
+        item_id: entry for item_id, entry in config.items() if entry.get("enabled", True)
+    }
+
+    if mark_pending_fn is not None:
+        for item_id, entry in enabled.items():
+            mark_pending_fn(item_id, entry)
+
     failed: list[tuple[str, str]] = []
-    for item_id, entry in config.items():
-        if not entry.get("enabled", True):
-            continue
+    for item_id, entry in enabled.items():
         desc = (
             desc_fn(item_id, entry)
             if desc_fn is not None
