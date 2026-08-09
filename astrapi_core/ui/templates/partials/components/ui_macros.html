@@ -69,8 +69,6 @@
     <span class="badge-pill badge-status-running"><svg width="11" height="11" viewBox="0 0 24 24" fill="currentColor" stroke="none" style="animation:spin 1s linear infinite;flex-shrink:0"><use href="#icon-loading"></use></svg>läuft</span>
   {% elif _s == 'pending' %}
     <span class="badge-pill badge-status-pending"><span style="animation:pulse 1.2s infinite;line-height:1">●</span>Pending</span>
-  {% elif _s == 'aborted' %}
-    <span class="badge-pill badge-status-warn"><svg width="11" height="11" viewBox="0 0 24 24" fill="currentColor" stroke="none"><use href="#icon-alert"></use></svg>Abgebrochen</span>
   {% elif _s == 'neu' or not _s %}
     {# Leerer Wert und 'neu' bedeuten dasselbe: noch nie gelaufen. G-010 gibt
        'neu' vor, astrapi-packages schreibt historisch '' (T-134). #}
