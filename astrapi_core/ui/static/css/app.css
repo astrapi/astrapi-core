@@ -676,10 +676,6 @@ input,select,textarea { font-family:var(--font); }
 .col-last-run .lr-date, .m-card-meta-value .lr-date { display:inline-block; min-width:80px; text-align:right; font-family:var(--mono,monospace); font-size:.85em; }
 .col-last-run .lr-time, .m-card-meta-value .lr-time { display:inline-block; min-width:40px; text-align:right; font-family:var(--mono,monospace); font-size:.85em; color:var(--text-2); }
 .ds-list-table .col-status   { width:100px; min-width:100px; text-align:right; }
-/* badge-mono: inline monospace tag (Modul, Log-Typ, …) */
-.badge-mono { display:inline-block; font-family:var(--mono,monospace); font-size:10px;
-              padding:2px 6px; border-radius:4px;
-              background:rgba(255,255,255,0.07); color:var(--text-2); }
 .ds-list-table thead th     { position:relative; }
 .col-resize-handle {
   position:absolute; top:0; right:0;
@@ -992,13 +988,9 @@ input,select,textarea { font-family:var(--font); }
 .empty-state-title { font-size:14px; font-weight:600; color:var(--text-2); }
 .empty-state-sub { font-size:13px; margin-top:4px; }
 
-/* ── Run-Badge ──────────────────────────────────────────────── */
+/* ── Pulse-Animation ────────────────────────────────────────── */
+/* Genutzt von badge-status-pending und den Live-Indikatoren (Log-Dialog). */
 @keyframes pulse { 0%,100%{opacity:1;} 50%{opacity:0.5;} }
-.run-badge {
-  font-size:11px; padding:1px 7px; border-radius:99px;
-  background:var(--b-dim); color:var(--b);
-  animation:pulse 1.8s infinite; flex-shrink:0;
-}
 
 /* ── Log-Farben ─────────────────────────────────────────────── */
 .log-line { white-space:pre-wrap; word-break:break-all; }
