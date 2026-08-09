@@ -431,6 +431,7 @@ input,select,textarea { font-family:var(--font); }
 .badge-status-err,
 .badge-status-warn,
 .badge-status-running,
+.badge-status-pending,
 .badge-status-none {
   width:82px;
   justify-content:center;
@@ -439,6 +440,7 @@ input,select,textarea { font-family:var(--font); }
 .badge-status-err     { background:rgba(220,38,38,0.15);   color:#f87171; }
 .badge-status-warn    { background:rgba(217,119,6,0.15);   color:#d97706; }
 .badge-status-running { background:rgba(37,99,235,0.15);   color:#60a5fa; }
+.badge-status-pending { background:rgba(124,58,237,0.15);  color:#a78bfa; }
 .badge-status-none    { background:rgba(255,255,255,0.06); color:var(--text-3); }
 
 .mono-inline {
