@@ -20,6 +20,7 @@
         {% for f in filter_defs %}
         <select
           class="form-select table-filter-select"
+          name="{{ f.param }}"
           x-data="moduleFilter('{{ module }}__{{ f.param }}')"
           @change="save($el.value)"
           hx-get="/ui/{{ module }}/content"
