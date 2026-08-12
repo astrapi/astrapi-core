@@ -98,7 +98,7 @@
       <button type="button" class="btn btn-ghost"
               id="sched-add-{{ key | replace('.', '_') }}"
               onclick="schedAddStep('{{ key }}', '{{ label }}')"
-              {{ 'style="display:none"' if key in sel else '' }}>+ {{ label }}</button>
+              {% if key in sel %}style="display:none"{% endif %}>+ {{ label }}</button>
       {% endfor %}
     </div>
 
