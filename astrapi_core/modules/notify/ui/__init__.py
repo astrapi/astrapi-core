@@ -245,6 +245,7 @@ def delete_modal(channel_id: str, request: Request):
             verb="löschen",
             confirm_url=f"/api/{KEY}/{channel_id}",
             method="delete",
+            reload_url=f"/ui/{KEY}/content",
         ),
     )
 
@@ -341,6 +342,7 @@ def delete_job_modal(job_id: str, request: Request):
             verb="löschen",
             confirm_url=f"/api/{KEY}/jobs/{job_id}",
             method="delete",
+            reload_url=f"/ui/{KEY}/content",
         ),
     )
 

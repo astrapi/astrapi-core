@@ -126,6 +126,7 @@ def scheduler_job_delete_modal(job_id: str, request: Request):
             verb="löschen",
             confirm_url=f"/api/{KEY}/{job_id}",
             method="delete",
+            reload_url=f"/ui/{KEY}/content",
         ),
     )
 

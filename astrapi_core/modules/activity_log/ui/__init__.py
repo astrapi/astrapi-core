@@ -104,6 +104,7 @@ def clear_confirm(request: Request):
             verb="löschen",
             confirm_url=f"/api/{KEY}/clear",
             method="delete",
+            reload_url=f"/ui/{KEY}/content",
         ),
     )
 
