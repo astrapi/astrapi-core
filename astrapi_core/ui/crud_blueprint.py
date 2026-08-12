@@ -300,6 +300,7 @@ def make_crud_router(
                     verb="löschen",
                     confirm_url=f"/api/{key}/{item_id}",
                     method="delete",
+                    reload_url=f"/ui/{key}/content",
                 ),
             )
 
