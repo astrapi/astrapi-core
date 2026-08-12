@@ -16,10 +16,15 @@
 #}
 {% import 'partials/components/ui_macros.html' as ui %}
 
-{# Poll-Div: deaktiviert sich selbst wenn kein Job mehr läuft #}
-<div id="poll-{{ module }}" hx-swap-oob="true" style="display:none"
-     {% if running %}hx-get="/ui/{{ module }}/status" hx-trigger="every 2s" hx-swap="none"{% endif %}></div>
-
+{# <table>-Wrapper ist zwingend fuer die <td>-OOB-Fragmente: der Browser-
+   HTML-Parser verwirft freistehende <td>-Elemente ausserhalb eines
+   Tabellenkontexts (bzw. wirft bei htmx' eigenem Tag-Sniffing/Auto-Wrap
+   einen Fehler), lange bevor htmx' hx-swap-oob-Logik sie ueberhaupt zu
+   Gesicht bekommt - die Zellen wurden dadurch nie aktualisiert, obwohl der
+   Server korrektes HTML lieferte. Die konkrete Verschachtelung/Position im
+   synthetischen <tr> ist irrelevant, hx-swap-oob findet sein Ziel per ID
+   unabhaengig davon. #}
+<table><tbody><tr>
 {% for item_id, item in cfg.items() %}
   {% set is_running = (module ~ ":" ~ item_id) in (running or {}) %}
   {% set _status = 'running' if is_running else (last_run_status(module, item_id) or item.last_status) %}
@@ -30,3 +35,8 @@
   <td id="lastrun-{{ module }}-{{ item_id }}" hx-swap-oob="true" class="col-last-run">{{ ui.last_run_cell(item.last_run) }}</td>
   {% endif %}
 {% endfor %}
+</tr></tbody></table>
+
+{# Poll-Div: deaktiviert sich selbst wenn kein Job mehr läuft #}
+<div id="poll-{{ module }}" hx-swap-oob="true" style="display:none"
+     {% if running %}hx-get="/ui/{{ module }}/status" hx-trigger="every 2s" hx-swap="none"{% endif %}></div>
