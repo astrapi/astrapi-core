@@ -154,7 +154,7 @@ def _systemd_service(name: str) -> dict:
 _COLLECT_TIMEOUT = 20.0
 
 
-def collect() -> dict:
+def collect(refresh_updates: bool = False) -> dict:
     """Sammelt alle Systemdaten (ohne Cache), mit Timeout-Schutz.
 
     _collect_uncapped() läuft synchron in einem eigenen Thread: hostname/uname
@@ -164,12 +164,16 @@ def collect() -> dict:
     den Request-Handler unbegrenzt blockieren. Der Thread selbst kann dabei
     nicht abgebrochen werden (uninterruptible I/O), laeuft als Daemon-Thread
     aber harmlos im Hintergrund weiter, statt die Antwort zu verzoegern.
+
+    refresh_updates: Stoesst bei echten Seitenaufrufen (nicht beim internen
+    Status-Polling) im Hintergrund einen frischen PyPI-Check an, statt den
+    zuletzt gecachten Stand unbegrenzt weiterzuzeigen.
     """
     result: dict = {}
     done = _threading.Event()
 
     def _work():
-        result["data"] = _collect_uncapped()
+        result["data"] = _collect_uncapped(refresh_updates=refresh_updates)
         done.set()
 
     _threading.Thread(target=_work, daemon=True, name="system-collect").start()
@@ -182,7 +186,7 @@ def collect() -> dict:
     return result["data"]
 
 
-def _collect_uncapped() -> dict:
+def _collect_uncapped(refresh_updates: bool = False) -> dict:
     """Eigentliche Datensammlung, siehe collect() für den Timeout-Schutz."""
     try:
         import psutil
@@ -240,9 +244,11 @@ def _collect_uncapped() -> dict:
 
         updater = None
         try:
+            if refresh_updates:
+                check_updates()
             st = get_status()
             packages = st["packages"]
-            if not packages:
+            if not packages and not refresh_updates:
                 packages = _update_packages_fn() if _update_packages_fn else get_packages_with_versions()
             updater = {
                 "status": st["status"],

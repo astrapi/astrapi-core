@@ -34,7 +34,7 @@ def _render_content(request) -> str:
             "module": KEY,
             "has_create": False,
             "container_id": f"mod-{KEY}",
-            "info": collect(),
+            "info": collect(refresh_updates=True),
         },
     )
 
@@ -53,7 +53,7 @@ def system_content(request: Request):
             "module": KEY,
             "has_create": False,
             "container_id": f"mod-{KEY}",
-            "info": collect(),
+            "info": collect(refresh_updates=True),
         },
     )
 
