@@ -61,8 +61,11 @@ class NtfyNotifier(BaseNotifier):
             return False
 
         endpoint = f"{self.url}/{self.topic}"
-        headers: dict[str, str] = {
-            "Title":        title,
+        headers: dict = {
+            # http.client kodiert str-Header-Werte als Latin-1 (siehe
+            # HTTPConnection.putheader). Als bytes uebergeben, damit Umlaute
+            # nicht als Mojibake beim Empfaenger ankommen.
+            "Title":        title.encode("utf-8"),
             "Priority":     priority,
             "Content-Type": "text/plain; charset=utf-8",
         }
