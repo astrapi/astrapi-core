@@ -207,7 +207,7 @@ class HeaderControl:
     hx_get: str = ""
     hx_post: str = ""
     hx_target: str = ""  # leer = auto (#container_id)
-    hx_swap: str = ""  # leer = auto (innerHTML)
+    hx_swap: str = ""  # leer = auto (outerHTML für filter_select, beforeend für action_button)
     hx_include: str = ""  # leer = auto (data-filter-for='module')
 
     # Für filter_select

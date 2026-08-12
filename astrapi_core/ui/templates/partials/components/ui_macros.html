@@ -503,7 +503,7 @@
 {%- if ctrl.type == 'filter_select' -%}
 {%- set _hx_get     = ctrl.hx_get     or ('/ui/' ~ module ~ '/content') -%}
 {%- set _hx_target  = ctrl.hx_target  or ('#' ~ container_id) -%}
-{%- set _hx_swap    = ctrl.hx_swap    or 'innerHTML' -%}
+{%- set _hx_swap    = ctrl.hx_swap    or 'outerHTML' -%}
 {%- set _hx_include = ctrl.hx_include or ('[data-filter-for=\'' ~ module ~ '\']') -%}
 {%- set _data_key   = ctrl.data_attr  or ('data-filter-for="' ~ module ~ '"') -%}
 {%- set _opts = ctrl.options if ctrl.options else [] -%}

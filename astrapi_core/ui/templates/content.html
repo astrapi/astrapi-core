@@ -24,7 +24,7 @@
           @change="save($el.value)"
           hx-get="/ui/{{ module }}/content"
           hx-target="#{{ container_id }}"
-          hx-swap="innerHTML"
+          hx-swap="outerHTML"
           hx-include="[data-filter-for='{{ module }}']"
           data-filter-for="{{ module }}">
           <option value="">{{ f.all_label }}</option>
