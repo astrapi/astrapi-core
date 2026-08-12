@@ -92,16 +92,30 @@ def clear_tee_context() -> None:
 
 
 def set_active_log_id(log_id: int) -> None:
-    """Aktiviert DB-Logging: alle log()-Zeilen gehen in activity_log_lines(log_id)."""
-    _db_context.log_id = log_id
+    """Aktiviert DB-Logging: alle log()-Zeilen gehen in activity_log_lines(log_id).
+
+    Verschachtelte set_active_log_id()/clear_active_log_id()-Paare im selben
+    Thread (z.B. run_logged() fuer ein einzelnes Item innerhalb eines
+    Scheduler-Laufs, der selbst schon einen log_id gesetzt hat) legen den
+    aeusseren Wert auf einen Stack statt ihn zu ueberschreiben - clear
+    stellt ihn wieder her, statt hart auf None zu setzen.
+    """
+    stack = getattr(_db_context, "stack", None)
+    if stack is None:
+        stack = []
+        _db_context.stack = stack
+    stack.append(log_id)
 
 
 def clear_active_log_id() -> None:
-    _db_context.log_id = None
+    stack = getattr(_db_context, "stack", None)
+    if stack:
+        stack.pop()
 
 
 def get_active_log_id() -> int | None:
-    return getattr(_db_context, "log_id", None)
+    stack = getattr(_db_context, "stack", None)
+    return stack[-1] if stack else None
 
 
 # ── Logging ───────────────────────────────────────────────────────
