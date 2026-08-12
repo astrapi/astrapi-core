@@ -30,7 +30,7 @@
                 title="Kopieren"
                 x-on:mouseenter="$el.style.opacity=1"
                 x-on:mouseleave="$el.style.opacity=copied?1:.75"
-                x-on:click="navigator.clipboard.writeText($refs.cmd.textContent.trim()); copied=true; setTimeout(()=>copied=false,1500)">
+                x-on:click="copyToClipboard($refs.cmd.textContent.trim()); copied=true; setTimeout(()=>copied=false,1500)">
           <template x-if="!copied">
             <svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor" stroke="none"><use href="#icon-copy"></use></svg>
           </template>

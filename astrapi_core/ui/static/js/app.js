@@ -178,6 +178,37 @@ function closeModal(el) {
     el.closest('.ds-modal-backdrop')?.remove();
 }
 
+// ── Zwischenablage mit Fallback ─────────────────────────────────────────
+// navigator.clipboard existiert nur in "sicheren Kontexten" (HTTPS oder
+// localhost) - viele Instanzen laufen intern per HTTP auf Hostname/IP,
+// wo navigator.clipboard schlicht undefined ist und der Kopieren-Button
+// sonst kommentarlos nichts tut. Fallback: klassisches execCommand('copy')
+// über ein verstecktes Textarea.
+function copyToClipboardFallback(text) {
+    var ta = document.createElement('textarea');
+    ta.value = text;
+    ta.style.position = 'fixed';
+    ta.style.opacity = '0';
+    document.body.appendChild(ta);
+    ta.focus();
+    ta.select();
+    try {
+        document.execCommand('copy');
+    } finally {
+        document.body.removeChild(ta);
+    }
+}
+
+window.copyToClipboard = function (text) {
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(text).catch(function () {
+            copyToClipboardFallback(text);
+        });
+    } else {
+        copyToClipboardFallback(text);
+    }
+};
+
 // Escape-Taste schließt das oberste offene Modal.
 // Modals mit x-show werden übersprungen – Alpine verwaltet deren Sichtbarkeit selbst.
 document.addEventListener('keydown', function(e) {
