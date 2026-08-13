@@ -3,7 +3,7 @@
   Inline-Einstellungskarte für ein Modul auf der Einstellungsseite.
   Erwartet im Kontext: data.mod, data.schema, data.values
 #}
-{% from "partials/components/ui_macros.html" import btn, btn_save, form_input, form_select, form_textarea, toggle_field %}
+{% from "partials/components/ui_macros.html" import btn, btn_save, form_input, form_select, form_textarea %}
 {% set mod    = data['mod'] %}
 {% set schema = data['schema'] %}
 {% set values = data['values'] %}
@@ -57,9 +57,11 @@
             {% if ftype == 'select' %}
             {{ form_select(fkey, field.options, fval, placeholder='') }}
 
-            {% elif ftype == 'checkbox' %}
-            {{ toggle_field(fkey, fval in (True, '1', 'true', 'on'),
-                            label='', field_id='tf-' ~ fkey) }}
+            {% elif ftype in ('checkbox', 'boolean') %}
+            {{ form_select(fkey,
+                           [{'value': 'true', 'label': 'Ja'}, {'value': 'false', 'label': 'Nein'}],
+                           'true' if fval in (True, '1', 'true', 'on') else 'false',
+                           placeholder='') }}
 
             {% elif ftype == 'list' %}
             {% set flist = fval if fval is iterable and fval is not string else [] %}
