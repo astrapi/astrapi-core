@@ -154,7 +154,7 @@ def _systemd_service(name: str) -> dict:
 _COLLECT_TIMEOUT = 20.0
 
 
-def collect(refresh_updates: bool = False) -> dict:
+def collect() -> dict:
     """Sammelt alle Systemdaten (ohne Cache), mit Timeout-Schutz.
 
     _collect_uncapped() läuft synchron in einem eigenen Thread: hostname/uname
@@ -165,15 +165,15 @@ def collect(refresh_updates: bool = False) -> dict:
     nicht abgebrochen werden (uninterruptible I/O), laeuft als Daemon-Thread
     aber harmlos im Hintergrund weiter, statt die Antwort zu verzoegern.
 
-    refresh_updates: Stoesst bei echten Seitenaufrufen (nicht beim internen
-    Status-Polling) im Hintergrund einen frischen PyPI-Check an, statt den
-    zuletzt gecachten Stand unbegrenzt weiterzuzeigen.
+    Stoesst keinen Update-Check an - das passiert ausschliesslich explizit
+    über den "Update prüfen"-Button (check_updates()), nicht bei jedem
+    Seitenaufruf.
     """
     result: dict = {}
     done = _threading.Event()
 
     def _work():
-        result["data"] = _collect_uncapped(refresh_updates=refresh_updates)
+        result["data"] = _collect_uncapped()
         done.set()
 
     _threading.Thread(target=_work, daemon=True, name="system-collect").start()
@@ -186,7 +186,7 @@ def collect(refresh_updates: bool = False) -> dict:
     return result["data"]
 
 
-def _collect_uncapped(refresh_updates: bool = False) -> dict:
+def _collect_uncapped() -> dict:
     """Eigentliche Datensammlung, siehe collect() für den Timeout-Schutz."""
     try:
         import psutil
@@ -244,11 +244,9 @@ def _collect_uncapped(refresh_updates: bool = False) -> dict:
 
         updater = None
         try:
-            if refresh_updates:
-                check_updates()
             st = get_status()
             packages = st["packages"]
-            if not packages and not refresh_updates:
+            if not packages:
                 packages = _update_packages_fn() if _update_packages_fn else get_packages_with_versions()
             updater = {
                 "status": st["status"],
