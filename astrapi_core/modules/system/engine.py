@@ -537,8 +537,12 @@ def _do_check_updates() -> None:
                         from packaging.version import Version
 
                         update_available = Version(latest) > Version(installed)
-                    except Exception:
+                    except Exception as e:
                         update_available = False
+                        _upd_log.warning(
+                            "updater: Versionsvergleich %s (%s vs. %s) fehlgeschlagen: %s",
+                            pip_name, installed, latest, e,
+                        )
 
             packages.append(
                 {
