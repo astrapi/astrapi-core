@@ -1,4 +1,5 @@
 {% import 'partials/components/ui_macros.html' as ui %}
+{% import 'partials/components/mobile_card_macros.html' as mc %}
 {% from 'partials/components/ui_macros.html' import btn, btn_save %}
 {% if not info.ok %}
 <div id="system-metrics">
@@ -48,6 +49,7 @@
   </div>
   {% endif %}
   <div style="padding:0 16px 12px;" data-debug-label="content-subitem">
+  <div class="desktop-view">
   <table class="ds-list-table">
     <tbody>
       {% if info.updater %}
@@ -91,6 +93,28 @@
       {% endfor %}
     </tbody>
   </table>
+  </div>
+  <div class="mobile-view">
+    {% if info.updater %}
+      {% for pkg in info.updater.packages %}
+      {% call mc.m_card(pkg.name) %}
+        {{ mc.m_card_row('Version', pkg.installed) }}
+        {% if pkg.update_available %}{{ mc.m_card_row('Verfügbar', pkg.latest) }}{% endif %}
+      {% endcall %}
+      {% if pkg.update_available and info.updater.status not in ('running', 'checking') %}
+      {% call mc.m_card_footer() %}
+        {{ btn('Update', variant='primary', size='sm', busy_label='Starte…',
+               attrs='hx-post="/ui/system/update" hx-target="#system-metrics" hx-swap="outerHTML"') }}
+      {% endcall %}
+      {% endif %}
+      {% endfor %}
+    {% endif %}
+    {% for key, val in info.software.items() %}
+    {% if key not in ('psutil', 'Datenbank') and key not in ns.updater_names %}
+    {% call mc.m_card(key) %}{{ mc.m_card_row('Version', val) }}{% endcall %}
+    {% endif %}
+    {% endfor %}
+  </div>
   </div>
 </div>
 

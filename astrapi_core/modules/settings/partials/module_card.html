@@ -34,9 +34,7 @@
           </div>
           {% set ns.first_section = False %}
           {% set ns.grid_cols = field.get('cols', 1) %}
-          <div style="display:grid;
-                      grid-template-columns:repeat({{ ns.grid_cols }}, 1fr);
-                      gap:12px;">
+          <div class="form-grid" style="--cols:{{ ns.grid_cols }};">
           {% set ns.grid_open = True %}
 
         {% else %}

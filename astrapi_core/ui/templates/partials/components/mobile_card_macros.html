@@ -1,0 +1,78 @@
+{#
+  partials/components/mobile_card_macros.html
+
+  Wiederverwendbare Bausteine für modulspezifische Mobile-Karten
+  ({modul}/partials/mobile_cards.html). Nutzen dieselben CSS-Klassen wie der
+  generische Fallback (partials/lists/mobile_cards_generic.html) -- .m-card,
+  .m-card-header, .m-card-meta, .m-card-meta-row, .m-card-footer, siehe
+  app.css "Mobile Karten"-Abschnitt.
+
+  Zweck: eigene, feinabgestimmte Karten pro Modul (statt des generischen,
+  aber undifferenzierten Fallbacks), ohne dass jede mobile_cards.html das
+  Karten-Markup komplett neu erfindet.
+
+  Verwendung (Beispiel):
+
+    {% import 'partials/components/mobile_card_macros.html' as mc %}
+    {% for item_id, item in cfg.items() %}
+      {% call mc.m_card(item.description or item_id, status=item.get('last_status')) %}
+        {{ mc.m_card_row('Ziel', item.get('target_path')) }}
+      {% endcall %}
+      {% call mc.m_card_footer() %}
+        {{ mc.m_card_actions_default(module, item_id, item, container_id, loading_id) }}
+      {% endcall %}
+    {% endfor %}
+#}
+{% import 'partials/components/ui_macros.html' as ui %}
+
+{# Karten-Wrapper: Titel + optionaler Status im Header, caller() liefert die
+   Meta-Zeilen (via m_card_row). Ohne caller-Body wird kein .m-card-meta
+   gerendert (z.B. wenn eine Karte nur Header+Footer braucht). #}
+{% macro m_card(title, status=none, enabled=True) %}
+<div class="m-card {{ 'on' if enabled else 'off' }}">
+  <div class="m-card-header">
+    <span class="m-card-title">{{ title }}</span>
+    {% if status %}{{ ui.status_inline(status) }}{% endif %}
+  </div>
+  {% if caller is defined %}
+  <div class="m-card-meta">{{ caller() }}</div>
+  {% endif %}
+</div>
+{% endmacro %}
+
+{# Eine Label/Value-Zeile -- rendert nichts wenn value leer ist (wie der
+   generische Fallback: keine leeren Meta-Zeilen anzeigen). #}
+{% macro m_card_row(label, value) %}
+{% if value %}
+<div class="m-card-meta-row">
+  <span class="m-card-meta-label">{{ label }}</span>
+  <span class="m-card-meta-value">{{ value }}</span>
+</div>
+{% endif %}
+{% endmacro %}
+
+{# Muster "Remote-Path-Paar" (Quelle/Ziel) -- borg, rsync. #}
+{% macro m_card_remote_path_pair(source_label, source_value, target_label, target_value) %}
+{{ m_card_row(source_label, source_value) }}
+{{ m_card_row(target_label, target_value) }}
+{% endmacro %}
+
+{# Footer-Wrapper -- caller() liefert die Buttons. #}
+{% macro m_card_footer() %}
+<div class="m-card-footer">{{ caller() }}</div>
+{% endmacro %}
+
+{# Standard-CRUD-Footer: card_actions (modul.yaml) + Edit + Delete, wie der
+   generische Fallback. Deckt Muster 3 (reines CRUD) direkt ab. #}
+{% macro m_card_actions_default(module, item, item_data, container_id, loading_id, item_prefix='', has_edit=True, has_delete=True, card_actions=[]) %}
+{% for action in card_actions %}{{ ui.card_action_button(action, item, item_data, container_id, loading_id) }}{% endfor %}
+{% if has_edit %}{{ ui.edit_button(module=module, item=item, container_id=container_id, loading_id=loading_id, item_prefix=item_prefix) }}{% endif %}
+{% if has_delete %}{{ ui.delete_button(module=module, item=item, container_id=container_id, loading_id=loading_id, description=item_data.get('description') or item, item_prefix=item_prefix) }}{% endif %}
+{% endmacro %}
+
+{# Build/Run-Footer: Run-Button zusätzlich zu Edit/Delete -- Muster 5
+   (proxmox_client, builder, packages). #}
+{% macro m_card_run_actions(module, item, item_data, container_id, loading_id, item_prefix='', has_edit=True, has_delete=True, card_actions=[]) %}
+{{ ui.run_button(module=module, item=item, container_id=container_id, enabled=item_data.get('enabled', True)) }}
+{{ m_card_actions_default(module, item, item_data, container_id, loading_id, item_prefix, has_edit, has_delete, card_actions) }}
+{% endmacro %}

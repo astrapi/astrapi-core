@@ -18,6 +18,15 @@
    backupctl – Tailwind-inspirierte Design Tokens
    ============================================================ */
 
+/* ── Breakpoints (Referenz, keine CSS-Variable -- @media-Bedingungen
+   können keine Custom Properties auswerten) ────────────────────
+     768px  Haupt-Breakpoint: Sidebar→Drawer, Tabelle→Karten, Formular-
+            Grid→1-spaltig. Alle @media (max-width:768px) im Folgenden
+            gehören zu diesem einen logischen Zustand "Mobile".
+     900px  Breiterer Zusatz-Breakpoint für reine Grid-Layouts
+            (.content-columns, .settings-form-grid), die schon vor dem
+            Haupt-Breakpoint auf eine Spalte wechseln sollen. */
+
 /* ── Tailwind-nahe Dark Tokens ──────────────────────────────── */
 :root {
   --bg:          #101010;
@@ -609,7 +618,10 @@ input,select,textarea { font-family:var(--font); }
 .card-run-date  { color:var(--text); }
 
 /* ════════════════════════ LIST TABLE ════════════════════════════ */
-.content-items--table { display:block; overflow-x:hidden; }
+/* auto statt hidden: Sicherheitsnetz falls die Tabelle (bei schmalem
+   Nicht-Mobile-Fenster oberhalb des 768px-Breakpoints) breiter als der
+   Container ist -- lieber scrollen als Spalten abzuschneiden */
+.content-items--table { display:block; overflow-x:auto; }
 .ds-list-table-wrap-scroll { overflow-x:hidden; }
 .ds-list-table {
   width:100%;
@@ -831,12 +843,23 @@ input,select,textarea { font-family:var(--font); }
 .form-error { font-size:12px; color:var(--err); font-family:var(--mono); display:none; margin-top:3px; }
 .form-error.visible { display:block; }
 
+/* Formular-Grid (create_edit_modal.html, settings/module_card.html): Spaltenzahl
+   kommt als --cols-Custom-Property statt fest verdrahtetem grid-template-columns
+   im Markup, damit die @media-Mobile-Regel unten sie übersteuern kann. */
+.form-grid {
+  display:grid; grid-template-columns:repeat(var(--cols,2), 1fr); gap:12px;
+  align-items:start;
+}
+.form-grid--with-toggle { grid-template-columns:1fr auto; align-items:end; }
+
 /* ═════════════════════════ MODALS ═══════════════════════════════ */
 .ds-modal-backdrop {
   position:fixed; inset:0;
   background:rgba(9,9,11,0.68); backdrop-filter:blur(32px);
   display:flex; align-items:center; justify-content:center;
-  z-index:50; padding:16px;
+  /* höher als #mobile-header (z-index:50) -- ein offenes Modal muss auf
+     Mobile immer über der App-Bar liegen, nicht nur zufällig per DOM-Reihenfolge */
+  z-index:60; padding:16px;
 }
 .ds-modal {
   background:var(--sb); border:1px solid var(--border-s);
@@ -1070,17 +1093,6 @@ input,select,textarea { font-family:var(--font); }
   .sysinfo-app-grid  { grid-template-columns:1fr !important; }
 }
 
-/* ── Activity Log: Filter Desktop/Mobile ─────────────────────── */
-.al-filters-desktop { display:contents; }
-.al-filters-mobile { display:none; }
-@media (max-width:768px) {
-  .al-filters-desktop { display:none; }
-  .al-filters-mobile {
-    display:flex; flex-wrap:wrap; gap:6px; align-items:center;
-    margin-bottom:14px;
-  }
-}
-
 /* ── Activity Log: kompakte Mobilansicht ─────────────────────── */
 .al-status-dot {
   display:none;
@@ -1090,7 +1102,7 @@ input,select,textarea { font-family:var(--font); }
 .al-mobile-meta {
   display:none;
 }
-@media (max-width:767px) {
+@media (max-width:768px) {
   .al-col-hide, .col-hide-sm { display:none; }
   .al-status-text           { display:none; }
   .al-date                  { font-size:11px; }
@@ -1145,6 +1157,15 @@ body.mobile-nav-open #sidebar-overlay { display:block; }
 @media (max-width:768px) {
   #mobile-header { display:flex; }
   .app-layout { display:block; padding:0; }
+
+  /* Anlegen/Bearbeiten-Formulare und Settings-Karten: immer 1 Spalte,
+     unabhängig von --cols (siehe .form-grid oben) -- ohne !important
+     würde die per Inline-Style gesetzte Custom Property gewinnen. */
+  .form-grid, .form-grid--with-toggle { grid-template-columns:1fr !important; }
+
+  /* Modal: weniger Innenabstand/Radius auf schmalen Screens */
+  .ds-modal { padding:18px 16px; border-radius:16px; }
+  .ds-modal-title { font-size:17px; }
   #sidebar {
     position:fixed; top:52px; left:0; bottom:0; z-index:40;
     transform:translateX(-100%);
