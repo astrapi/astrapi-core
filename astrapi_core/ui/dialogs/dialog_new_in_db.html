@@ -1,0 +1,47 @@
+{#
+  dialog_new_in_db.html – "Neu erstellen"-Dialog fuer DB-verwaltete Pakete
+  (Etappe 5, siehe projects/packages/planung-datei-editor.md).
+
+  Erwartet im Kontext: module, error (optional).
+  Legt beim Absenden eine PKGBUILD-Vorlage direkt in der App-DB an (kein
+  Git-Repo noetig) und ersetzt sich selbst durch den Datei-Editor-Dialog
+  des neuen Pakets (hx-target="#dialog" swap="outerHTML" statt des
+  Formular-Standardpfads aus dialog_form.html, der auf #main-content
+  zielt -- hier soll ein neuer Dialog entstehen, nicht die Liste).
+#}
+{% extends "dialog_core.html" %}
+
+{% block dialog_title %}Neues Paket (PKGBUILD){% endblock %}
+{% block dialog_width %}420{% endblock %}
+
+{% block dialog_body %}
+<div id="modal-error-container">
+{% if error %}
+<div style="margin:8px 0;padding:8px 12px;border-radius:6px;
+            background:var(--r-dim);color:var(--r);font-size:13px;">
+  {{ error }}
+</div>
+{% endif %}
+</div>
+<div class="form-group" style="margin:0;">
+  <label class="form-label">Paketname</label>
+  <input type="text" name="name" id="new-in-db-name" class="form-input"
+         placeholder="z.B. mypackage" required autofocus
+         onkeydown="if(event.key==='Enter'){event.preventDefault();document.getElementById('new-in-db-submit').click();}">
+  <span class="form-hint" style="font-size:11px; display:block; margin-top:4px;">
+    Legt eine PKGBUILD-Vorlage direkt in der App an — kein externes Git-Repo nötig.
+  </span>
+</div>
+{% endblock %}
+
+{% block dialog_footer %}
+<div class="ds-modal-footer ds-modal-footer--end">
+  <button type="button" class="btn btn-sm btn-ghost" onclick="closeModal(this)">Abbrechen</button>
+  <button type="button" id="new-in-db-submit" class="btn btn-sm btn-primary"
+          hx-post="/ui/{{ module }}/new-in-db"
+          hx-include="#new-in-db-name"
+          hx-target="#dialog" hx-swap="outerHTML">
+    Erstellen
+  </button>
+</div>
+{% endblock %}
