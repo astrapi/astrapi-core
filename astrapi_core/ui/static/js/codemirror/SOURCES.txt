@@ -1,0 +1,51 @@
+CodeMirror – Herkunft und Bezugsquelle
+=======================================
+
+Vendoriert statt per CDN eingebunden (self-hosted, kein externer Request zur
+Laufzeit).
+
+**Hinweis zur Version:** Die Planung (planung-datei-editor.md) hatte
+CodeMirror 6 vorgesehen. Beim Vendorieren stellte sich heraus, dass CM6 in
+separate @codemirror/*-Pakete mit eigenem, sich gegenseitig referenzierendem
+Abhaengigkeitsgraphen (state/view/language/commands/lezer/style-mod/...)
+aufgeteilt ist. Ohne lokales Node/npm/esbuild-Toolchain (hier nicht
+verfuegbar) liess sich dieser Graph nicht zuverlaessig von Hand
+zusammensetzen -- ein Testaufbau mit unabhaengig gebuendelten Einzelpaketen
+scheiterte reproduzierbar an doppelten, nicht kompatiblen internen Kopien
+der Facet/Extension-Maschinerie ("Unrecognized extension value").
+Stattdessen **CodeMirror 5**: ein einzelnes, abhaengigkeitsfreies
+UMD-Bundle (haengt sich an `window.CodeMirror`), dazu eigene, in sich
+geschlossene Modus-Dateien fuer Shell und Dockerfile. Funktional fuer den
+Anwendungsfall (Zeilennummern, Syntax-Highlighting, kein IDE-Funktionsumfang
+noetig) gleichwertig, deutlich risikoaermer zu vendorieren.
+
+codemirror.js / codemirror.css
+  Paket:   codemirror@5.65.16 (lib/codemirror.js, lib/codemirror.css)
+  Quelle:  https://cdn.jsdelivr.net/npm/codemirror@5.65.16/lib/
+  Lizenz:  MIT
+
+mode-shell.js
+  Paket:   codemirror@5.65.16 (mode/shell/shell.js)
+  Quelle:  https://cdn.jsdelivr.net/npm/codemirror@5.65.16/mode/shell/shell.js
+  Lizenz:  MIT
+  Verwendung: PKGBUILD (Bash-Syntax, direkter Fit)
+
+mode-dockerfile.js
+  Paket:   codemirror@5.65.16 (mode/dockerfile/dockerfile.js)
+  Quelle:  https://cdn.jsdelivr.net/npm/codemirror@5.65.16/mode/dockerfile/dockerfile.js
+  Lizenz:  MIT
+  Verwendung: Dockerfile (eigener Modus, kein Workaround)
+  Abhaengigkeit: addon-simple-mode.js (siehe unten)
+
+addon-simple-mode.js
+  Paket:   codemirror@5.65.16 (addon/mode/simple.js)
+  Quelle:  https://cdn.jsdelivr.net/npm/codemirror@5.65.16/addon/mode/simple.js
+  Lizenz:  MIT
+  Hinweis: Wird von mode-dockerfile.js vorausgesetzt, muss vor diesem
+           geladen werden.
+
+editor.js ist kein Vendor-Code, sondern eigene Glue-Logik (siehe Datei).
+
+Ladereihenfolge (siehe file_editor.html):
+  codemirror.js → addon-simple-mode.js → mode-shell.js → mode-dockerfile.js
+  → editor.js

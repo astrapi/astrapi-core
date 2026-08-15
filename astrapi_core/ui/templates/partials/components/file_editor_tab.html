@@ -1,0 +1,178 @@
+{#
+  partials/components/file_editor_tab.html – wiederverwendbarer Datei-Editor-Tab
+  fuer Builder-Images und Pakete (debian/archlinux), siehe
+  projects/packages/planung-datei-editor.md, Abschnitt 2.2.
+
+  Erwartet im Kontext:
+    files_module   – Modul-Key, z.B. 'builder' | 'debian' | 'archlinux'
+    files_item_id  – item_id des Builders/Pakets (muss bereits existieren)
+
+  Nutzt die generischen Routen /api/{module}/{item_id}/files... (siehe
+  astrapi_packages/utils/file_routes.py) und das vendorierte CodeMirror
+  (astrapi_core/ui/static/js/codemirror/, siehe SOURCES.txt dort).
+#}
+<link rel="stylesheet" href="{{ url_for('static', filename='js/codemirror/codemirror.css') }}">
+<script src="{{ url_for('static', filename='js/codemirror/codemirror.js') }}"></script>
+<script src="{{ url_for('static', filename='js/codemirror/addon-simple-mode.js') }}"></script>
+<script src="{{ url_for('static', filename='js/codemirror/mode-shell.js') }}"></script>
+<script src="{{ url_for('static', filename='js/codemirror/mode-dockerfile.js') }}"></script>
+<script src="{{ url_for('static', filename='js/codemirror/editor.js') }}"></script>
+
+<div id="files-tab-{{ files_module }}-{{ files_item_id }}" class="files-tab" data-module="{{ files_module }}" data-item-id="{{ files_item_id }}">
+  <div style="display:flex; gap:12px; min-height:340px;">
+    <div style="width:180px; flex-shrink:0; border-right:1px solid var(--border); padding-right:8px;">
+      <div class="files-list" style="display:flex; flex-direction:column; gap:2px; margin-bottom:8px;"></div>
+      <button type="button" class="btn btn-sm btn-ghost" style="width:100%;" onclick="filesTabNewFile(this)">+ Neue Datei</button>
+    </div>
+    <div style="flex:1; display:flex; flex-direction:column; min-width:0;">
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
+        <span class="files-current-name" style="font-family:var(--font-mono); font-size:13px; color:var(--text-2);">–</span>
+        <div class="inline-cluster" style="gap:6px;">
+          <button type="button" class="btn btn-sm btn-ghost" onclick="filesTabShowHistory(this)" disabled>Verlauf</button>
+          <button type="button" class="btn btn-sm btn-primary" onclick="filesTabSave(this)" disabled>Speichern</button>
+        </div>
+      </div>
+      <textarea class="files-editor-textarea" style="flex:1; min-height:280px; width:100%; font-family:var(--font-mono); font-size:13px;" placeholder="Datei links auswaehlen oder neu anlegen …"></textarea>
+      <div class="files-diff-panel" style="display:none; margin-top:8px; max-height:200px; overflow:auto;">
+        <pre class="files-diff-content surface-code" style="font-size:12px; padding:8px;"></pre>
+        <div class="inline-cluster" style="gap:8px; margin-top:6px;">
+          <button type="button" class="btn btn-sm btn-primary" onclick="filesTabConfirmSave(this)">Bestätigen</button>
+          <button type="button" class="btn btn-sm btn-ghost" onclick="filesTabCancelDiff(this)">Abbrechen</button>
+        </div>
+      </div>
+      <div class="files-history-panel" style="display:none; margin-top:8px; max-height:200px; overflow:auto;"></div>
+    </div>
+  </div>
+</div>
+
+<script>
+(function () {
+  function tabRoot(el) { return el.closest(".files-tab"); }
+  function apiBase(root) { return "/api/" + root.dataset.module + "/" + root.dataset.itemId + "/files"; }
+
+  function currentFilename(root) {
+    return root.querySelector(".files-current-name").dataset.filename || null;
+  }
+  function setCurrentFilename(root, name) {
+    const label = root.querySelector(".files-current-name");
+    label.textContent = name || "–";
+    label.dataset.filename = name || "";
+    root.querySelector('button[onclick^="filesTabSave"]').disabled = !name;
+    root.querySelector('button[onclick^="filesTabShowHistory"]').disabled = !name;
+  }
+
+  function mountOrUpdate(root, content, filename) {
+    const ta = root.querySelector(".files-editor-textarea");
+    if (root._cm) { root._cm.toTextArea(); root._cm = null; }
+    ta.value = content;
+    root._cm = window.mountCodeEditor(ta, { filename: filename });
+  }
+
+  window.filesTabInit = function (module, itemId) {
+    const root = document.getElementById("files-tab-" + module + "-" + itemId);
+    if (!root || root._loaded) return;
+    root._loaded = true;
+    fetch(apiBase(root)).then(r => r.json()).then(files => {
+      const list = root.querySelector(".files-list");
+      list.innerHTML = "";
+      files.forEach(f => {
+        const item = document.createElement("button");
+        item.type = "button";
+        item.className = "btn btn-sm btn-ghost";
+        item.style.cssText = "justify-content:flex-start; font-family:var(--font-mono); font-size:12px;";
+        item.textContent = f.filename;
+        item.onclick = function () { filesTabOpen(root, f.filename); };
+        list.appendChild(item);
+      });
+    });
+  };
+
+  function filesTabOpen(root, filename) {
+    fetch(apiBase(root) + "/" + encodeURIComponent(filename))
+      .then(r => r.json())
+      .then(data => {
+        setCurrentFilename(root, filename);
+        mountOrUpdate(root, data.content, filename);
+        root.querySelector(".files-diff-panel").style.display = "none";
+        root.querySelector(".files-history-panel").style.display = "none";
+      });
+  }
+
+  window.filesTabNewFile = function (btn) {
+    const root = tabRoot(btn);
+    const name = prompt("Dateiname (z.B. PKGBUILD, fix.patch):");
+    if (!name) return;
+    setCurrentFilename(root, name);
+    mountOrUpdate(root, "", name);
+  };
+
+  window.filesTabSave = function (btn) {
+    const root = tabRoot(btn);
+    const filename = currentFilename(root);
+    if (!filename || !root._cm) return;
+    const content = root._cm.getValue();
+    fetch(apiBase(root) + "/" + encodeURIComponent(filename) + "/diff", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ content: content }),
+    })
+      .then(r => r.json())
+      .then(data => {
+        const panel = root.querySelector(".files-diff-panel");
+        root.querySelector(".files-diff-content").textContent = data.diff || "(keine Aenderung)";
+        panel.style.display = "block";
+      });
+  };
+
+  window.filesTabConfirmSave = function (btn) {
+    const root = tabRoot(btn);
+    const filename = currentFilename(root);
+    const content = root._cm.getValue();
+    fetch(apiBase(root) + "/" + encodeURIComponent(filename), {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ content: content }),
+    }).then(function () {
+      root.querySelector(".files-diff-panel").style.display = "none";
+      root._loaded = false;
+      filesTabInit(root.dataset.module, root.dataset.itemId);
+    });
+  };
+
+  window.filesTabCancelDiff = function (btn) {
+    tabRoot(btn).querySelector(".files-diff-panel").style.display = "none";
+  };
+
+  window.filesTabShowHistory = function (btn) {
+    const root = tabRoot(btn);
+    const filename = currentFilename(root);
+    if (!filename) return;
+    fetch(apiBase(root) + "/" + encodeURIComponent(filename) + "/history")
+      .then(r => r.json())
+      .then(versions => {
+        const panel = root.querySelector(".files-history-panel");
+        panel.innerHTML = "";
+        versions.forEach(v => {
+          const row = document.createElement("div");
+          row.style.cssText = "display:flex; justify-content:space-between; align-items:center; padding:4px 0; border-bottom:1px solid var(--border); font-size:12px;";
+          const label = document.createElement("span");
+          label.textContent = (v.is_deleted ? "🗑 " : "") + v.created_at + (v.message ? " – " + v.message : "");
+          row.appendChild(label);
+          if (!v.is_deleted) {
+            const restoreBtn = document.createElement("button");
+            restoreBtn.type = "button";
+            restoreBtn.className = "btn btn-sm btn-ghost";
+            restoreBtn.textContent = "Wiederherstellen";
+            restoreBtn.onclick = function () {
+              fetch(apiBase(root) + "/" + encodeURIComponent(filename) + "/restore/" + v.id, { method: "POST" })
+                .then(function () { filesTabOpen(root, filename); panel.style.display = "none"; });
+            };
+            row.appendChild(restoreBtn);
+          }
+          panel.appendChild(row);
+        });
+        panel.style.display = "block";
+      });
+  };
+})();
+</script>
