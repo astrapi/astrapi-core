@@ -1,0 +1,34 @@
+{#
+  dialog_import.html – generischer Import-Dialog (Export/Import zwischen
+  App-Instanzen, siehe projects/packages/planung-datei-editor.md, Etappe 4).
+
+  Erwartet im Kontext: module (Owner-Type, z.B. 'builder'|'debian'|'archlinux').
+#}
+{% extends "dialog_core.html" %}
+
+{% block dialog_title %}Importieren{% endblock %}
+{% block dialog_width %}480{% endblock %}
+
+{% block dialog_body %}
+<form hx-post="/ui/{{ module }}/import" hx-target="#import-result" hx-swap="innerHTML"
+      hx-encoding="multipart/form-data" style="display:flex; flex-direction:column; gap:12px;">
+  <div class="form-group" style="margin:0;">
+    <label class="form-label">Export-Datei (JSON)</label>
+    <input type="file" name="file" accept="application/json" required class="form-input">
+    <span class="form-hint" style="font-size:11px; display:block; margin-top:4px;">
+      Fehlende Einträge werden angelegt, vorhandene abgeglichen (per ID) —
+      nichts wird gelöscht, bisherige Versionen bleiben in der Historie erhalten.
+    </span>
+  </div>
+  <div>
+    <button type="submit" class="btn btn-sm btn-primary">Importieren</button>
+  </div>
+</form>
+<div id="import-result" style="margin-top:12px;"></div>
+{% endblock %}
+
+{% block dialog_footer %}
+<div class="ds-modal-footer ds-modal-footer--end">
+  <button type="button" class="btn btn-sm btn-ghost" onclick="closeModal(this)">Schließen</button>
+</div>
+{% endblock %}

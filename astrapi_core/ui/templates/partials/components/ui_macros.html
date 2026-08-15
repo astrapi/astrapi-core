@@ -531,6 +531,9 @@
                ~ (('hx-post="' ~ ctrl.hx_post ~ '" ') if ctrl.hx_post else '')
                ~ (('hx-target="' ~ (ctrl.hx_target or 'body') ~ '" hx-swap="' ~ (ctrl.hx_swap or 'beforeend') ~ '"') if (ctrl.hx_get or ctrl.hx_post) else '') -%}
 {{ btn(ctrl.label, variant=ctrl.style or 'primary', attrs=_attrs) }}
+{%- elif ctrl.type == 'link_button' -%}
+<a href="{{ ctrl.href }}" {% if ctrl.download %}download{% endif %}
+   class="btn btn-sm btn-{{ ctrl.style or 'ghost' }}" style="text-decoration:none;">{{ ctrl.label }}</a>
 {%- endif %}
 {% endmacro %}
 

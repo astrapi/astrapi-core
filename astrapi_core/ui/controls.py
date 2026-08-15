@@ -195,6 +195,7 @@ class HeaderControl:
     Typen:
         filter_select   – <select> mit Optionen, triggert HTMX-Request
         action_button   – <button> mit HTMX-Attributen
+        link_button     – <a href> ohne HTMX, z.B. für Datei-Downloads
     """
 
     type: str
@@ -209,6 +210,10 @@ class HeaderControl:
     hx_target: str = ""  # leer = auto (#container_id)
     hx_swap: str = ""  # leer = auto (outerHTML für filter_select, beforeend für action_button)
     hx_include: str = ""  # leer = auto (data-filter-for='module')
+
+    # Für link_button
+    href: str = ""
+    download: bool = False
 
     # Für filter_select
     name: str = ""
@@ -273,6 +278,23 @@ class Header:
             hx_post=hx_post,
             hx_target=hx_target or "body",
             hx_swap=hx_swap,
+            style=style,
+        )
+
+    @staticmethod
+    def link_button(
+        label: str,
+        href: str,
+        download: bool = True,
+        style: str = "ghost",
+    ) -> HeaderControl:
+        """Plainer <a href>-Link ohne HTMX -- für Datei-Downloads (z.B. Export),
+        bei denen ein hx-get/AJAX-Swap fehl am Platz wäre."""
+        return HeaderControl(
+            type="link_button",
+            label=label,
+            href=href,
+            download=download,
             style=style,
         )
 
