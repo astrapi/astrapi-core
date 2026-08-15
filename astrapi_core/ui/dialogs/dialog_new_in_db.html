@@ -2,7 +2,11 @@
   dialog_new_in_db.html – "Neu erstellen"-Dialog fuer DB-verwaltete Pakete
   (Etappe 5, siehe projects/packages/planung-datei-editor.md).
 
-  Erwartet im Kontext: module, error (optional).
+  Erwartet im Kontext: module, error (optional), os_type_options (optional
+  Liste [{'value':...,'label':...}] -- gesetzt seit dem generischen
+  Pakete-Modul, siehe "Virtuelles OS-Modul": wenn vorhanden, muss der Nutzer
+  vor dem Anlegen einen OS-Typ waehlen, sonst (Rueckwaertskompatibilitaet
+  fuer andere Aufrufer) entfaellt das Feld).
   Legt beim Absenden eine PKGBUILD-Vorlage direkt in der App-DB an (kein
   Git-Repo noetig) und ersetzt sich selbst durch den Datei-Editor-Dialog
   des neuen Pakets (hx-target="#dialog" swap="outerHTML" statt des
@@ -10,6 +14,7 @@
   zielt -- hier soll ein neuer Dialog entstehen, nicht die Liste).
 #}
 {% extends "dialog_core.html" %}
+{% from "partials/components/ui_macros.html" import form_select %}
 
 {% block dialog_title %}Neues Paket (PKGBUILD){% endblock %}
 {% block dialog_width %}420{% endblock %}
@@ -23,6 +28,12 @@
 </div>
 {% endif %}
 </div>
+{% if os_type_options %}
+<div class="form-group">
+  <label class="form-label">OS-Typ</label>
+  {{ form_select('os_type', os_type_options, os_type_options[0].value, placeholder='', attrs='id="new-in-db-os-type"') }}
+</div>
+{% endif %}
 <div class="form-group" style="margin:0;">
   <label class="form-label">Paketname</label>
   <input type="text" name="name" id="new-in-db-name" class="form-input"
@@ -39,7 +50,7 @@
   <button type="button" class="btn btn-sm btn-ghost" onclick="closeModal(this)">Abbrechen</button>
   <button type="button" id="new-in-db-submit" class="btn btn-sm btn-primary"
           hx-post="/ui/{{ module }}/new-in-db"
-          hx-include="#new-in-db-name"
+          hx-include="#new-in-db-name{% if os_type_options %}, #new-in-db-os-type{% endif %}"
           hx-target="#dialog" hx-swap="outerHTML">
     Erstellen
   </button>
