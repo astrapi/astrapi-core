@@ -14,7 +14,7 @@
           onclick="closeModal(this)">Abbrechen</button>
   <button type="button" class="btn btn-sm btn-{{ btn_style | default('danger') }}"
           hx-{{ method | default('post') }}="{{ confirm_url }}"
-          hx-on::after-request="{% if reload_url %}if(event.detail.successful){htmx.ajax('GET','{{ reload_url }}',{target:'#main-content',swap:'innerHTML'});this.closest('.ds-modal-backdrop').remove()}{% else %}this.closest('.ds-modal-backdrop').remove(){% endif %}">
+          hx-on::after-request="{% if reload_url %}if(event.detail.successful){htmx.ajax('GET','{{ reload_url }}',{target:'{{ reload_target_id | default('#main-content', true) }}',swap:'innerHTML'});this.closest('.ds-modal-backdrop').remove()}{% else %}this.closest('.ds-modal-backdrop').remove(){% endif %}">
     {{ verb | capitalize }}
   </button>
 </div>

@@ -3,7 +3,7 @@
 {% block dialog_content %}
 <form id="{% block form_id %}dialog-form{% endblock %}"
       hx-{% block form_method %}post{% endblock %}="{% block form_action %}{% endblock %}"
-      hx-target="{% block form_target %}#main-content{% endblock %}"
+      hx-target="{% block form_target %}{{ form_target_id | default('#main-content', true) }}{% endblock %}"
       hx-swap="innerHTML"
       {# event.target === this ist zwingend: htmx-Events blubbern. Ohne die
          Pruefung schliesst auch jede Anfrage aus einem verschachtelten

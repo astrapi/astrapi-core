@@ -67,6 +67,26 @@
   </div>
   {% endif %}
 
+  {# ── Eingebettete Module (settings_embed=True) ───────────────────────────── #}
+  {% for mod in modules %}
+  {% if mod.settings_embed %}
+  <div>
+    <div class="content-item on" data-debug-label="content-subitem">
+      <div class="card-header">
+        <span class="card-title">{{ mod.label }}</span>
+      </div>
+      <div class="card-body" style="padding:16px;">
+          <div id="{{ mod.key }}-settings-slot"
+               hx-get="/ui/{{ mod.key }}/content"
+               hx-trigger="load"
+               hx-swap="innerHTML">
+          </div>
+      </div>
+    </div>
+  </div>
+  {% endif %}
+  {% endfor %}
+
   {# ── Moduleinstellungen ──────────────────────────────────────────────────── #}
   {% for key, data in (mod_settings | default({})).items() %}
   {% include "settings/partials/module_card.html" %}

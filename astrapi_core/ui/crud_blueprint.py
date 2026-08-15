@@ -89,6 +89,7 @@ def make_crud_router(
     filters: list[dict] | None = None,
     create_defaults: dict | None = None,
     extra_buttons: list[dict] | None = None,
+    embed_target_id: str | None = None,
 ) -> APIRouter:
     """Erstellt einen generischen CRUD-APIRouter.
 
@@ -104,6 +105,11 @@ def make_crud_router(
         resolve_fields_fn: Optionale Funktion zum Anreichern der Schema-Felder
         extra_page_actions_template: Optionales Template für zusätzliche Page-Actions
         running_fn:        Optionale Funktion () -> dict mit laufenden Jobs
+        embed_target_id:   Optionales HTMX-Swap-Ziel (z.B. "#mod-os_types") für
+                           Anlegen/Bearbeiten/Löschen/Toggle, falls das Modul
+                           nicht auf seiner eigenen Seite, sondern eingebettet
+                           (z.B. in den Einstellungen) läuft. Ohne Angabe wie
+                           bisher die komplette Hauptseite (#main-content).
 
     Returns:
         FastAPI APIRouter mit allen Standard-UI-Routen
@@ -258,6 +264,7 @@ def make_crud_router(
                     container_id=request.query_params.get("container_id", _c_id),
                     loading_id=request.query_params.get("loading_id", _l_id),
                     prefill_template=prefill_template,
+                    form_target_id=embed_target_id,
                 ),
             )
 
@@ -283,6 +290,7 @@ def make_crud_router(
                     reload_url=f"/ui/{key}/content",
                     container_id=request.query_params.get("container_id", _c_id),
                     loading_id=request.query_params.get("loading_id", _l_id),
+                    form_target_id=embed_target_id,
                 ),
             )
 
@@ -301,6 +309,7 @@ def make_crud_router(
                     confirm_url=f"/api/{key}/{item_id}",
                     method="delete",
                     reload_url=f"/ui/{key}/content",
+                    reload_target_id=embed_target_id,
                 ),
             )
 
@@ -322,6 +331,7 @@ def make_crud_router(
                     reload_url=f"/ui/{key}/content",
                     container_id=request.query_params.get("container_id", _c_id),
                     loading_id=request.query_params.get("loading_id", _l_id),
+                    reload_target_id=embed_target_id,
                 ),
             )
 
