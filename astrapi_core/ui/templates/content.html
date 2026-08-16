@@ -14,7 +14,23 @@
     <div class="content-header-title">{{ module_label(module) }}</div>
     <div class="content-header-actions">
       {% if _ui_header is not none %}
-        {% for ctrl in _ui_header.controls %}{{ ui.header_control(ctrl, module, container_id, loading_id | default(''), filter_defs | default([])) }}{% endfor %}
+        {%- set _filter_ctrls = _ui_header.controls | selectattr('type', 'equalto', 'filter_select') | list -%}
+        {%- set _other_ctrls  = _ui_header.controls | rejectattr('type', 'equalto', 'filter_select') | list -%}
+        {% if _filter_ctrls %}
+        {# id ist bewusst modulweit konstant (wie #dialog bei Modals): es
+           existiert immer nur ein aktives Panel, fuer das gerade geladene
+           Modul. #}
+        <div class="content-header-filters" id="mobile-filter-panel">
+          <div class="m-filter-panel-header">
+            <span>Filter</span>
+            <button type="button" class="btn-icon" onclick="closeFilterPanel()" title="Schließen">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" stroke="none"><use href="#icon-close"></use></svg>
+            </button>
+          </div>
+          {% for ctrl in _filter_ctrls %}{{ ui.header_control(ctrl, module, container_id, loading_id | default(''), filter_defs | default([])) }}{% endfor %}
+        </div>
+        {% endif %}
+        {% for ctrl in _other_ctrls %}{{ ui.header_control(ctrl, module, container_id, loading_id | default(''), filter_defs | default([])) }}{% endfor %}
       {% else %}
         {% if filter_defs %}
         {% for f in filter_defs %}

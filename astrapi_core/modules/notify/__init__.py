@@ -18,11 +18,15 @@ module = load_modul(
                 "Neuer Kanal",
                 hx_get=f"/ui/{_KEY}/backend-select",
                 hx_target="body",
+                style="primary",
+                icon="plus",
             ),
             Header.action_button(
                 "Neuer Job",
                 hx_get=f"/ui/{_KEY}/jobs/create",
                 hx_target="body",
+                style="primary",
+                icon="plus",
             ),
         ]
     ),

@@ -217,6 +217,9 @@ class HeaderControl:
     # Callable () -> list[dict]: dynamische Optionen (werden zur Render-Zeit ausgewertet)
     options_fn: object = field(default=None, repr=False)
 
+    # Für action_button
+    icon: str = ""  # Icon-Name aus ui/icons/, z.B. "plus" (leer = kein Icon)
+
     # Marker-Attribute
     data_attr: str = ""  # z.B. "data-actlog-filter" für individuelles hx-include
 
@@ -265,6 +268,7 @@ class Header:
         hx_target: str = "",
         hx_swap: str = "beforeend",
         style: str = "accent",
+        icon: str = "",
     ) -> HeaderControl:
         return HeaderControl(
             type="action_button",
@@ -274,6 +278,7 @@ class Header:
             hx_target=hx_target or "body",
             hx_swap=hx_swap,
             style=style,
+            icon=icon,
         )
 
 

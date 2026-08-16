@@ -41,6 +41,7 @@
     hx-target="body" hx-swap="beforeend"
     class="btn btn-primary btn-sm" title="Neu"
   >
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" stroke="none"><use href="#icon-plus"></use></svg>
     Neu
   </button>
 {% endmacro %}
@@ -149,11 +150,12 @@
   Klasse .htmx-request auf das auslösende Element; die CSS-Regeln in app.css
   blenden dann Label gegen Spinner + busy_label aus und sperren den Button.
 #}
-{% macro btn(label='', variant='ghost', size='sm', type='button', onclick=None, attrs='', busy_label=None) %}
+{% macro btn(label='', variant='ghost', size='sm', type='button', onclick=None, attrs='', busy_label=None, icon=None) %}
 <button type="{{ type }}"
         class="btn btn-{{ variant }}{% if size %} btn-{{ size }}{% endif %}{% if busy_label %} btn--busy{% endif %}"
         {% if onclick %}onclick="{{ onclick }}"{% endif %}
         {% if attrs %}{{ attrs | safe }}{% endif %}>
+  {%- if icon %}<svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" stroke="none"><use href="#icon-{{ icon }}"></use></svg>{% endif -%}
   {%- if busy_label %}
     <span class="btn__label">{%- if caller is defined %}{{ caller() }}{%- else %}{{ label }}{%- endif %}</span>
     <span class="btn__busy"><span class="btn__spinner"></span>{{ busy_label }}</span>
@@ -510,27 +512,42 @@
 {%- if not _opts and ctrl.options_fn -%}{%- set _opts = ctrl.options_fn() -%}{%- endif -%}
 {%- set _ns = namespace(active='') -%}
 {%- for fd in filter_defs -%}{%- if fd.param == ctrl.name -%}{%- set _ns.active = fd.active -%}{%- endif -%}{%- endfor -%}
-<select class="form-select table-filter-select"
-        name="{{ ctrl.name }}"
-        {{ _data_key }}
-        x-data="moduleFilter('{{ module }}__{{ ctrl.name }}')"
-        @change="save($el.value)"
-        hx-get="{{ _hx_get }}"
-        hx-target="{{ _hx_target }}"
-        hx-swap="{{ _hx_swap }}"
-        hx-trigger="change"
-        hx-include="{{ _hx_include }}">
-  <option value="">{{ ctrl.all_label or 'Alle' }}</option>
-  {%- for opt in _opts -%}
-  {%- set _sel = (opt.value|string == _ns.active|string and _ns.active != '') or (opt.default and not _ns.active) -%}
-  <option value="{{ opt.value }}"{{ ' selected' if _sel else '' }}>{{ opt.label }}</option>
-  {%- endfor -%}
-</select>
+{%- set _all_label = ctrl.all_label or '' -%}
+{%- set _group_label = (_all_label[5:] if _all_label.startswith('Alle ') else _all_label) or (ctrl.name | replace('_', ' ') | title) -%}
+<div class="m-filter-group">
+  <select class="form-select table-filter-select"
+          name="{{ ctrl.name }}"
+          {{ _data_key }}
+          x-data="moduleFilter('{{ module }}__{{ ctrl.name }}')"
+          @change="save($el.value)"
+          hx-get="{{ _hx_get }}"
+          hx-target="{{ _hx_target }}"
+          hx-swap="{{ _hx_swap }}"
+          hx-trigger="change"
+          hx-include="{{ _hx_include }}">
+    <option value="">{{ ctrl.all_label or 'Alle' }}</option>
+    {%- for opt in _opts -%}
+    {%- set _sel = (opt.value|string == _ns.active|string and _ns.active != '') or (opt.default and not _ns.active) -%}
+    <option value="{{ opt.value }}"{{ ' selected' if _sel else '' }}>{{ opt.label }}</option>
+    {%- endfor -%}
+  </select>
+  {# Nur auf Mobile sichtbar (siehe app.css): eigene, tippbare Chip-Liste statt
+     des nativen Auswahlfensters. Steuert dasselbe <select> statt eigener
+     hx-Logik, damit Cookie-Persistenz und hx-include unveraendert bleiben. #}
+  <div class="m-filter-group-label">{{ _group_label }}</div>
+  <div class="m-filter-options">
+    <button type="button" class="m-filter-option{{ ' active' if not _ns.active else '' }}" data-value="" onclick="_setFilterValue(this)">{{ ctrl.all_label or 'Alle' }}</button>
+    {%- for opt in _opts -%}
+    {%- set _sel = (opt.value|string == _ns.active|string and _ns.active != '') or (opt.default and not _ns.active) -%}
+    <button type="button" class="m-filter-option{{ ' active' if _sel else '' }}" data-value="{{ opt.value }}" onclick="_setFilterValue(this)">{{ opt.label }}</button>
+    {%- endfor -%}
+  </div>
+</div>
 {%- elif ctrl.type == 'action_button' -%}
 {%- set _attrs = (('hx-get="'  ~ ctrl.hx_get  ~ '" ') if ctrl.hx_get  else '')
                ~ (('hx-post="' ~ ctrl.hx_post ~ '" ') if ctrl.hx_post else '')
                ~ (('hx-target="' ~ (ctrl.hx_target or 'body') ~ '" hx-swap="' ~ (ctrl.hx_swap or 'beforeend') ~ '"') if (ctrl.hx_get or ctrl.hx_post) else '') -%}
-{{ btn(ctrl.label, variant=ctrl.style or 'primary', attrs=_attrs) }}
+{{ btn(ctrl.label, variant=ctrl.style or 'primary', attrs=_attrs, icon=ctrl.icon or none) }}
 {%- endif %}
 {% endmacro %}
 

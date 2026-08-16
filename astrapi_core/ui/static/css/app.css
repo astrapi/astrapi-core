@@ -915,6 +915,10 @@ input,select,textarea { font-family:var(--font); }
   gap:12px;
   align-items:start;
 }
+/* Grid-Items sind sonst per Default min-width:auto und schrumpfen nicht
+   unter die Breite ihres nicht umbrechbaren Inhalts (z.B. lange Pfade,
+   unwrapped Flex-Reihen) -- das sprengt dann die ganze Seite horizontal. */
+.content-columns > * { min-width:0; }
 .content-columns--stretch { align-items:stretch; }
 .content-columns--wide    { grid-template-columns:minmax(0,1.3fr) minmax(0,1fr); }
 .notify-panel {
@@ -979,6 +983,12 @@ input,select,textarea { font-family:var(--font); }
 .content-header-actions {
   display:flex; align-items:center; gap:8px;
 }
+/* Desktop-Default: Filter-Wrapper/Gruppen erzeugen keine eigene Box, ihre
+   Kinder (die <select>-Elemente) reihen sich direkt in .content-header-actions
+   ein -- unveraendertes Desktop-Verhalten. Die mobile mediaquery unten
+   ueberschreibt das fuer das Bottom-Sheet. */
+.content-header-filters, .m-filter-group { display:contents; }
+.m-filter-panel-header, .m-filter-group-label, .m-filter-options { display:none; }
 
 /* ── Content Footer ──────────────────────────────────────────── */
 .content-footer {
@@ -1076,6 +1086,7 @@ input,select,textarea { font-family:var(--font); }
   grid-template-columns: 1fr 1fr;
   gap: 12px;
 }
+.sysinfo-gauges-grid > * { min-width: 0; }
 .sysinfo-gauge-card  { padding: 0; overflow: hidden; }
 .sysinfo-gauge-head  { display:flex; align-items:center; justify-content:space-between; margin-bottom:10px; }
 .sysinfo-gauge-label { font-size:11px; text-transform:uppercase; letter-spacing:0.07em; color:var(--text-3); font-weight:600; }
@@ -1084,10 +1095,27 @@ input,select,textarea { font-family:var(--font); }
 .sysinfo-gauge-bar-wrap { height:8px; background:var(--sel); border-radius:99px; overflow:hidden; }
 .sysinfo-gauge-sub   { font-size:11px; color:var(--text-3); margin-top:8px; }
 
+/* Ring-Gauge (Mobile-Ersatz für den linearen Balken) */
+.sysinfo-gauge-ring-wrap {
+  position:relative;
+  align-items:center; justify-content:center;
+  width:88px; height:88px;
+  margin:2px auto 6px;
+}
+.sysinfo-gauge-ring { display:block; }
+.sysinfo-gauge-ring-value {
+  position:absolute; top:50%; left:50%; transform:translate(-50%,-50%);
+  font-size:19px; font-weight:700; color:var(--text);
+  display:flex; align-items:baseline; gap:1px;
+}
+
 /* ── Sysinfo: responsive Grids ───────────────────────────────── */
 @media (max-width:768px) {
   .content-columns, .content-columns--wide { grid-template-columns: 1fr; }
-  .sysinfo-gauges-grid  { grid-template-columns: 1fr; }
+  /* Ring-Karten (CPU/RAM) bleiben zu zweit nebeneinander, Balken-Karten
+     (DISK/Extra-Disks, .sysinfo-gauge-card--wide) spannen die volle Breite. */
+  .sysinfo-gauges-grid  { grid-template-columns: 1fr 1fr; }
+  .sysinfo-gauge-card--wide { grid-column: 1 / -1; }
   .sysinfo-gauges    { grid-template-columns:1fr !important; }
   .sysinfo-info      { grid-template-columns:1fr !important; }
   .sysinfo-app-grid  { grid-template-columns:1fr !important; }
@@ -1191,6 +1219,9 @@ body.mobile-nav-open #sidebar-overlay { display:block; }
   /* ── Desktop/Mobile-View-Trennung ───────────────────────────── */
   .desktop-view { display:none; }
   .mobile-view  { display:block; }
+  .sysinfo-gauge-ring-wrap.mobile-view { display:flex; }
+  .sysinfo-gauge-card--ring .sysinfo-card-header { justify-content:center; text-align:center; }
+  .sysinfo-gauge-card--ring .sysinfo-gauge-sub   { justify-content:center; text-align:center; }
 
   /* ── Äußerer Content-Rahmen entfernen ───────────────────────── */
   .content-area {
@@ -1213,9 +1244,6 @@ body.mobile-nav-open #sidebar-overlay { display:block; }
     width:100%; flex-wrap:wrap; gap:6px;
   }
   .content-header-actions .btn-ghost { display:none; }
-  .content-header-actions .table-filter-select {
-    flex:1 1 auto; min-width:90px;
-  }
   .m-module-actions {
     display:flex; flex-wrap:wrap; gap:6px; margin-bottom:8px;
   }
@@ -1265,6 +1293,26 @@ body.mobile-nav-open #sidebar-overlay { display:block; }
     border-top:1px solid var(--border-s);
   }
   .m-card-footer-actions { margin-left:auto; display:flex; gap:4px; }
+
+  .sysinfo-last-checked { display:none; }
+  /* Anwendungen: eine einzige Zeilenliste direkt in der (unveränderten)
+     .sysinfo-info-card -- keine verschachtelte zweite Karte mehr. */
+  .sysinfo-update-versions {
+    font-size:12px; color:var(--text-2); white-space:nowrap;
+    margin-left:auto; text-align:right;
+    min-width:0; overflow:hidden; text-overflow:ellipsis;
+  }
+  .sysinfo-update-versions strong { color:var(--g); font-weight:600; }
+  .sysinfo-update-list-row {
+    display:flex; align-items:center; gap:10px;
+    padding:9px 0; border-bottom:1px solid var(--border-s);
+  }
+  .sysinfo-update-list-row:last-child { border-bottom:none; }
+  .sysinfo-update-list-name {
+    font-size:13px; font-weight:600; color:var(--text);
+    min-width:0; flex-shrink:1;
+    white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
+  }
 
   /* Activity-Log: kompakte Meta-Zeile */
   .al-m-line {
@@ -1318,25 +1366,110 @@ body.mobile-nav-open #sidebar-overlay { display:block; }
   .m-card-footer { padding:10px 16px; min-height:48px; }
   .m-card:active { opacity:0.88; transition:opacity 0.08s; }
 
-  /* Content-Header mit Filtern: dezente Karte */
-  .content-header:has(.table-filter-select) {
-    border-radius:14px;
-    margin-bottom:12px;
+  /* Paketliste (System-Seite) ist kein tippbares Listenelement, sondern
+     eine reine Infokarte -- soll wie die anderen flachen Karten dort
+     aussehen (System/CPU/RAM), nicht wie ein Material-elevated Listeneintrag. */
+  .sysinfo-package-list {
+    border-radius: var(--rad);
+    box-shadow: none;
   }
+  .sysinfo-package-list:active { opacity:1; }
 
-  /* FAB: „Neu"-Button als Extended Floating Action Button */
-  .content-header:not(:has(.table-filter-select)) {
+  /* Content-Header kollabiert auf Mobile immer auf 0: Filter leben im
+     Bottom-Sheet (#mobile-filter-panel, position:fixed), der "Neu"-Button
+     ist FAB (position:fixed) -- beide damit ohnehin aus dem Layoutfluss raus. */
+  .content-header {
     height:0; overflow:visible;
     margin:0; padding:0; min-height:0;
     background:transparent; box-shadow:none; border-radius:0;
   }
-  .content-header:not(:has(.table-filter-select)) .btn-primary {
+
+  /* Filter-Icon in der App-Bar: nur sichtbar, wenn die aktuelle Seite ein
+     Filter-Panel mitbringt. */
+  #mobile-filter-btn {
+    display:none;
+    width:40px; height:40px; border-radius:8px;
+    align-items:center; justify-content:center;
+    background:transparent; border:none; color:var(--text-2);
+    flex-shrink:0; margin-left:auto; cursor:pointer;
+  }
+  .app-layout:has(#mobile-filter-panel) #mobile-filter-btn { display:flex; }
+  #mobile-filter-btn:hover { background:var(--sel); }
+
+  #mobile-filter-overlay {
+    display:none;
+    position:fixed; top:0; left:0; right:0; bottom:0; z-index:65;
+    background:rgba(0,0,0,0.55);
+    backdrop-filter:blur(2px); -webkit-backdrop-filter:blur(2px);
+  }
+  body.filter-panel-open #mobile-filter-overlay { display:block; }
+
+  /* Filter-Panel: Bottom-Sheet, per Icon in der App-Bar geöffnet
+     (body.filter-panel-open steuert die Sichtbarkeit, siehe navigation.js).
+     Lebt bewusst im dynamisch geladenen Modul-Content (nicht im statischen
+     Shell), damit es beim Modulwechsel automatisch mitkommt/verschwindet. */
+  .content-header-filters {
+    display:block;
+    position:fixed; left:0; right:0; bottom:0; z-index:70;
+    background:var(--card);
+    border-radius:20px 20px 0 0;
+    box-shadow:0 -4px 24px rgba(0,0,0,0.4);
+    padding:8px 16px calc(16px + env(safe-area-inset-bottom, 0px));
+    max-height:70vh; overflow-y:auto;
+    transform:translateY(100%);
+    transition:transform 220ms var(--ease);
+  }
+  body.filter-panel-open .content-header-filters { transform:translateY(0); }
+
+  .m-filter-panel-header {
+    display:flex; align-items:center; justify-content:space-between;
+    padding:8px 4px 12px; font-size:15px; font-weight:600; color:var(--text);
+  }
+  .m-filter-group { display:block; margin-bottom:16px; }
+  .m-filter-group:last-child { margin-bottom:4px; }
+  .m-filter-group select.table-filter-select { display:none; }
+  .m-filter-group-label {
+    display:block; font-size:12px; font-weight:600; color:var(--text-3);
+    text-transform:uppercase; letter-spacing:0.04em; margin-bottom:8px;
+  }
+  .m-filter-options { display:flex; flex-wrap:wrap; gap:8px; }
+  .m-filter-option {
+    border:1px solid var(--border-s); background:var(--btn-2); color:var(--btn-2-t);
+    border-radius:16px; padding:8px 14px; font-size:13px; font-weight:500;
+    cursor:pointer;
+  }
+  .m-filter-option.active {
+    background:rgba(37,99,235,0.15); border-color:rgba(37,99,235,0.5); color:var(--b);
+    font-weight:600;
+  }
+
+  /* FAB: alle verbleibenden Header-Action-Buttons (nicht nur "Neu") immer als
+     echte Floating Action Buttons, unabhängig davon ob der Header zusätzlich
+     Filter-Selects zeigt (die sind ja eh ins Bottom-Sheet ausgelagert).
+     Android-Standard: schwebende Buttons unten rechts, nie Teil der
+     Kopfzeile. Farbe/Variante (primary/danger/ghost/accent) bleibt jeweils
+     wie gehabt -- hier wird nur Position/Form/Größe vereinheitlicht.
+     .sysinfo-card-header .btn: dasselbe für "Auf Updates prüfen" auf der
+     System-Seite (eigenes, nicht-generisches content.html). */
+  .content-header-actions > .btn, .sysinfo-card-header .btn {
     position:fixed; bottom:24px; right:20px; z-index:30;
-    border-radius:10px; height:48px; padding:0 24px;
+    border-radius:24px; height:48px; padding:0 20px 0 16px;
     font-size:14px; font-weight:600; letter-spacing:0.01em;
+    box-shadow:0 4px 20px rgba(0,0,0,0.35), 0 2px 6px rgba(0,0,0,0.3);
+    transition:box-shadow 0.15s ease, transform 0.1s ease;
+  }
+  .content-header-actions > .btn.btn-primary, .sysinfo-card-header .btn.btn-primary {
     box-shadow:0 4px 20px rgba(37,99,235,0.5), 0 2px 6px rgba(0,0,0,0.3);
   }
-  .content-header:not(:has(.table-filter-select)) .btn-primary:not(:last-child) {
+  .content-header-actions > .btn svg, .sysinfo-card-header .btn svg {
+    width:20px; height:20px; flex-shrink:0;
+  }
+  .content-header-actions > .btn:active, .sysinfo-card-header .btn:active {
+    transform:scale(0.96);
+    box-shadow:0 2px 8px rgba(0,0,0,0.35), 0 1px 3px rgba(0,0,0,0.3);
+  }
+  /* Mehrere Buttons stapeln sich nach oben statt sich zu überlappen. */
+  .content-header-actions > .btn:not(:last-child) {
     bottom:84px;
   }
 }
@@ -1493,5 +1626,10 @@ body.mobile-nav-open #sidebar-overlay { display:block; }
 
 /* ════════════════════ DEBUG MODE ════════════════════════════════ */
 .debug-mode .app-layout {
+  border-top: 3px solid #dc2626;
+}
+/* #mobile-header liegt fest über dem oberen Rand von .app-layout und würde
+   den roten Debug-Strich im Hochformat sonst komplett verdecken. */
+.debug-mode #mobile-header {
   border-top: 3px solid #dc2626;
 }
