@@ -15,20 +15,27 @@
 
     {% import 'partials/components/mobile_card_macros.html' as mc %}
     {% for item_id, item in cfg.items() %}
-      {% call mc.m_card(item.description or item_id, status=item.get('last_status')) %}
+      {% set _footer %}
+        {{ mc.m_card_actions_default(module, item_id, item, container_id, loading_id) }}
+      {% endset %}
+      {% call mc.m_card(item.description or item_id, status=item.get('last_status'), footer=_footer) %}
         {{ mc.m_card_row('Ziel', item.get('target_path')) }}
       {% endcall %}
-      {% call mc.m_card_footer() %}
-        {{ mc.m_card_actions_default(module, item_id, item, container_id, loading_id) }}
-      {% endcall %}
     {% endfor %}
+
+  Wichtig: footer wird als ECHTES Kind-Element von .m-card gerendert (nicht
+  als Sibling-Div daneben) -- Aktions-Buttons sollen sichtbar Teil der Karte
+  sein, nicht nur optisch per CSS angeglichen.
 #}
 {% import 'partials/components/ui_macros.html' as ui %}
 
 {# Karten-Wrapper: Titel + optionaler Status im Header, caller() liefert die
    Meta-Zeilen (via m_card_row). Ohne caller-Body wird kein .m-card-meta
-   gerendert (z.B. wenn eine Karte nur Header+Footer braucht). #}
-{% macro m_card(title, status=none, enabled=True) %}
+   gerendert (z.B. wenn eine Karte nur Header+Footer braucht). footer
+   (vorgerenderter, bereits escapeter HTML-String -- z.B. via {% set %}...
+   {% endset %} oder m_card_actions_default()) landet als .m-card-footer
+   INNERHALB derselben Karte, nicht als separates Sibling-Element. #}
+{% macro m_card(title, status=none, enabled=True, footer=none) %}
 <div class="m-card {{ 'on' if enabled else 'off' }}">
   <div class="m-card-header">
     <span class="m-card-title">{{ title }}</span>
@@ -36,6 +43,9 @@
   </div>
   {% if caller is defined %}
   <div class="m-card-meta">{{ caller() }}</div>
+  {% endif %}
+  {% if footer %}
+  <div class="m-card-footer">{{ footer }}</div>
   {% endif %}
 </div>
 {% endmacro %}

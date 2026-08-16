@@ -1287,6 +1287,9 @@ body.mobile-nav-open #sidebar-overlay { display:block; }
     color:var(--text-2);
     min-width:0; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
   }
+  /* footer ist echtes Kind von .m-card (m_card(..., footer=...) Parameter,
+     siehe mobile_card_macros.html) -- erbt Hintergrund/Radius/overflow:hidden
+     der Karte automatisch, braucht nur noch Layout + Trennlinie. */
   .m-card-footer {
     display:flex; align-items:center; gap:4px;
     padding:8px 14px;
@@ -1365,15 +1368,6 @@ body.mobile-nav-open #sidebar-overlay { display:block; }
   .m-card-title  { font-size:15px; }
   .m-card-footer { padding:10px 16px; min-height:48px; }
   .m-card:active { opacity:0.88; transition:opacity 0.08s; }
-
-  /* Paketliste (System-Seite) ist kein tippbares Listenelement, sondern
-     eine reine Infokarte -- soll wie die anderen flachen Karten dort
-     aussehen (System/CPU/RAM), nicht wie ein Material-elevated Listeneintrag. */
-  .sysinfo-package-list {
-    border-radius: var(--rad);
-    box-shadow: none;
-  }
-  .sysinfo-package-list:active { opacity:1; }
 
   /* Content-Header kollabiert auf Mobile immer auf 0: Filter leben im
      Bottom-Sheet (#mobile-filter-panel, position:fixed), der "Neu"-Button
