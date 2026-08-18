@@ -20,6 +20,7 @@ module = load_modul(
                 hx_target="body",
                 style="primary",
                 icon="plus",
+                css_class="fab-row-left",
             ),
             Header.action_button(
                 "Neuer Job",
