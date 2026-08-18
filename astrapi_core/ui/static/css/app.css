@@ -29,14 +29,21 @@
 
 /* ── Tailwind-nahe Dark Tokens ──────────────────────────────── */
 :root {
-  --bg:          #101010;
+  /* Exakte Werte per Farbpipette aus der Obsidian-Referenz: bg #000000,
+     card #1e1e1e, Trennlinie #333333. */
+  --bg:          #000000;
   --sb:          #151515;
-  --card:        #1a1a1a;
-  --card-hi:     #222222;
-  --sel:         #2a2a2a;
-  --input-bg:    #111111;
+  --card:        #1e1e1e;
+  --card-hi:     #262626;
+  --sel:         #2c2c2c;
+  /* #282828 statt #0a0a0a: Formularelemente (Dropdown, Buttons) sitzen in
+     der Referenz sichtbar heller/"erhaben" auf der Karte, nicht dunkler/
+     "eingesunken" wie bisher. */
+  --input-bg:    #282828;
 
-  --border-s:    rgba(255,255,255,0.08);
+  /* Alpha 0.093 (weiss ueber --card) ergibt exakt #333333 -- der von der
+     Referenz abgepipettete Linienton. */
+  --border-s:    rgba(255,255,255,0.093);
   --border-i:    rgba(255,255,255,0.11);
 
   --text:        #f4f4f5;
@@ -47,7 +54,10 @@
   --text-3:      rgba(244,244,245,0.50);
 
   --card-off:    #141414;
-  --card-off-hi: #1e1e1e;
+  /* #171717 statt vormals #1e1e1e: kollidierte mit dem neuen --card
+     (#1e1e1e) -- eine gehoverte deaktivierte Karte saehe sonst aus wie
+     eine normale aktive Karte in Ruhe. */
+  --card-off-hi: #171717;
   --text-off:    rgba(244,244,245,0.34);
   --text-off-2:  rgba(244,244,245,0.22);
   --sh-off:      none;
@@ -89,14 +99,20 @@
 
 /* ── Tailwind-nahe Light Tokens ─────────────────────────────── */
 .light-mode {
-  --bg:          #f5f5f5;
+  /* #e2e2e8 statt vormals #f5f5f5: --card-hi lag bisher exakt auf --bg
+     (Hover einer Karte war unsichtbar, 1.00:1). Jetzt liegt der alte
+     --bg-Wert (#f5f5f5, unten als --card-hi weiterverwendet) zwischen
+     dem neuen, dunkleren --bg und der reinweissen --card. */
+  --bg:          #e2e2e8;
   --sb:          #fafafa;
   --card:        #ffffff;
   --card-hi:     #f5f5f5;
-  --sel:         #eef2ff;
+  --sel:         #e4e9fb;
   --input-bg:    #ffffff;
 
-  --border-s:    rgba(15,23,42,0.10);
+  /* 0.22 statt vormals 0.10: siehe Dark-Mode-Kommentar oben, hier ~1.6:1
+     gegen --card (Variante "Flaechen betont"). */
+  --border-s:    rgba(15,23,42,0.22);
   --border-i:    rgba(15,23,42,0.14);
 
   --text:        #0f172a;
@@ -571,6 +587,8 @@ input,select,textarea { font-family:var(--font); }
 /* ═══════════════════════════ CARDS ══════════════════════════════ */
 .content-item {
   border-radius:var(--rad); padding:0; overflow:hidden;
+  /* Kein aeusserer Rahmen -- die Abgrenzung zur Seite traegt allein der
+     kraeftigere --card/--bg-Flaechenkontrast, siehe Token-Kommentare oben. */
   transition:background var(--t) var(--ease), box-shadow var(--t) var(--ease), transform var(--t) var(--ease);
 }
 .content-item.on  { background:var(--card); }
@@ -600,25 +618,32 @@ input,select,textarea { font-family:var(--font); }
 }
 .content-item.off .card-actions { border-left-color:var(--border-s); }
 
+/* Trennlinien als inset Hintergrund-Gradient statt echtem border -- so
+   reicht die Linie nicht bis an die abgerundeten Kartenecken, sondern
+   endet buendig mit dem seitlichen Innenabstand (Vorbild: Obsidian-
+   Einstellungsseite, deren Trennlinien ebenfalls eingerueckt sind). */
 .card-header {
   display:flex; align-items:center; justify-content:space-between;
-  padding:12px 16px 10px; border-bottom:1px solid var(--border-s); gap:8px;
+  padding:12px 16px 10px; gap:8px;
+  background:linear-gradient(var(--border-s),var(--border-s)) no-repeat left 16px bottom / calc(100% - 32px) 1px;
 }
-.content-item.off .card-header { border-bottom-color:transparent; }
+.content-item.off .card-header { background:none; }
 .card-header .card-title { font-size:13px; font-weight:600; color:var(--text); }
 
 .card-footer {
   display:flex; align-items:center; justify-content:space-between;
-  padding:10px 16px; border-top:1px solid var(--border-s);
+  padding:10px 16px;
+  background:linear-gradient(var(--border-s),var(--border-s)) no-repeat left 16px top / calc(100% - 32px) 1px;
 }
-.content-item.off .card-footer { border-top-color:transparent; }
+.content-item.off .card-footer { background:none; }
 
 .card-run-info {
   display:flex; align-items:center; justify-content:space-between;
-  padding:6px 16px; border-top:1px solid var(--border-s);
+  padding:6px 16px;
+  background:linear-gradient(var(--border-s),var(--border-s)) no-repeat left 16px top / calc(100% - 32px) 1px;
   font-size:12px;
 }
-.card-header + .card-run-info { border-top:none; }
+.card-header + .card-run-info { background:none; }
 .card-run-left  { display:flex; align-items:center; gap:6px; color:var(--text-s); }
 .card-run-date  { color:var(--text); }
 
@@ -935,7 +960,7 @@ input,select,textarea { font-family:var(--font); }
 }
 .notify-section-head {
   padding:10px 14px 9px;
-  border-bottom:1px solid var(--border-s);
+  background:linear-gradient(var(--border-s),var(--border-s)) no-repeat left 14px bottom / calc(100% - 28px) 1px;
 }
 .notify-section-title {
   font-size:11px;
@@ -1278,15 +1303,17 @@ body.mobile-nav-open #sidebar-overlay { display:block; }
     border-radius:var(--rad);
     background:var(--card);
     overflow:hidden;
-    margin-bottom:8px;
+    /* 14px statt 8px: mehr Luft zwischen den Karten. */
+    margin-bottom:14px;
     transition:background var(--t);
   }
   .m-card.off { background:var(--card-off); }
   .m-card-header {
     display:flex; align-items:center; justify-content:space-between;
     gap:8px;
-    padding:12px 14px 10px;
-    border-bottom:1px solid var(--border-s);
+    /* 18px statt 14px horizontal -- Trennlinien-Inset unten zieht mit. */
+    padding:12px 18px 10px;
+    background:linear-gradient(var(--border-s),var(--border-s)) no-repeat left 18px bottom / calc(100% - 36px) 1px;
   }
   .m-card-title {
     font-size:14px; font-weight:600; color:var(--text);
@@ -1295,7 +1322,7 @@ body.mobile-nav-open #sidebar-overlay { display:block; }
     flex:1;
   }
   .m-card-meta {
-    padding:8px 14px;
+    padding:8px 18px;
     display:flex; flex-direction:column; gap:4px;
   }
   .m-card-meta-row {
@@ -1314,8 +1341,8 @@ body.mobile-nav-open #sidebar-overlay { display:block; }
      der Karte automatisch, braucht nur noch Layout + Trennlinie. */
   .m-card-footer {
     display:flex; align-items:center; gap:4px;
-    padding:8px 14px;
-    border-top:1px solid var(--border-s);
+    padding:8px 18px;
+    background:linear-gradient(var(--border-s),var(--border-s)) no-repeat left 18px top / calc(100% - 36px) 1px;
   }
   .m-card-footer-actions { margin-left:auto; display:flex; gap:4px; }
 
@@ -1387,11 +1414,18 @@ body.mobile-nav-open #sidebar-overlay { display:block; }
   .m-card {
     border-radius:16px;
     box-shadow:0 1px 3px rgba(0,0,0,0.3), 0 3px 10px rgba(0,0,0,0.18);
-    margin-bottom:10px;
+    margin-bottom:16px;
   }
-  .m-card-header { padding:14px 16px 12px; min-height:56px; }
+  .m-card-header {
+    padding:14px 20px 12px; min-height:56px;
+    background:linear-gradient(var(--border-s),var(--border-s)) no-repeat left 20px bottom / calc(100% - 40px) 1px;
+  }
   .m-card-title  { font-size:15px; }
-  .m-card-footer { padding:10px 16px; min-height:48px; }
+  .m-card-meta   { padding:8px 20px; }
+  .m-card-footer {
+    padding:10px 20px; min-height:48px;
+    background:linear-gradient(var(--border-s),var(--border-s)) no-repeat left 20px top / calc(100% - 40px) 1px;
+  }
   .m-card:active { opacity:0.88; transition:opacity 0.08s; }
 
   /* Content-Header kollabiert auf Mobile immer auf 0: Filter leben im
@@ -1525,7 +1559,7 @@ body.mobile-nav-open #sidebar-overlay { display:block; }
   justify-content: space-between;
   gap: 20px;
   padding: 14px 16px;
-  border-bottom: 1px solid var(--border-s);
+  background: linear-gradient(var(--border-s),var(--border-s)) no-repeat left 16px bottom / calc(100% - 32px) 1px;
 }
 .settings-row-block {
   flex-direction: column;
