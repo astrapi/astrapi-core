@@ -48,6 +48,8 @@ class Module:
         module_root       – Pfad zum Modul-Verzeichnis (wird automatisch gesetzt)
         hidden            – Modul nicht in der Navigation anzeigen (auch nicht automatisch)
         settings_embed    – Modul-Content per Lazy-Load in die Einstellungen-Seite einbetten
+        settings_order    – Sortier-Gewicht der Modul-Karte auf der Einstellungen-Seite
+                            (aufsteigend, Default 0, gleicher Wert → alphabetisch nach key)
     """
 
     key: str
@@ -61,6 +63,7 @@ class Module:
     nav_group: Optional[str] = None
     hidden: bool = False
     settings_embed: bool = False
+    settings_order: int = 0
 
     settings_defaults: dict = field(default_factory=dict)
     settings_schema: list = field(default_factory=list)
