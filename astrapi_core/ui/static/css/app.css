@@ -41,7 +41,10 @@
 
   --text:        #f4f4f5;
   --text-2:      rgba(244,244,245,0.72);
-  --text-3:      rgba(244,244,245,0.42);
+  /* 0.50 statt vormals 0.42: WCAG-AA-Kontrast (4.5:1) fuer Fliesstext auf
+     --card (#1a1a1a) -- 0.42 lag bei ~3.8:1, faellt fuer die 11px-Hilfetexte
+     durch, die diese Variable ueberwiegend nutzen. */
+  --text-3:      rgba(244,244,245,0.50);
 
   --card-off:    #141414;
   --card-off-hi: #1e1e1e;
@@ -98,7 +101,9 @@
 
   --text:        #0f172a;
   --text-2:      rgba(15,23,42,0.72);
-  --text-3:      rgba(15,23,42,0.48);
+  /* 0.62 statt vormals 0.48: WCAG-AA-Kontrast (4.5:1) auf --card (#ffffff)
+     -- 0.48 lag bei ~3.2:1, siehe Dark-Mode-Kommentar oben. */
+  --text-3:      rgba(15,23,42,0.62);
 
   --card-off:    #efefef;
   --card-off-hi: #e5e5e5;
@@ -219,7 +224,7 @@ input,select,textarea { font-family:var(--font); }
   flex:1; overflow-y:auto;
   padding:0;
   background:var(--bg);
-  scroll-padding-top:52px;
+  scroll-padding-top:58px;
 }
 
 /* ═══════════════════════════ PAGE HEADER ════════════════════════ */
@@ -1156,7 +1161,7 @@ input,select,textarea { font-family:var(--font); }
 #mobile-header {
   display:none;
   position:fixed; top:0; left:0; right:0; z-index:50;
-  height:52px;
+  height:58px;
   align-items:center; gap:4px;
   background:var(--bg);
   border-bottom:1px solid var(--border-s);
@@ -1170,13 +1175,24 @@ input,select,textarea { font-family:var(--font); }
   cursor:pointer; color:var(--text-2);
 }
 #mobile-menu-btn:hover { background:var(--sel); }
+/* Zeigt welche der drei Apps gerade offen ist (Sidebar mit dem App-Namen ist
+   auf Mobile hinter dem Hamburger versteckt) + den Modul-Namen darunter. */
+#mobile-title-group {
+  display:flex; flex-direction:column; justify-content:center;
+  min-width:0; gap:1px;
+}
+#mobile-app-name {
+  font-size:10.5px; font-weight:600; letter-spacing:0.05em; text-transform:uppercase;
+  color:var(--text-3);
+  white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
+}
 #mobile-title {
-  font-size:15px; font-weight:600; color:var(--text-1);
+  font-size:15px; font-weight:600; color:var(--text);
   white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
 }
 #sidebar-overlay {
   display:none;
-  position:fixed; top:52px; left:0; right:0; bottom:0; z-index:35;
+  position:fixed; top:58px; left:0; right:0; bottom:0; z-index:35;
   background:rgba(0,0,0,0.55);
   backdrop-filter:blur(2px);
   -webkit-backdrop-filter:blur(2px);
@@ -1191,11 +1207,18 @@ body.mobile-nav-open #sidebar-overlay { display:block; }
      würde die per Inline-Style gesetzte Custom Property gewinnen. */
   .form-grid, .form-grid--with-toggle { grid-template-columns:1fr !important; }
 
+  /* Speichern-/Hinzufuegen-Buttons in Settings-Karten und Formularen: volle
+     Breite statt kleiner rechtsbuendiger Ziel -- deutlich leichter mit dem
+     Daumen zu treffen. */
+  .form-actions { justify-content:stretch; }
+  .form-actions > .btn,
+  .list-field-add > .btn { width:100%; justify-content:center; }
+
   /* Modal: weniger Innenabstand/Radius auf schmalen Screens */
   .ds-modal { padding:18px 16px; border-radius:16px; }
   .ds-modal-title { font-size:17px; }
   #sidebar {
-    position:fixed; top:52px; left:0; bottom:0; z-index:40;
+    position:fixed; top:58px; left:0; bottom:0; z-index:40;
     transform:translateX(-100%);
     transition:transform 260ms var(--ease);
     box-shadow:4px 0 24px rgba(0,0,0,0.4);
@@ -1203,7 +1226,7 @@ body.mobile-nav-open #sidebar-overlay { display:block; }
   }
   body.mobile-nav-open #sidebar { transform:translateX(0); }
   .main-content {
-    padding:56px 16px 16px;
+    padding:62px 16px 16px;
     height:100vh;
     overflow-y:auto;
   }
@@ -1243,7 +1266,6 @@ body.mobile-nav-open #sidebar-overlay { display:block; }
   .content-header-actions {
     width:100%; flex-wrap:wrap; gap:6px;
   }
-  .content-header-actions .btn-ghost { display:none; }
   .m-module-actions {
     display:flex; flex-wrap:wrap; gap:6px; margin-bottom:8px;
   }
@@ -1329,8 +1351,11 @@ body.mobile-nav-open #sidebar-overlay { display:block; }
 
   /* App-Bar: 56dp, Schatten, Touch-Targets */
   #mobile-header {
-    height:56px;
+    height:62px;
     box-shadow:0 2px 12px rgba(0,0,0,0.5);
+  }
+  #mobile-app-name {
+    font-size:11px;
   }
   #mobile-title {
     font-size:17px; font-weight:600; letter-spacing:-0.01em;
@@ -1340,11 +1365,11 @@ body.mobile-nav-open #sidebar-overlay { display:block; }
   }
 
   /* Sidebar + Overlay an neue App-Bar-Höhe anpassen */
-  #sidebar         { top:56px; width:min(280px, 82vw); }
-  #sidebar-overlay { top:56px; }
+  #sidebar         { top:62px; width:min(280px, 82vw); }
+  #sidebar-overlay { top:62px; }
 
   /* Hauptinhalt: genug Luft nach oben (App-Bar) + unten (FAB) */
-  .main-content { padding-top:64px; padding-bottom:88px; }
+  .main-content { padding-top:70px; padding-bottom:88px; }
 
   /* Nav-Items: Android-Drawer-Stil */
   .nav-item {
@@ -1465,6 +1490,15 @@ body.mobile-nav-open #sidebar-overlay { display:block; }
   /* Mehrere Buttons stapeln sich nach oben statt sich zu überlappen. */
   .content-header-actions > .btn:not(:last-child) {
     bottom:84px;
+  }
+  /* Ausnahme: Ghost-Buttons (z.B. "Auf Updates prüfen" bei debian/archlinux)
+     sowie Buttons mit der Marker-Klasse .fab-row-left (z.B. "Neuer Kanal"
+     bei notify, ueber Header.action_button(css_class="fab-row-left") gesetzt)
+     bleiben in derselben Zeile wie der primäre FAB, linksbündig statt
+     gestapelt -- kein zweiter schwebender Button übereinander. */
+  .content-header-actions > .btn-ghost:not(:last-child),
+  .content-header-actions > .btn.fab-row-left:not(:last-child) {
+    bottom:24px; left:20px; right:auto;
   }
 }
 

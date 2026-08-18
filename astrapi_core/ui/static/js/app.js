@@ -173,10 +173,66 @@ function initAllTableSort(root) {
 document.addEventListener('DOMContentLoaded', () => initAllTableSort());
 document.body.addEventListener('htmx:afterSwap', e => initAllTableSort(e.detail.target));
 
-// ── Modal schließen ──────────────────────────────────────────────────────
-function closeModal(el) {
-    el.closest('.ds-modal-backdrop')?.remove();
+// ── Modal öffnen/schließen: Fokus-Management ─────────────────────────────
+// Fokus-Rueckgabe: merkt sich beim Oeffnen eines Modals (hx-target="body"
+// hx-swap="beforeend") das ausloesende Element und gibt beim Schliessen den
+// Fokus dorthin zurueck -- ohne das verlieren Tastatur-/Screenreader-Nutzer
+// ihre Position in der Liste dahinter.
+// Autofokus: das erste fokussierbare Feld im Modal bekommt beim Oeffnen den
+// Fokus (nicht den Schliessen-Button oben rechts).
+function _focusableEls(container) {
+    return Array.from(container.querySelectorAll(
+        'a[href], button:not([disabled]), textarea:not([disabled]), ' +
+        'input:not([disabled]):not([type="hidden"]), select:not([disabled]), ' +
+        '[tabindex]:not([tabindex="-1"])'
+    )).filter((el) => el.offsetParent !== null); // nur sichtbare Elemente
 }
+
+document.body.addEventListener('htmx:afterSwap', (evt) => {
+    if (evt.detail.target !== document.body) return;
+    const backdrop = document.body.querySelector('.ds-modal-backdrop:last-of-type');
+    if (!backdrop) return;
+    if (evt.detail.elt) backdrop._triggerEl = evt.detail.elt;
+
+    const focusable = _focusableEls(backdrop);
+    const firstField = focusable.find((el) => !el.classList.contains('ds-modal-close'));
+    (firstField || focusable[0])?.focus();
+});
+
+function closeModalEl(backdrop) {
+    if (!backdrop) return;
+    const trigger = backdrop._triggerEl;
+    backdrop.remove();
+    if (trigger && document.body.contains(trigger) && typeof trigger.focus === 'function') {
+        trigger.focus();
+    }
+}
+
+function closeModal(el) {
+    closeModalEl(el.closest('.ds-modal-backdrop'));
+}
+
+// Fokus-Trap: Tab/Umschalt+Tab bleiben innerhalb des obersten Modals, statt
+// in die Seite dahinter zu wandern.
+document.addEventListener('keydown', (evt) => {
+    if (evt.key !== 'Tab') return;
+    const modals = document.querySelectorAll('.ds-modal-backdrop');
+    if (!modals.length) return;
+    const backdrop = modals[modals.length - 1];
+    if (!backdrop.contains(document.activeElement)) return;
+
+    const focusable = _focusableEls(backdrop);
+    if (!focusable.length) return;
+    const first = focusable[0];
+    const last = focusable[focusable.length - 1];
+    if (evt.shiftKey && document.activeElement === first) {
+        evt.preventDefault();
+        last.focus();
+    } else if (!evt.shiftKey && document.activeElement === last) {
+        evt.preventDefault();
+        first.focus();
+    }
+});
 
 // ── Zwischenablage mit Fallback ─────────────────────────────────────────
 // navigator.clipboard existiert nur in "sicheren Kontexten" (HTTPS oder
@@ -209,14 +265,11 @@ window.copyToClipboard = function (text) {
     }
 };
 
-// Escape-Taste schließt das oberste offene Modal.
-// Modals mit x-show werden übersprungen – Alpine verwaltet deren Sichtbarkeit selbst.
-document.addEventListener('keydown', function(e) {
-    if (e.key !== 'Escape') return;
-    var modals = Array.from(document.querySelectorAll('.ds-modal-backdrop'))
-        .filter(function(m) { return !m.hasAttribute('x-show'); });
-    if (modals.length > 0) modals[modals.length - 1].remove();
-});
+// Escape-Taste: siehe x-on:keydown.escape.window="closeModalEl($el)" in
+// dialog_core.html -- war hier zusaetzlich als globaler Handler dupliziert
+// (document-Listener feuert vor window-Listenern in der Bubble-Phase, hat
+// das Modal also direkt per .remove() entfernt, BEVOR Alpine's Handler mit
+// der Fokus-Rueckgabe drankam). Entfernt statt der zwei parallelen Pfade.
 
 // ── Modul-Filter (Cookie-persistent, überlebt Browser-Reload) ────────────────
 // Verwendung: x-data="moduleFilter('modulname__feldname')"

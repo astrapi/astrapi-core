@@ -6,6 +6,19 @@
 <p class="ds-modal-copy">
   Möchtest du <strong>{{ description }}</strong>{% if qualifier %} {{ qualifier }}{% endif %} {{ verb }}?
 </p>
+{% if cascade_items %}
+<div class="alert" style="align-items:flex-start; margin-top:10px; border-color:var(--warn); background:var(--warn-bg);">
+  <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" stroke="none" style="flex-shrink:0; margin-top:1px;"><use href="#icon-alert"></use></svg>
+  <div>
+    <div style="font-weight:600; margin-bottom:2px;">
+      {{ cascade_items | length }} weitere{{ 'r' if cascade_items | length == 1 else '' }} Eintrag{{ '' if cascade_items | length == 1 else 'e' }} wird{{ '' if cascade_items | length == 1 else 'en' }} mitgelöscht:
+    </div>
+    <div style="font-family:var(--mono); font-size:12px; color:var(--text-2);">
+      {{ cascade_items | join(', ') }}
+    </div>
+  </div>
+</div>
+{% endif %}
 {% endblock %}
 
 {% block dialog_footer %}
@@ -14,7 +27,7 @@
           onclick="closeModal(this)">Abbrechen</button>
   <button type="button" class="btn btn-sm btn-{{ btn_style | default('danger') }}"
           hx-{{ method | default('post') }}="{{ confirm_url }}"
-          hx-on::after-request="{% if reload_url %}if(event.detail.successful){htmx.ajax('GET','{{ reload_url }}',{target:'{{ reload_target_id | default('#main-content', true) }}',swap:'innerHTML'});this.closest('.ds-modal-backdrop').remove()}{% else %}this.closest('.ds-modal-backdrop').remove(){% endif %}">
+          hx-on::after-request="{% if reload_url %}if(event.detail.successful){htmx.ajax('GET','{{ reload_url }}',{target:'{{ reload_target_id | default('#main-content', true) }}',swap:'innerHTML'});} closeModalEl(this.closest('.ds-modal-backdrop'));{% else %}closeModalEl(this.closest('.ds-modal-backdrop'));{% endif %}">
     {{ verb | capitalize }}
   </button>
 </div>

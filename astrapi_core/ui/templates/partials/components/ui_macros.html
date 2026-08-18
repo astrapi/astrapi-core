@@ -10,14 +10,14 @@
 
 {% macro edit_button(module=None, item=None, container_id=None, loading_id=None, item_prefix='') %}
   <button hx-get="/ui/{{ module }}/{{ item_prefix }}{{ item }}/edit?container_id={{ container_id }}&loading_id={{ loading_id }}"
-    hx-target="body" hx-swap="beforeend" class="btn-icon" title="Bearbeiten">
+    hx-target="body" hx-swap="beforeend" class="btn-icon" title="Bearbeiten" aria-label="Bearbeiten">
     <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" stroke="none"><use href="#icon-edit"></use></svg>
   </button>
 {% endmacro %}
 
 {% macro delete_button(module=None, item=None, container_id=None, loading_id=None, description=None, item_prefix='') %}
   <button hx-get="/ui/{{ module }}/{{ item_prefix }}{{ item }}/delete?container_id={{ container_id }}&loading_id={{ loading_id }}&description={{ description }}"
-    hx-target="body" hx-swap="beforeend" class="btn-icon btn-icon-danger" title="Löschen">
+    hx-target="body" hx-swap="beforeend" class="btn-icon btn-icon-danger" title="Löschen" aria-label="Löschen">
     <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" stroke="none"><use href="#icon-trash"></use></svg>
   </button>
 {% endmacro %}
@@ -26,7 +26,8 @@
   <button hx-get="/ui/{{ module }}/{{ item }}/toggle?container_id={{ container_id }}&loading_id={{ loading_id }}&description={{ description }}&enabled={{ enabled }}"
     hx-target="body" hx-swap="beforeend"
     class="toggle-switch {{ 'toggle-on' if enabled else 'toggle-off' }}"
-    title="{{ 'Deaktivieren' if enabled else 'Aktivieren' }}">
+    title="{{ 'Deaktivieren' if enabled else 'Aktivieren' }}"
+    aria-label="{{ 'Deaktivieren' if enabled else 'Aktivieren' }}">
     <span class="toggle-knob"></span>
   </button>
 {% endmacro %}
@@ -84,7 +85,7 @@
     hx-get="{{ endpoint }}/list"
     hx-target="#{{ container_id }}" hx-swap="innerHTML"
     hx-indicator="#{{ loading_id }}"
-    class="btn-icon" title="Aktualisieren"
+    class="btn-icon" title="Aktualisieren" aria-label="Aktualisieren"
   >
     <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor" stroke="none"><use href="#icon-refresh-lg"></use></svg>
   </button>
@@ -101,6 +102,7 @@
     hx-headers='{"HX-Request": "true"}'
     class="btn-icon btn-icon-run"
     title="{{ 'Ausführen' if enabled else 'Deaktiviert – nur Debug-Run möglich' }}"
+    aria-label="{{ 'Ausführen' if enabled else 'Deaktiviert – nur Debug-Run möglich' }}"
     {% if not enabled %}disabled{% endif %}
   >
     <svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor" stroke="none"><use href="#icon-play"></use></svg>
@@ -113,7 +115,7 @@
     hx-target="#{{ container_id }}" hx-swap="innerHTML"
     hx-headers='{"HX-Request": "true"}'
     class="btn-icon btn-icon-debug"
-    title="Ausführen (Debug)"
+    title="Ausführen (Debug)" aria-label="Ausführen (Debug)"
   >
     <svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor" stroke="none"><use href="#icon-play-debug"></use></svg>
   </button>
@@ -126,7 +128,7 @@
     hx-get="/api/{{ module }}/{{ item }}/logs"
     hx-target="body" hx-swap="beforeend"
     class="btn-icon btn-icon-log"
-    title="Log anzeigen"
+    title="Log anzeigen" aria-label="Log anzeigen"
   >
     <svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor" stroke="none"><use href="#icon-file-text"></use></svg>
   </button>
@@ -150,9 +152,9 @@
   Klasse .htmx-request auf das auslösende Element; die CSS-Regeln in app.css
   blenden dann Label gegen Spinner + busy_label aus und sperren den Button.
 #}
-{% macro btn(label='', variant='ghost', size='sm', type='button', onclick=None, attrs='', busy_label=None, icon=None) %}
+{% macro btn(label='', variant='ghost', size='sm', type='button', onclick=None, attrs='', busy_label=None, icon=None, extra_class=None) %}
 <button type="{{ type }}"
-        class="btn btn-{{ variant }}{% if size %} btn-{{ size }}{% endif %}{% if busy_label %} btn--busy{% endif %}"
+        class="btn btn-{{ variant }}{% if size %} btn-{{ size }}{% endif %}{% if busy_label %} btn--busy{% endif %}{% if extra_class %} {{ extra_class }}{% endif %}"
         {% if onclick %}onclick="{{ onclick }}"{% endif %}
         {% if attrs %}{{ attrs | safe }}{% endif %}>
   {%- if icon %}<svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" stroke="none"><use href="#icon-{{ icon }}"></use></svg>{% endif -%}
@@ -396,12 +398,12 @@
 <a class="btn-icon{% if action.style %} btn-icon-{{ action.style }}{% endif %}"
    href="{{ _sub(action.href) }}"
    target="_blank" rel="noopener"
-   title="{{ action.title }}">
+   title="{{ action.title }}" aria-label="{{ action.title }}">
   {{ icon(action.icon) }}
 </a>
 {%- else -%}
 <button class="btn-icon{% if action.style %} btn-icon-{{ action.style }}{% endif %}"
-        title="{{ action.title }}"
+        title="{{ action.title }}" aria-label="{{ action.title }}"
         {% if action.hx_get  %}hx-get="{{  _sub(action.hx_get)  }}"{% endif %}
         {% if action.hx_post %}hx-post="{{ _sub(action.hx_post) }}"{% endif %}
         {% if action.hx_headers %}hx-headers='{{ action.hx_headers }}'{% endif %}
@@ -547,7 +549,7 @@
 {%- set _attrs = (('hx-get="'  ~ ctrl.hx_get  ~ '" ') if ctrl.hx_get  else '')
                ~ (('hx-post="' ~ ctrl.hx_post ~ '" ') if ctrl.hx_post else '')
                ~ (('hx-target="' ~ (ctrl.hx_target or 'body') ~ '" hx-swap="' ~ (ctrl.hx_swap or 'beforeend') ~ '"') if (ctrl.hx_get or ctrl.hx_post) else '') -%}
-{{ btn(ctrl.label, variant=ctrl.style or 'primary', attrs=_attrs, icon=ctrl.icon or none) }}
+{{ btn(ctrl.label, variant=ctrl.style or 'primary', attrs=_attrs, icon=ctrl.icon or none, extra_class=ctrl.css_class or none) }}
 {%- endif %}
 {% endmacro %}
 

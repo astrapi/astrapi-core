@@ -6,7 +6,10 @@
     <button id="mobile-menu-btn" onclick="toggleMobileNav()" aria-label="Menü öffnen">
       <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" stroke="none"><use href="#icon-hamburger"></use></svg>
     </button>
-    <span id="mobile-title"></span>
+    <div id="mobile-title-group">
+      <span id="mobile-app-name">{{ app_name }}</span>
+      <span id="mobile-title">{{ title | default('') }}</span>
+    </div>
     {# nur sichtbar, wenn die aktuelle Seite Filter mitbringt (per :has()
        CSS-Regel an mobile-filter-panel gebunden, siehe app.css) #}
     <button id="mobile-filter-btn" onclick="toggleFilterPanel()" aria-label="Filter öffnen">
