@@ -26,7 +26,7 @@
                 hx-target="#settings-container"
                 hx-swap="outerHTML"
                 class="form-stack" style="gap:14px;">
-            <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px;">
+            <div class="form-grid" style="--cols:2;">
               <div class="form-group" style="margin:0;">
                 <label class="form-label">Einträge pro Seite</label>
                 {{ form_input('PAGINATION_PAGE_SIZE',
@@ -42,6 +42,39 @@
                 <div style="font-size:11px; color:var(--text-3); margin-top:4px;">Ältere abgeschlossene Einträge werden beim Start entfernt; 0 = unbegrenzt</div>
               </div>
             </div>
+
+            {# ── System: Zusätzlicher Speicher (frueher eigene Karte) ──────── #}
+            <div class="form-group" style="margin:0;">
+              <label class="form-label">Zusätzlicher Speicher</label>
+              <div x-data='{ "lines": {{ extra_disks | default([]) | tojson }},
+                             add() { this.lines.push("") },
+                             remove(i) { this.lines.splice(i, 1) } }'
+                   class="stack-sm">
+                <template x-for="(line, i) in lines" :key="i">
+                  <div class="inline-cluster">
+                    <input type="text"
+                           :name="`extra_disks_${i}`"
+                           x-model="lines[i]"
+                           class="form-input" {# G-013-Ausnahme: Alpine.js x-model mit dynamischem :name #}
+                           style="flex:1; font-family:var(--font-mono); font-size:13px;">
+                    <button type="button" @click="remove(i)"
+                            class="btn-icon btn-icon-danger" title="Entfernen" aria-label="Entfernen">
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" stroke="none">
+                        <use href="#icon-minus"></use>
+                      </svg>
+                    </button>
+                  </div>
+                </template>
+                <div class="list-field-add">
+                  {% call ui.btn(attrs='style="gap:5px;" @click="add()"') %}
+                    <svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor" stroke="none"><use href="#icon-plus"></use></svg>
+                    Hinzufügen
+                  {% endcall %}
+                </div>
+              </div>
+              <span class="form-help">Mountpoints für zusätzliche Festplatten-Karten</span>
+            </div>
+
             <div class="form-actions">
               {{ btn_save() }}
             </div>
@@ -66,6 +99,26 @@
     </div>
   </div>
   {% endif %}
+
+  {# ── Eingebettete Module (settings_embed=True) ───────────────────────────── #}
+  {% for mod in modules %}
+  {% if mod.settings_embed %}
+  <div>
+    <div class="content-item on" data-debug-label="content-subitem">
+      <div class="card-header">
+        <span class="card-title">{{ mod.label }}</span>
+      </div>
+      <div class="card-body" style="padding:16px;">
+          <div id="{{ mod.key }}-settings-slot"
+               hx-get="/ui/{{ mod.key }}/content"
+               hx-trigger="load"
+               hx-swap="innerHTML">
+          </div>
+      </div>
+    </div>
+  </div>
+  {% endif %}
+  {% endfor %}
 
   {# ── Moduleinstellungen ──────────────────────────────────────────────────── #}
   {% for key, data in (mod_settings | default({})).items() %}

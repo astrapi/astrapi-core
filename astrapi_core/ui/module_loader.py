@@ -218,6 +218,7 @@ def load_modul(
         ui_router=ui_router,
         nav_group=cfg.get("nav_group", "Module"),
         nav_default=bool(cfg.get("nav_default", False)),
+        settings_order=int(cfg.get("settings_order", 0)),
         settings_defaults=merged_defaults,
         settings_schema=settings_schema,
         card_actions=_expand_card_actions(cfg.get("card_actions", []), key),

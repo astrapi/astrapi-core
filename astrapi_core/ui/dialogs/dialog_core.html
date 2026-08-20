@@ -1,16 +1,19 @@
 <div id="{% block dialog_id %}dialog{% endblock %}"
      class="ds-modal-backdrop"
+     role="dialog"
+     aria-modal="true"
+     aria-labelledby="modal-title"
      x-data
-     x-on:keydown.escape.window="$el.remove()">
+     x-on:keydown.escape.window="closeModalEl($el)">
   <div class="ds-modal"
        style="max-width:{% block dialog_width %}620{% endblock %}px;
               padding:{% block dialog_padding %}20px 24px{% endblock %};">
     <div class="ds-modal-header">
       <div style="display:flex;align-items:center;gap:12px;min-width:0;">
-        <span class="ds-modal-title">{% block dialog_title %}{{ title }}{% endblock %}</span>
+        <span class="ds-modal-title" id="modal-title">{% block dialog_title %}{{ title }}{% endblock %}</span>
         {% block dialog_header_extra %}{% endblock %}
       </div>
-      <button type="button" class="ds-modal-close" onclick="closeModal(this)">
+      <button type="button" class="ds-modal-close" onclick="closeModal(this)" title="Schließen" aria-label="Schließen">
         <svg width="14" height="14" viewBox="0 0 24 24"
              fill="currentColor" stroke="none"><use href="#icon-close"></use></svg>
       </button>

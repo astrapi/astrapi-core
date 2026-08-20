@@ -89,6 +89,8 @@ def make_crud_router(
     filters: list[dict] | None = None,
     create_defaults: dict | None = None,
     extra_buttons: list[dict] | None = None,
+    embed_target_id: str | None = None,
+    delete_preview_fn: Callable[[str], list[str]] | None = None,
 ) -> APIRouter:
     """Erstellt einen generischen CRUD-APIRouter.
 
@@ -104,6 +106,16 @@ def make_crud_router(
         resolve_fields_fn: Optionale Funktion zum Anreichern der Schema-Felder
         extra_page_actions_template: Optionales Template für zusätzliche Page-Actions
         running_fn:        Optionale Funktion () -> dict mit laufenden Jobs
+        embed_target_id:   Optionales HTMX-Swap-Ziel (z.B. "#mod-os_types") für
+                           Anlegen/Bearbeiten/Löschen/Toggle, falls das Modul
+                           nicht auf seiner eigenen Seite, sondern eingebettet
+                           (z.B. in den Einstellungen) läuft. Ohne Angabe wie
+                           bisher die komplette Hauptseite (#main-content).
+        delete_preview_fn: Optionale Funktion (item_id) -> list[str] mit IDs,
+                           die beim Löschen dieses Eintrags kaskadierend
+                           mitgelöscht würden (z.B. verwaiste Abhängigkeiten).
+                           Wird im Bestätigungsdialog aufgelistet, damit die
+                           Kaskade vor dem Klick sichtbar ist statt danach.
 
     Returns:
         FastAPI APIRouter mit allen Standard-UI-Routen
@@ -258,6 +270,7 @@ def make_crud_router(
                     container_id=request.query_params.get("container_id", _c_id),
                     loading_id=request.query_params.get("loading_id", _l_id),
                     prefill_template=prefill_template,
+                    form_target_id=embed_target_id,
                 ),
             )
 
@@ -283,6 +296,7 @@ def make_crud_router(
                     reload_url=f"/ui/{key}/content",
                     container_id=request.query_params.get("container_id", _c_id),
                     loading_id=request.query_params.get("loading_id", _l_id),
+                    form_target_id=embed_target_id,
                 ),
             )
 
@@ -291,6 +305,7 @@ def make_crud_router(
         @router.get(f"/ui/{key}/{{item_id}}/delete", response_class=HTMLResponse)
         def delete_modal(item_id: str, request: Request):
             item = store.get(item_id) or {}
+            cascade_items = delete_preview_fn(item_id) if delete_preview_fn else []
             return render(
                 request,
                 "dialog_confirm.html",
@@ -301,6 +316,8 @@ def make_crud_router(
                     confirm_url=f"/api/{key}/{item_id}",
                     method="delete",
                     reload_url=f"/ui/{key}/content",
+                    reload_target_id=embed_target_id,
+                    cascade_items=cascade_items,
                 ),
             )
 
@@ -322,6 +339,7 @@ def make_crud_router(
                     reload_url=f"/ui/{key}/content",
                     container_id=request.query_params.get("container_id", _c_id),
                     loading_id=request.query_params.get("loading_id", _l_id),
+                    reload_target_id=embed_target_id,
                 ),
             )
 

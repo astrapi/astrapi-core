@@ -304,6 +304,7 @@ def build_nav_items(modules: list, app_root: Path) -> list[dict]:
         m
         for m in modules
         if m.key not in yaml_keys
+        and not m.hidden
         and not (m.module_root and m.module_root.parent == core_modules_dir)
     ]
 

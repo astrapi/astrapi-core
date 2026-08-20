@@ -64,13 +64,11 @@
           {{ field.label }}
         </div>
         {% set ns.first_section = False %}
-        <div style="display:grid;
-                    grid-template-columns:repeat({{ field.get('cols', 2) }}, 1fr);
-                    gap:12px;">
+        <div class="form-grid" style="--cols:{{ field.get('cols', 2) }};">
         {% set ns.grid_open = True %}
       {% else %}
         {% if not ns.grid_open %}
-          <div style="display:grid; grid-template-columns:1fr; gap:14px;">
+          <div class="form-grid" style="--cols:1;">
           {% set ns.grid_open = True %}
         {% endif %}
         {% set field_span = field.get('span', 1) %}
@@ -87,10 +85,8 @@
   {% else %}
     {% set rows = render_fields | groupby("row", default=0) %}
     {% for row, fields in rows %}
-      <div style="display:grid;
-                  grid-template-columns:{% if fields | length == 2 and fields[1].type == 'boolean' %}1fr auto{% else %}repeat({{ fields | length }}, 1fr){% endif %};
-                  gap:12px;
-                  align-items:{% if fields | length == 2 and fields[1].type == 'boolean' %}end{% else %}start{% endif %};">
+      {% set _with_toggle = fields | length == 2 and fields[1].type == 'boolean' %}
+      <div class="form-grid{% if _with_toggle %} form-grid--with-toggle{% endif %}" style="--cols:{{ fields | length }};">
         {% for field in fields %}
           {% include "partials/create_edit/field_renderer.html" %}
         {% endfor %}

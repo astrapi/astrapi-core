@@ -1,5 +1,61 @@
 {% import 'partials/components/ui_macros.html' as ui %}
+{% import 'partials/components/mobile_card_macros.html' as mc %}
 {% from 'partials/components/ui_macros.html' import btn, btn_save %}
+
+{# Gauge-Karte für die 2x2-Kachelreihe.
+   style='ring' (Default, CPU/RAM): Desktop linearer Balken + caller()-Subtext
+     (ausführlich, viel Platz), Mobile Ring (iOS/Android-Systemeinstellungen-
+     Stil) + eigener, kompakter mobile_sub-Text -- zwei Ringe nebeneinander
+     in schmalen Kacheln haben keinen Platz für den ausführlichen Desktop-Text
+     (siehe .sysinfo-gauge-card--ring).
+   style='bar' (DISK/Extra-Disks): auf Mobile UND Desktop derselbe lineare
+     Balken + caller()-Subtext -- volle Breite, eigene Grid-Zeile
+     (.sysinfo-gauge-card--wide).
+   r=42 -> Umfang 2*pi*42 ≈ 263.9. #}
+{% macro gauge_card(label, percent, color, style='ring', mobile_sub=none) %}
+<div class="content-item on sysinfo-gauge-card {{ 'sysinfo-gauge-card--ring' if style == 'ring' else 'sysinfo-gauge-card--wide' }}" data-debug-label="content-item">
+  <div class="sysinfo-card-header">{{ label }}</div>
+  <div style="padding:0 18px 16px;">
+    {% if style == 'ring' %}
+    <div class="desktop-view">
+      <div class="sysinfo-gauge-head">
+        <div class="sysinfo-gauge-value">{{ percent }}<span class="sysinfo-gauge-unit">%</span></div>
+      </div>
+      <div class="sysinfo-gauge-bar-wrap">
+        <div style="height:100%; width:{{ percent }}%; border-radius:99px; background:{{ color }}; transition:width 400ms;"></div>
+      </div>
+      <div class="sysinfo-gauge-sub" style="display:flex; flex-wrap:wrap; gap:2px 14px;">
+        {{ caller() }}
+      </div>
+    </div>
+    <div class="mobile-view sysinfo-gauge-ring-wrap">
+      <svg class="sysinfo-gauge-ring" viewBox="0 0 100 100" width="72" height="72">
+        <circle cx="50" cy="50" r="42" fill="none" stroke="var(--sel)" stroke-width="9"/>
+        <circle cx="50" cy="50" r="42" fill="none" stroke="{{ color }}" stroke-width="9"
+                stroke-linecap="round"
+                stroke-dasharray="{{ (percent / 100 * 263.9) | round(1) }} 263.9"
+                transform="rotate(-90 50 50)"
+                style="transition:stroke-dasharray 400ms;"/>
+      </svg>
+      <div class="sysinfo-gauge-ring-value">{{ percent }}<span class="sysinfo-gauge-unit">%</span></div>
+    </div>
+    {% if mobile_sub %}
+    <div class="mobile-view sysinfo-gauge-sub sysinfo-gauge-sub--compact">{{ mobile_sub }}</div>
+    {% endif %}
+    {% else %}
+    <div class="sysinfo-gauge-head">
+      <div class="sysinfo-gauge-value">{{ percent }}<span class="sysinfo-gauge-unit">%</span></div>
+    </div>
+    <div class="sysinfo-gauge-bar-wrap">
+      <div style="height:100%; width:{{ percent }}%; border-radius:99px; background:{{ color }}; transition:width 400ms;"></div>
+    </div>
+    <div class="sysinfo-gauge-sub" style="display:flex; flex-wrap:wrap; gap:2px 14px;">
+      {{ caller() }}
+    </div>
+    {% endif %}
+  </div>{# /padding #}
+</div>
+{% endmacro %}
 {% if not info.ok %}
 <div id="system-metrics">
   <div class="empty-state">
@@ -26,14 +82,14 @@
     {% if info.updater %}
     <span style="display:flex; align-items:center; gap:10px;">
       {% if info.updater.last_checked %}
-      <span style="color:var(--text-3); font-size:11px;">Geprüft: {{ info.updater.last_checked }}</span>
+      <span class="sysinfo-last-checked" style="color:var(--text-3); font-size:11px;">Geprüft: {{ info.updater.last_checked }}</span>
       {% endif %}
       {% if info.updater.status in ('running', 'checking') %}
       <span style="color:var(--text-2); font-size:11px;">
         {{ 'Update läuft…' if info.updater.status == 'running' else 'Prüfung läuft…' }}
       </span>
       {% else %}
-      {{ btn('Auf Updates prüfen', busy_label='Prüfe…',
+      {{ btn('Auf Updates prüfen', variant='primary', busy_label='Prüfe…', icon='refresh',
              attrs='hx-post="/ui/system/check" hx-target="#system-metrics" hx-swap="outerHTML"') }}
       {% endif %}
     </span>
@@ -48,6 +104,7 @@
   </div>
   {% endif %}
   <div style="padding:0 16px 12px;" data-debug-label="content-subitem">
+  <div class="desktop-view">
   <table class="ds-list-table">
     <tbody>
       {% if info.updater %}
@@ -92,6 +149,32 @@
     </tbody>
   </table>
   </div>
+  <div class="mobile-view">
+    {# Eine einzige Liste für alle Pakete (getrackte Apps + reine
+       Abhängigkeiten aus info.software), Reihenfolge unverändert -- Pakete
+       mit Update werden nicht mehr herausgezogen, sondern zeigen nur inline
+       den Versionssprung + Update-Button in ihrer eigenen Zeile. #}
+    {% set ns_all = namespace(items=[]) %}
+    {% if info.updater %}
+      {% for pkg in info.updater.packages %}
+      {% set ns_all.items = ns_all.items + [pkg] %}
+      {% endfor %}
+    {% endif %}
+    {% for key, val in info.software.items() %}
+    {% if key not in ('psutil', 'Datenbank') and key not in ns.updater_names %}
+    {% set ns_all.items = ns_all.items + [{'name': key, 'installed': val, 'update_available': False}] %}
+    {% endif %}
+    {% endfor %}
+    {% for pkg in ns_all.items %}
+    <div class="sysinfo-update-list-row">
+      <span class="sysinfo-update-list-name">{{ pkg.name }}</span>
+      <span class="sysinfo-update-versions">
+        {% if pkg.update_available %}{{ pkg.installed }} → <strong>{{ pkg.latest }}</strong>{% else %}{{ pkg.installed }}{% endif %}
+      </span>
+    </div>
+    {% endfor %}
+  </div>
+  </div>
 </div>
 
 {# ── Rechte Spalte: System-Karte + Gauges ────────────────────────── #}
@@ -103,6 +186,7 @@
     <span>System</span>
   </div>
   <div style="padding:0 16px 12px;" data-debug-label="content-subitem">
+  <div class="desktop-view">
   <table class="ds-list-table">
     <tbody>
       <tr class="on">
@@ -125,86 +209,45 @@
     </tbody>
   </table>
   </div>
+  <div class="mobile-view">
+    {# kein mc.m_card()-Wrapper: der Titel "System" kommt schon von
+       .sysinfo-card-header oberhalb, ein zweiter waere doppelt. #}
+    {{ mc.m_card_row('OS', info.system.os_pretty) }}
+    {{ mc.m_card_row('User', info.system.user) }}
+    {% if info.software.get('Datenbank') %}{{ mc.m_card_row('Datenbank', info.software['Datenbank']) }}{% endif %}
+  </div>
+  </div>
 </div>
 
 {# ── Gauges: CPU, RAM, DISK, SWAP ─────────────────────────────────── #}
 <div class="sysinfo-gauges-grid">
 
-  {# CPU #}
-  <div class="content-item on sysinfo-gauge-card" data-debug-label="content-item">
-    <div class="sysinfo-card-header">CPU</div>
-    <div style="padding:0 18px 16px;">
-    <div class="sysinfo-gauge-head">
-      <div class="sysinfo-gauge-value">{{ info.cpu.percent }}<span class="sysinfo-gauge-unit">%</span></div>
-    </div>
-    <div class="sysinfo-gauge-bar-wrap">
-      <div style="height:100%; width:{{ info.cpu.percent }}%; border-radius:99px;
-                  background:{{ 'var(--r)' if info.cpu.percent > 85 else ('var(--b)' if info.cpu.percent > 50 else 'var(--g)') }};
-                  transition:width 400ms;"></div>
-    </div>
-    <div class="sysinfo-gauge-sub">
-      {{ info.cpu.cores }} Kerne · {{ info.cpu.freq }}
-      {% if info.cpu.model %}<div style="margin-top:2px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">{{ info.cpu.model }}</div>{% endif %}
-    </div>
-    </div>{# /padding #}
-  </div>
+  {# CPU: Desktop hat Platz für Kerne+Freq+Modell, die schmale Mobile-Ring-
+     Kachel bekommt nur "N Kerne" -- Freq/Modell würden dort nur umbrechen
+     oder mitten im Wort abgeschnitten werden. #}
+  {% call gauge_card('CPU', info.cpu.percent, 'var(--r)' if info.cpu.percent > 85 else ('var(--b)' if info.cpu.percent > 50 else 'var(--g)'), mobile_sub=(info.cpu.cores ~ ' Kerne')) %}
+    {{ info.cpu.cores }} Kerne · {{ info.cpu.freq }}
+    {% if info.cpu.model %}<div style="margin-top:2px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">{{ info.cpu.model }}</div>{% endif %}
+  {% endcall %}
 
-  {# RAM #}
-  <div class="content-item on sysinfo-gauge-card" data-debug-label="content-item">
-    <div class="sysinfo-card-header">RAM</div>
-    <div style="padding:0 18px 16px;">
-    <div class="sysinfo-gauge-head">
-      <div class="sysinfo-gauge-value">{{ info.mem.percent }}<span class="sysinfo-gauge-unit">%</span></div>
-    </div>
-    <div class="sysinfo-gauge-bar-wrap">
-      <div style="height:100%; width:{{ info.mem.percent }}%; border-radius:99px;
-                  background:{{ 'var(--r)' if info.mem.percent > 85 else ('var(--b)' if info.mem.percent > 60 else 'var(--g)') }};
-                  transition:width 400ms;"></div>
-    </div>
-    <div class="sysinfo-gauge-sub" style="display:flex; justify-content:space-between;">
-      <span>{{ info.mem.used }} belegt</span><span>{{ info.mem.free }} frei</span><span>{{ info.mem.total }} gesamt</span>
-    </div>
-    </div>{# /padding #}
-  </div>
+  {# RAM: Desktop zeigt belegt/frei/gesamt einzeln, mobile kompakt als
+     "belegt / gesamt" -- passt in eine Zeile statt umzubrechen. #}
+  {% call gauge_card('RAM', info.mem.percent, 'var(--r)' if info.mem.percent > 85 else ('var(--b)' if info.mem.percent > 60 else 'var(--g)'), mobile_sub=(info.mem.used ~ ' / ' ~ info.mem.total)) %}
+    <span>{{ info.mem.used }} belegt</span><span>{{ info.mem.free }} frei</span><span>{{ info.mem.total }} gesamt</span>
+  {% endcall %}
 
   {# DISK (/) #}
   {% if info.root_disk %}
-  <div class="content-item on sysinfo-gauge-card" data-debug-label="content-item">
-    <div class="sysinfo-card-header">DISK</div>
-    <div style="padding:0 18px 16px;">
-    <div class="sysinfo-gauge-head">
-      <div class="sysinfo-gauge-value">{{ info.root_disk.percent }}<span class="sysinfo-gauge-unit">%</span></div>
-    </div>
-    <div class="sysinfo-gauge-bar-wrap">
-      <div style="height:100%; width:{{ info.root_disk.percent }}%; border-radius:99px;
-                  background:{{ 'var(--r)' if info.root_disk.percent > 90 else ('var(--b)' if info.root_disk.percent > 70 else 'var(--g)') }};
-                  transition:width 400ms;"></div>
-    </div>
-    <div class="sysinfo-gauge-sub" style="display:flex; justify-content:space-between;">
-      <span>{{ info.root_disk.used_fmt }} belegt</span><span>{{ info.root_disk.free_fmt }} frei</span><span>{{ info.root_disk.total_fmt }} gesamt</span>
-    </div>
-    </div>{# /padding #}
-  </div>
+  {% call gauge_card('DISK', info.root_disk.percent, 'var(--r)' if info.root_disk.percent > 90 else ('var(--b)' if info.root_disk.percent > 70 else 'var(--g)'), style='bar') %}
+    <span>{{ info.root_disk.used_fmt }} belegt</span><span>{{ info.root_disk.free_fmt }} frei</span><span>{{ info.root_disk.total_fmt }} gesamt</span>
+  {% endcall %}
   {% else %}<div></div>{% endif %}
 
   {# Extra-Disks (aus Einstellungen oder configure()) #}
   {% for ed in info.extra_disks %}
-  <div class="content-item on sysinfo-gauge-card" data-debug-label="content-item">
-    <div class="sysinfo-card-header">{{ ed.label }}</div>
-    <div style="padding:0 18px 16px;">
-    <div class="sysinfo-gauge-head">
-      <div class="sysinfo-gauge-value">{{ ed.percent }}<span class="sysinfo-gauge-unit">%</span></div>
-    </div>
-    <div class="sysinfo-gauge-bar-wrap">
-      <div style="height:100%; width:{{ ed.percent }}%; border-radius:99px;
-                  background:{{ 'var(--r)' if ed.percent > 90 else ('var(--b)' if ed.percent > 70 else 'var(--g)') }};
-                  transition:width 400ms;"></div>
-    </div>
-    <div class="sysinfo-gauge-sub" style="display:flex; justify-content:space-between;">
-      <span>{{ ed.used_fmt }} belegt</span><span>{{ ed.free_fmt }} frei</span><span>{{ ed.total_fmt }} gesamt</span>
-    </div>
-    </div>{# /padding #}
-  </div>
+  {% call gauge_card(ed.label, ed.percent, 'var(--r)' if ed.percent > 90 else ('var(--b)' if ed.percent > 70 else 'var(--g)'), style='bar') %}
+    <span>{{ ed.used_fmt }} belegt</span><span>{{ ed.free_fmt }} frei</span><span>{{ ed.total_fmt }} gesamt</span>
+  {% endcall %}
   {% endfor %}
   {% if not info.extra_disks %}<div></div>{% endif %}
 

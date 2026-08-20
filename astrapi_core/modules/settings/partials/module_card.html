@@ -34,9 +34,7 @@
           </div>
           {% set ns.first_section = False %}
           {% set ns.grid_cols = field.get('cols', 1) %}
-          <div style="display:grid;
-                      grid-template-columns:repeat({{ ns.grid_cols }}, 1fr);
-                      gap:12px;">
+          <div class="form-grid" style="--cols:{{ ns.grid_cols }};">
           {% set ns.grid_open = True %}
 
         {% else %}
@@ -77,14 +75,14 @@
                          class="form-input" {# G-013-Ausnahme: Alpine.js x-model mit dynamischem :name #}
                          style="flex:1;{% if field.get('mono') %}font-family:var(--font-mono);{% endif %}font-size:13px;">
                   <button type="button" @click="remove(i)"
-                          class="btn-icon btn-icon-danger" title="Entfernen">
+                          class="btn-icon btn-icon-danger" title="Entfernen" aria-label="Entfernen">
                     <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" stroke="none">
                       <use href="#icon-minus"></use>
                     </svg>
                   </button>
                 </div>
               </template>
-              <div>
+              <div class="list-field-add">
                 {% call btn(attrs='style="gap:5px;" @click="add()"') %}
                   <svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor" stroke="none"><use href="#icon-plus"></use></svg>
                   Hinzufügen

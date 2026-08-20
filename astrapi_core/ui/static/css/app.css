@@ -18,24 +18,46 @@
    backupctl – Tailwind-inspirierte Design Tokens
    ============================================================ */
 
+/* ── Breakpoints (Referenz, keine CSS-Variable -- @media-Bedingungen
+   können keine Custom Properties auswerten) ────────────────────
+     768px  Haupt-Breakpoint: Sidebar→Drawer, Tabelle→Karten, Formular-
+            Grid→1-spaltig. Alle @media (max-width:768px) im Folgenden
+            gehören zu diesem einen logischen Zustand "Mobile".
+     900px  Breiterer Zusatz-Breakpoint für reine Grid-Layouts
+            (.content-columns, .settings-form-grid), die schon vor dem
+            Haupt-Breakpoint auf eine Spalte wechseln sollen. */
+
 /* ── Tailwind-nahe Dark Tokens ──────────────────────────────── */
 :root {
-  --bg:          #101010;
+  /* Exakte Werte per Farbpipette aus der Obsidian-Referenz: bg #000000,
+     card #1e1e1e, Trennlinie #333333. */
+  --bg:          #000000;
   --sb:          #151515;
-  --card:        #1a1a1a;
-  --card-hi:     #222222;
-  --sel:         #2a2a2a;
-  --input-bg:    #111111;
+  --card:        #1e1e1e;
+  --card-hi:     #262626;
+  --sel:         #2c2c2c;
+  /* #282828 statt #0a0a0a: Formularelemente (Dropdown, Buttons) sitzen in
+     der Referenz sichtbar heller/"erhaben" auf der Karte, nicht dunkler/
+     "eingesunken" wie bisher. */
+  --input-bg:    #282828;
 
-  --border-s:    rgba(255,255,255,0.08);
+  /* Alpha 0.093 (weiss ueber --card) ergibt exakt #333333 -- der von der
+     Referenz abgepipettete Linienton. */
+  --border-s:    rgba(255,255,255,0.093);
   --border-i:    rgba(255,255,255,0.11);
 
   --text:        #f4f4f5;
   --text-2:      rgba(244,244,245,0.72);
-  --text-3:      rgba(244,244,245,0.42);
+  /* 0.50 statt vormals 0.42: WCAG-AA-Kontrast (4.5:1) fuer Fliesstext auf
+     --card (#1a1a1a) -- 0.42 lag bei ~3.8:1, faellt fuer die 11px-Hilfetexte
+     durch, die diese Variable ueberwiegend nutzen. */
+  --text-3:      rgba(244,244,245,0.50);
 
   --card-off:    #141414;
-  --card-off-hi: #1e1e1e;
+  /* #171717 statt vormals #1e1e1e: kollidierte mit dem neuen --card
+     (#1e1e1e) -- eine gehoverte deaktivierte Karte saehe sonst aus wie
+     eine normale aktive Karte in Ruhe. */
+  --card-off-hi: #171717;
   --text-off:    rgba(244,244,245,0.34);
   --text-off-2:  rgba(244,244,245,0.22);
   --sh-off:      none;
@@ -77,19 +99,27 @@
 
 /* ── Tailwind-nahe Light Tokens ─────────────────────────────── */
 .light-mode {
-  --bg:          #f5f5f5;
+  /* #e2e2e8 statt vormals #f5f5f5: --card-hi lag bisher exakt auf --bg
+     (Hover einer Karte war unsichtbar, 1.00:1). Jetzt liegt der alte
+     --bg-Wert (#f5f5f5, unten als --card-hi weiterverwendet) zwischen
+     dem neuen, dunkleren --bg und der reinweissen --card. */
+  --bg:          #e2e2e8;
   --sb:          #fafafa;
   --card:        #ffffff;
   --card-hi:     #f5f5f5;
-  --sel:         #eef2ff;
+  --sel:         #e4e9fb;
   --input-bg:    #ffffff;
 
-  --border-s:    rgba(15,23,42,0.10);
+  /* 0.22 statt vormals 0.10: siehe Dark-Mode-Kommentar oben, hier ~1.6:1
+     gegen --card (Variante "Flaechen betont"). */
+  --border-s:    rgba(15,23,42,0.22);
   --border-i:    rgba(15,23,42,0.14);
 
   --text:        #0f172a;
   --text-2:      rgba(15,23,42,0.72);
-  --text-3:      rgba(15,23,42,0.48);
+  /* 0.62 statt vormals 0.48: WCAG-AA-Kontrast (4.5:1) auf --card (#ffffff)
+     -- 0.48 lag bei ~3.2:1, siehe Dark-Mode-Kommentar oben. */
+  --text-3:      rgba(15,23,42,0.62);
 
   --card-off:    #efefef;
   --card-off-hi: #e5e5e5;
@@ -210,7 +240,7 @@ input,select,textarea { font-family:var(--font); }
   flex:1; overflow-y:auto;
   padding:0;
   background:var(--bg);
-  scroll-padding-top:52px;
+  scroll-padding-top:58px;
 }
 
 /* ═══════════════════════════ PAGE HEADER ════════════════════════ */
@@ -557,6 +587,8 @@ input,select,textarea { font-family:var(--font); }
 /* ═══════════════════════════ CARDS ══════════════════════════════ */
 .content-item {
   border-radius:var(--rad); padding:0; overflow:hidden;
+  /* Kein aeusserer Rahmen -- die Abgrenzung zur Seite traegt allein der
+     kraeftigere --card/--bg-Flaechenkontrast, siehe Token-Kommentare oben. */
   transition:background var(--t) var(--ease), box-shadow var(--t) var(--ease), transform var(--t) var(--ease);
 }
 .content-item.on  { background:var(--card); }
@@ -586,30 +618,40 @@ input,select,textarea { font-family:var(--font); }
 }
 .content-item.off .card-actions { border-left-color:var(--border-s); }
 
+/* Trennlinien als inset Hintergrund-Gradient statt echtem border -- so
+   reicht die Linie nicht bis an die abgerundeten Kartenecken, sondern
+   endet buendig mit dem seitlichen Innenabstand (Vorbild: Obsidian-
+   Einstellungsseite, deren Trennlinien ebenfalls eingerueckt sind). */
 .card-header {
   display:flex; align-items:center; justify-content:space-between;
-  padding:12px 16px 10px; border-bottom:1px solid var(--border-s); gap:8px;
+  padding:12px 16px 10px; gap:8px;
+  background:linear-gradient(var(--border-s),var(--border-s)) no-repeat left 16px bottom / calc(100% - 32px) 1px;
 }
-.content-item.off .card-header { border-bottom-color:transparent; }
+.content-item.off .card-header { background:none; }
 .card-header .card-title { font-size:13px; font-weight:600; color:var(--text); }
 
 .card-footer {
   display:flex; align-items:center; justify-content:space-between;
-  padding:10px 16px; border-top:1px solid var(--border-s);
+  padding:10px 16px;
+  background:linear-gradient(var(--border-s),var(--border-s)) no-repeat left 16px top / calc(100% - 32px) 1px;
 }
-.content-item.off .card-footer { border-top-color:transparent; }
+.content-item.off .card-footer { background:none; }
 
 .card-run-info {
   display:flex; align-items:center; justify-content:space-between;
-  padding:6px 16px; border-top:1px solid var(--border-s);
+  padding:6px 16px;
+  background:linear-gradient(var(--border-s),var(--border-s)) no-repeat left 16px top / calc(100% - 32px) 1px;
   font-size:12px;
 }
-.card-header + .card-run-info { border-top:none; }
+.card-header + .card-run-info { background:none; }
 .card-run-left  { display:flex; align-items:center; gap:6px; color:var(--text-s); }
 .card-run-date  { color:var(--text); }
 
 /* ════════════════════════ LIST TABLE ════════════════════════════ */
-.content-items--table { display:block; overflow-x:hidden; }
+/* auto statt hidden: Sicherheitsnetz falls die Tabelle (bei schmalem
+   Nicht-Mobile-Fenster oberhalb des 768px-Breakpoints) breiter als der
+   Container ist -- lieber scrollen als Spalten abzuschneiden */
+.content-items--table { display:block; overflow-x:auto; }
 .ds-list-table-wrap-scroll { overflow-x:hidden; }
 .ds-list-table {
   width:100%;
@@ -831,12 +873,23 @@ input,select,textarea { font-family:var(--font); }
 .form-error { font-size:12px; color:var(--err); font-family:var(--mono); display:none; margin-top:3px; }
 .form-error.visible { display:block; }
 
+/* Formular-Grid (create_edit_modal.html, settings/module_card.html): Spaltenzahl
+   kommt als --cols-Custom-Property statt fest verdrahtetem grid-template-columns
+   im Markup, damit die @media-Mobile-Regel unten sie übersteuern kann. */
+.form-grid {
+  display:grid; grid-template-columns:repeat(var(--cols,2), 1fr); gap:12px;
+  align-items:start;
+}
+.form-grid--with-toggle { grid-template-columns:1fr auto; align-items:end; }
+
 /* ═════════════════════════ MODALS ═══════════════════════════════ */
 .ds-modal-backdrop {
   position:fixed; inset:0;
   background:rgba(9,9,11,0.68); backdrop-filter:blur(32px);
   display:flex; align-items:center; justify-content:center;
-  z-index:50; padding:16px;
+  /* höher als #mobile-header (z-index:50) -- ein offenes Modal muss auf
+     Mobile immer über der App-Bar liegen, nicht nur zufällig per DOM-Reihenfolge */
+  z-index:60; padding:16px;
 }
 .ds-modal {
   background:var(--sb); border:1px solid var(--border-s);
@@ -892,6 +945,10 @@ input,select,textarea { font-family:var(--font); }
   gap:12px;
   align-items:start;
 }
+/* Grid-Items sind sonst per Default min-width:auto und schrumpfen nicht
+   unter die Breite ihres nicht umbrechbaren Inhalts (z.B. lange Pfade,
+   unwrapped Flex-Reihen) -- das sprengt dann die ganze Seite horizontal. */
+.content-columns > * { min-width:0; }
 .content-columns--stretch { align-items:stretch; }
 .content-columns--wide    { grid-template-columns:minmax(0,1.3fr) minmax(0,1fr); }
 .notify-panel {
@@ -903,7 +960,7 @@ input,select,textarea { font-family:var(--font); }
 }
 .notify-section-head {
   padding:10px 14px 9px;
-  border-bottom:1px solid var(--border-s);
+  background:linear-gradient(var(--border-s),var(--border-s)) no-repeat left 14px bottom / calc(100% - 28px) 1px;
 }
 .notify-section-title {
   font-size:11px;
@@ -956,6 +1013,12 @@ input,select,textarea { font-family:var(--font); }
 .content-header-actions {
   display:flex; align-items:center; gap:8px;
 }
+/* Desktop-Default: Filter-Wrapper/Gruppen erzeugen keine eigene Box, ihre
+   Kinder (die <select>-Elemente) reihen sich direkt in .content-header-actions
+   ein -- unveraendertes Desktop-Verhalten. Die mobile mediaquery unten
+   ueberschreibt das fuer das Bottom-Sheet. */
+.content-header-filters, .m-filter-group { display:contents; }
+.m-filter-panel-header, .m-filter-group-label, .m-filter-options { display:none; }
 
 /* ── Content Footer ──────────────────────────────────────────── */
 .content-footer {
@@ -1053,6 +1116,7 @@ input,select,textarea { font-family:var(--font); }
   grid-template-columns: 1fr 1fr;
   gap: 12px;
 }
+.sysinfo-gauges-grid > * { min-width: 0; }
 .sysinfo-gauge-card  { padding: 0; overflow: hidden; }
 .sysinfo-gauge-head  { display:flex; align-items:center; justify-content:space-between; margin-bottom:10px; }
 .sysinfo-gauge-label { font-size:11px; text-transform:uppercase; letter-spacing:0.07em; color:var(--text-3); font-weight:600; }
@@ -1061,24 +1125,30 @@ input,select,textarea { font-family:var(--font); }
 .sysinfo-gauge-bar-wrap { height:8px; background:var(--sel); border-radius:99px; overflow:hidden; }
 .sysinfo-gauge-sub   { font-size:11px; color:var(--text-3); margin-top:8px; }
 
+/* Ring-Gauge (Mobile-Ersatz für den linearen Balken) */
+.sysinfo-gauge-ring-wrap {
+  position:relative;
+  align-items:center; justify-content:center;
+  width:88px; height:88px;
+  margin:2px auto 6px;
+}
+.sysinfo-gauge-ring { display:block; }
+.sysinfo-gauge-ring-value {
+  position:absolute; top:50%; left:50%; transform:translate(-50%,-50%);
+  font-size:19px; font-weight:700; color:var(--text);
+  display:flex; align-items:baseline; gap:1px;
+}
+
 /* ── Sysinfo: responsive Grids ───────────────────────────────── */
 @media (max-width:768px) {
   .content-columns, .content-columns--wide { grid-template-columns: 1fr; }
-  .sysinfo-gauges-grid  { grid-template-columns: 1fr; }
+  /* Ring-Karten (CPU/RAM) bleiben zu zweit nebeneinander, Balken-Karten
+     (DISK/Extra-Disks, .sysinfo-gauge-card--wide) spannen die volle Breite. */
+  .sysinfo-gauges-grid  { grid-template-columns: 1fr 1fr; }
+  .sysinfo-gauge-card--wide { grid-column: 1 / -1; }
   .sysinfo-gauges    { grid-template-columns:1fr !important; }
   .sysinfo-info      { grid-template-columns:1fr !important; }
   .sysinfo-app-grid  { grid-template-columns:1fr !important; }
-}
-
-/* ── Activity Log: Filter Desktop/Mobile ─────────────────────── */
-.al-filters-desktop { display:contents; }
-.al-filters-mobile { display:none; }
-@media (max-width:768px) {
-  .al-filters-desktop { display:none; }
-  .al-filters-mobile {
-    display:flex; flex-wrap:wrap; gap:6px; align-items:center;
-    margin-bottom:14px;
-  }
 }
 
 /* ── Activity Log: kompakte Mobilansicht ─────────────────────── */
@@ -1090,7 +1160,7 @@ input,select,textarea { font-family:var(--font); }
 .al-mobile-meta {
   display:none;
 }
-@media (max-width:767px) {
+@media (max-width:768px) {
   .al-col-hide, .col-hide-sm { display:none; }
   .al-status-text           { display:none; }
   .al-date                  { font-size:11px; }
@@ -1116,7 +1186,7 @@ input,select,textarea { font-family:var(--font); }
 #mobile-header {
   display:none;
   position:fixed; top:0; left:0; right:0; z-index:50;
-  height:52px;
+  height:58px;
   align-items:center; gap:4px;
   background:var(--bg);
   border-bottom:1px solid var(--border-s);
@@ -1130,13 +1200,24 @@ input,select,textarea { font-family:var(--font); }
   cursor:pointer; color:var(--text-2);
 }
 #mobile-menu-btn:hover { background:var(--sel); }
+/* Zeigt welche der drei Apps gerade offen ist (Sidebar mit dem App-Namen ist
+   auf Mobile hinter dem Hamburger versteckt) + den Modul-Namen darunter. */
+#mobile-title-group {
+  display:flex; flex-direction:column; justify-content:center;
+  min-width:0; gap:1px;
+}
+#mobile-app-name {
+  font-size:10.5px; font-weight:600; letter-spacing:0.05em; text-transform:uppercase;
+  color:var(--text-3);
+  white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
+}
 #mobile-title {
-  font-size:15px; font-weight:600; color:var(--text-1);
+  font-size:15px; font-weight:600; color:var(--text);
   white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
 }
 #sidebar-overlay {
   display:none;
-  position:fixed; top:52px; left:0; right:0; bottom:0; z-index:35;
+  position:fixed; top:58px; left:0; right:0; bottom:0; z-index:35;
   background:rgba(0,0,0,0.55);
   backdrop-filter:blur(2px);
   -webkit-backdrop-filter:blur(2px);
@@ -1145,8 +1226,24 @@ body.mobile-nav-open #sidebar-overlay { display:block; }
 @media (max-width:768px) {
   #mobile-header { display:flex; }
   .app-layout { display:block; padding:0; }
+
+  /* Anlegen/Bearbeiten-Formulare und Settings-Karten: immer 1 Spalte,
+     unabhängig von --cols (siehe .form-grid oben) -- ohne !important
+     würde die per Inline-Style gesetzte Custom Property gewinnen. */
+  .form-grid, .form-grid--with-toggle { grid-template-columns:1fr !important; }
+
+  /* Speichern-/Hinzufuegen-Buttons in Settings-Karten und Formularen: volle
+     Breite statt kleiner rechtsbuendiger Ziel -- deutlich leichter mit dem
+     Daumen zu treffen. */
+  .form-actions { justify-content:stretch; }
+  .form-actions > .btn,
+  .list-field-add > .btn { width:100%; justify-content:center; }
+
+  /* Modal: weniger Innenabstand/Radius auf schmalen Screens */
+  .ds-modal { padding:18px 16px; border-radius:16px; }
+  .ds-modal-title { font-size:17px; }
   #sidebar {
-    position:fixed; top:52px; left:0; bottom:0; z-index:40;
+    position:fixed; top:58px; left:0; bottom:0; z-index:40;
     transform:translateX(-100%);
     transition:transform 260ms var(--ease);
     box-shadow:4px 0 24px rgba(0,0,0,0.4);
@@ -1154,7 +1251,7 @@ body.mobile-nav-open #sidebar-overlay { display:block; }
   }
   body.mobile-nav-open #sidebar { transform:translateX(0); }
   .main-content {
-    padding:56px 16px 16px;
+    padding:62px 16px 16px;
     height:100vh;
     overflow-y:auto;
   }
@@ -1170,6 +1267,9 @@ body.mobile-nav-open #sidebar-overlay { display:block; }
   /* ── Desktop/Mobile-View-Trennung ───────────────────────────── */
   .desktop-view { display:none; }
   .mobile-view  { display:block; }
+  .sysinfo-gauge-ring-wrap.mobile-view { display:flex; }
+  .sysinfo-gauge-card--ring .sysinfo-card-header { justify-content:center; text-align:center; }
+  .sysinfo-gauge-card--ring .sysinfo-gauge-sub   { justify-content:center; text-align:center; }
 
   /* ── Äußerer Content-Rahmen entfernen ───────────────────────── */
   .content-area {
@@ -1191,10 +1291,6 @@ body.mobile-nav-open #sidebar-overlay { display:block; }
   .content-header-actions {
     width:100%; flex-wrap:wrap; gap:6px;
   }
-  .content-header-actions .btn-ghost { display:none; }
-  .content-header-actions .table-filter-select {
-    flex:1 1 auto; min-width:90px;
-  }
   .m-module-actions {
     display:flex; flex-wrap:wrap; gap:6px; margin-bottom:8px;
   }
@@ -1207,15 +1303,17 @@ body.mobile-nav-open #sidebar-overlay { display:block; }
     border-radius:var(--rad);
     background:var(--card);
     overflow:hidden;
-    margin-bottom:8px;
+    /* 14px statt 8px: mehr Luft zwischen den Karten. */
+    margin-bottom:14px;
     transition:background var(--t);
   }
   .m-card.off { background:var(--card-off); }
   .m-card-header {
     display:flex; align-items:center; justify-content:space-between;
     gap:8px;
-    padding:12px 14px 10px;
-    border-bottom:1px solid var(--border-s);
+    /* 18px statt 14px horizontal -- Trennlinien-Inset unten zieht mit. */
+    padding:12px 18px 10px;
+    background:linear-gradient(var(--border-s),var(--border-s)) no-repeat left 18px bottom / calc(100% - 36px) 1px;
   }
   .m-card-title {
     font-size:14px; font-weight:600; color:var(--text);
@@ -1224,7 +1322,7 @@ body.mobile-nav-open #sidebar-overlay { display:block; }
     flex:1;
   }
   .m-card-meta {
-    padding:8px 14px;
+    padding:8px 18px;
     display:flex; flex-direction:column; gap:4px;
   }
   .m-card-meta-row {
@@ -1238,12 +1336,35 @@ body.mobile-nav-open #sidebar-overlay { display:block; }
     color:var(--text-2);
     min-width:0; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
   }
+  /* footer ist echtes Kind von .m-card (m_card(..., footer=...) Parameter,
+     siehe mobile_card_macros.html) -- erbt Hintergrund/Radius/overflow:hidden
+     der Karte automatisch, braucht nur noch Layout + Trennlinie. */
   .m-card-footer {
     display:flex; align-items:center; gap:4px;
-    padding:8px 14px;
-    border-top:1px solid var(--border-s);
+    padding:8px 18px;
+    background:linear-gradient(var(--border-s),var(--border-s)) no-repeat left 18px top / calc(100% - 36px) 1px;
   }
   .m-card-footer-actions { margin-left:auto; display:flex; gap:4px; }
+
+  .sysinfo-last-checked { display:none; }
+  /* Anwendungen: eine einzige Zeilenliste direkt in der (unveränderten)
+     .sysinfo-info-card -- keine verschachtelte zweite Karte mehr. */
+  .sysinfo-update-versions {
+    font-size:12px; color:var(--text-2); white-space:nowrap;
+    margin-left:auto; text-align:right;
+    min-width:0; overflow:hidden; text-overflow:ellipsis;
+  }
+  .sysinfo-update-versions strong { color:var(--g); font-weight:600; }
+  .sysinfo-update-list-row {
+    display:flex; align-items:center; gap:10px;
+    padding:9px 0; border-bottom:1px solid var(--border-s);
+  }
+  .sysinfo-update-list-row:last-child { border-bottom:none; }
+  .sysinfo-update-list-name {
+    font-size:13px; font-weight:600; color:var(--text);
+    min-width:0; flex-shrink:1;
+    white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
+  }
 
   /* Activity-Log: kompakte Meta-Zeile */
   .al-m-line {
@@ -1257,8 +1378,11 @@ body.mobile-nav-open #sidebar-overlay { display:block; }
 
   /* App-Bar: 56dp, Schatten, Touch-Targets */
   #mobile-header {
-    height:56px;
+    height:62px;
     box-shadow:0 2px 12px rgba(0,0,0,0.5);
+  }
+  #mobile-app-name {
+    font-size:11px;
   }
   #mobile-title {
     font-size:17px; font-weight:600; letter-spacing:-0.01em;
@@ -1268,11 +1392,11 @@ body.mobile-nav-open #sidebar-overlay { display:block; }
   }
 
   /* Sidebar + Overlay an neue App-Bar-Höhe anpassen */
-  #sidebar         { top:56px; width:min(280px, 82vw); }
-  #sidebar-overlay { top:56px; }
+  #sidebar         { top:62px; width:min(280px, 82vw); }
+  #sidebar-overlay { top:62px; }
 
   /* Hauptinhalt: genug Luft nach oben (App-Bar) + unten (FAB) */
-  .main-content { padding-top:64px; padding-bottom:88px; }
+  .main-content { padding-top:70px; padding-bottom:88px; }
 
   /* Nav-Items: Android-Drawer-Stil */
   .nav-item {
@@ -1290,33 +1414,125 @@ body.mobile-nav-open #sidebar-overlay { display:block; }
   .m-card {
     border-radius:16px;
     box-shadow:0 1px 3px rgba(0,0,0,0.3), 0 3px 10px rgba(0,0,0,0.18);
-    margin-bottom:10px;
+    margin-bottom:16px;
   }
-  .m-card-header { padding:14px 16px 12px; min-height:56px; }
+  .m-card-header {
+    padding:14px 20px 12px; min-height:56px;
+    background:linear-gradient(var(--border-s),var(--border-s)) no-repeat left 20px bottom / calc(100% - 40px) 1px;
+  }
   .m-card-title  { font-size:15px; }
-  .m-card-footer { padding:10px 16px; min-height:48px; }
+  .m-card-meta   { padding:8px 20px; }
+  .m-card-footer {
+    padding:10px 20px; min-height:48px;
+    background:linear-gradient(var(--border-s),var(--border-s)) no-repeat left 20px top / calc(100% - 40px) 1px;
+  }
   .m-card:active { opacity:0.88; transition:opacity 0.08s; }
 
-  /* Content-Header mit Filtern: dezente Karte */
-  .content-header:has(.table-filter-select) {
-    border-radius:14px;
-    margin-bottom:12px;
-  }
-
-  /* FAB: „Neu"-Button als Extended Floating Action Button */
-  .content-header:not(:has(.table-filter-select)) {
+  /* Content-Header kollabiert auf Mobile immer auf 0: Filter leben im
+     Bottom-Sheet (#mobile-filter-panel, position:fixed), der "Neu"-Button
+     ist FAB (position:fixed) -- beide damit ohnehin aus dem Layoutfluss raus. */
+  .content-header {
     height:0; overflow:visible;
     margin:0; padding:0; min-height:0;
     background:transparent; box-shadow:none; border-radius:0;
   }
-  .content-header:not(:has(.table-filter-select)) .btn-primary {
+
+  /* Filter-Icon in der App-Bar: nur sichtbar, wenn die aktuelle Seite ein
+     Filter-Panel mitbringt. */
+  #mobile-filter-btn {
+    display:none;
+    width:40px; height:40px; border-radius:8px;
+    align-items:center; justify-content:center;
+    background:transparent; border:none; color:var(--text-2);
+    flex-shrink:0; margin-left:auto; cursor:pointer;
+  }
+  .app-layout:has(#mobile-filter-panel) #mobile-filter-btn { display:flex; }
+  #mobile-filter-btn:hover { background:var(--sel); }
+
+  #mobile-filter-overlay {
+    display:none;
+    position:fixed; top:0; left:0; right:0; bottom:0; z-index:65;
+    background:rgba(0,0,0,0.55);
+    backdrop-filter:blur(2px); -webkit-backdrop-filter:blur(2px);
+  }
+  body.filter-panel-open #mobile-filter-overlay { display:block; }
+
+  /* Filter-Panel: Bottom-Sheet, per Icon in der App-Bar geöffnet
+     (body.filter-panel-open steuert die Sichtbarkeit, siehe navigation.js).
+     Lebt bewusst im dynamisch geladenen Modul-Content (nicht im statischen
+     Shell), damit es beim Modulwechsel automatisch mitkommt/verschwindet. */
+  .content-header-filters {
+    display:block;
+    position:fixed; left:0; right:0; bottom:0; z-index:70;
+    background:var(--card);
+    border-radius:20px 20px 0 0;
+    box-shadow:0 -4px 24px rgba(0,0,0,0.4);
+    padding:8px 16px calc(16px + env(safe-area-inset-bottom, 0px));
+    max-height:70vh; overflow-y:auto;
+    transform:translateY(100%);
+    transition:transform 220ms var(--ease);
+  }
+  body.filter-panel-open .content-header-filters { transform:translateY(0); }
+
+  .m-filter-panel-header {
+    display:flex; align-items:center; justify-content:space-between;
+    padding:8px 4px 12px; font-size:15px; font-weight:600; color:var(--text);
+  }
+  .m-filter-group { display:block; margin-bottom:16px; }
+  .m-filter-group:last-child { margin-bottom:4px; }
+  .m-filter-group select.table-filter-select { display:none; }
+  .m-filter-group-label {
+    display:block; font-size:12px; font-weight:600; color:var(--text-3);
+    text-transform:uppercase; letter-spacing:0.04em; margin-bottom:8px;
+  }
+  .m-filter-options { display:flex; flex-wrap:wrap; gap:8px; }
+  .m-filter-option {
+    border:1px solid var(--border-s); background:var(--btn-2); color:var(--btn-2-t);
+    border-radius:16px; padding:8px 14px; font-size:13px; font-weight:500;
+    cursor:pointer;
+  }
+  .m-filter-option.active {
+    background:rgba(37,99,235,0.15); border-color:rgba(37,99,235,0.5); color:var(--b);
+    font-weight:600;
+  }
+
+  /* FAB: alle verbleibenden Header-Action-Buttons (nicht nur "Neu") immer als
+     echte Floating Action Buttons, unabhängig davon ob der Header zusätzlich
+     Filter-Selects zeigt (die sind ja eh ins Bottom-Sheet ausgelagert).
+     Android-Standard: schwebende Buttons unten rechts, nie Teil der
+     Kopfzeile. Farbe/Variante (primary/danger/ghost/accent) bleibt jeweils
+     wie gehabt -- hier wird nur Position/Form/Größe vereinheitlicht.
+     .sysinfo-card-header .btn: dasselbe für "Auf Updates prüfen" auf der
+     System-Seite (eigenes, nicht-generisches content.html). */
+  .content-header-actions > .btn, .sysinfo-card-header .btn {
     position:fixed; bottom:24px; right:20px; z-index:30;
-    border-radius:10px; height:48px; padding:0 24px;
+    border-radius:24px; height:48px; padding:0 20px 0 16px;
     font-size:14px; font-weight:600; letter-spacing:0.01em;
+    box-shadow:0 4px 20px rgba(0,0,0,0.35), 0 2px 6px rgba(0,0,0,0.3);
+    transition:box-shadow 0.15s ease, transform 0.1s ease;
+  }
+  .content-header-actions > .btn.btn-primary, .sysinfo-card-header .btn.btn-primary {
     box-shadow:0 4px 20px rgba(37,99,235,0.5), 0 2px 6px rgba(0,0,0,0.3);
   }
-  .content-header:not(:has(.table-filter-select)) .btn-primary:not(:last-child) {
+  .content-header-actions > .btn svg, .sysinfo-card-header .btn svg {
+    width:20px; height:20px; flex-shrink:0;
+  }
+  .content-header-actions > .btn:active, .sysinfo-card-header .btn:active {
+    transform:scale(0.96);
+    box-shadow:0 2px 8px rgba(0,0,0,0.35), 0 1px 3px rgba(0,0,0,0.3);
+  }
+  /* Mehrere Buttons stapeln sich nach oben statt sich zu überlappen. */
+  .content-header-actions > .btn:not(:last-child) {
     bottom:84px;
+  }
+  /* Ausnahme: Ghost-Buttons (z.B. "Auf Updates prüfen" bei debian/archlinux)
+     sowie Buttons mit der Marker-Klasse .fab-row-left (z.B. "Neuer Kanal"
+     bei notify, ueber Header.action_button(css_class="fab-row-left") gesetzt)
+     bleiben in derselben Zeile wie der primäre FAB, linksbündig statt
+     gestapelt -- kein zweiter schwebender Button übereinander. */
+  .content-header-actions > .btn-ghost:not(:last-child),
+  .content-header-actions > .btn.fab-row-left:not(:last-child) {
+    bottom:24px; left:20px; right:auto;
   }
 }
 
@@ -1343,7 +1559,7 @@ body.mobile-nav-open #sidebar-overlay { display:block; }
   justify-content: space-between;
   gap: 20px;
   padding: 14px 16px;
-  border-bottom: 1px solid var(--border-s);
+  background: linear-gradient(var(--border-s),var(--border-s)) no-repeat left 16px bottom / calc(100% - 32px) 1px;
 }
 .settings-row-block {
   flex-direction: column;
@@ -1472,5 +1688,10 @@ body.mobile-nav-open #sidebar-overlay { display:block; }
 
 /* ════════════════════ DEBUG MODE ════════════════════════════════ */
 .debug-mode .app-layout {
+  border-top: 3px solid #dc2626;
+}
+/* #mobile-header liegt fest über dem oberen Rand von .app-layout und würde
+   den roten Debug-Strich im Hochformat sonst komplett verdecken. */
+.debug-mode #mobile-header {
   border-top: 3px solid #dc2626;
 }

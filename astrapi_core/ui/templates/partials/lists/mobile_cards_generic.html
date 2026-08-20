@@ -24,17 +24,9 @@
 #}
 {% import 'partials/components/ui_macros.html' as ui %}
 
-{# Ghost-Aktions-Buttons (z.B. "Auf Updates prüfen") vor den Karten #}
-{%- set _ui_header = (module_obj(module) if module_obj is defined else none) %}
-{%- set _ui_header = _ui_header.ui_header if _ui_header else none %}
-{% if _ui_header and _ui_header.controls %}
-  {%- set _ghost_ctrls = _ui_header.controls | selectattr('style', 'equalto', 'ghost') | list -%}
-  {% if _ghost_ctrls %}
-  <div class="m-module-actions">
-    {% for ctrl in _ghost_ctrls %}{{ ui.header_control(ctrl, module, container_id, loading_id | default('')) }}{% endfor %}
-  </div>
-  {% endif %}
-{% endif %}
+{# Ghost-Aktions-Buttons (z.B. "Auf Updates prüfen") rendern auf Mobile als FAB
+   neben "Neu" (siehe .content-header-actions > .btn-ghost in app.css) -- keine
+   zusätzliche Inline-Darstellung hier mehr, sonst erscheint der Button doppelt. #}
 
 {% if cfg %}
   {% for item_name, item_data in cfg.items() %}

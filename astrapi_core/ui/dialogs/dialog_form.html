@@ -3,13 +3,17 @@
 {% block dialog_content %}
 <form id="{% block form_id %}dialog-form{% endblock %}"
       hx-{% block form_method %}post{% endblock %}="{% block form_action %}{% endblock %}"
-      hx-target="{% block form_target %}#main-content{% endblock %}"
+      hx-target="{% block form_target %}{{ form_target_id | default('#main-content', true) }}{% endblock %}"
       hx-swap="innerHTML"
-      {# event.target === this ist zwingend: htmx-Events blubbern. Ohne die
-         Pruefung schliesst auch jede Anfrage aus einem verschachtelten
-         hx-Element das Modal – etwa die Paketsuche in archlinux/debian, die
-         350 ms nach dem ersten Buchstaben feuert. #}
-      hx-on::after-request="if(event.target === this && event.detail.successful) this.closest('.ds-modal-backdrop').remove()"
+      {# event.detail.elt (nicht event.target!) ist zwingend: htmx garantiert
+         darin das Element, das den jeweiligen Request ausgeloest hat - stabil
+         unabhaengig vom DOM-Bubbling. Ohne die Pruefung schliesst auch jede
+         Anfrage aus einem verschachtelten hx-Element das Modal – etwa die
+         Paketsuche in archlinux/debian (350ms nach dem ersten Buchstaben)
+         oder ein hx-trigger="load"-Nachladen direkt beim Oeffnen (proxmox_jobs/
+         proxmox_lxc: available-select), das noch vor dem eigentlichen Submit
+         feuert. event.target funktionierte dafuer nicht zuverlaessig genug. #}
+      hx-on::after-request="if(event.detail.elt === this && event.detail.successful) this.closest('.ds-modal-backdrop').remove()"
       {% block form_attrs %}{% endblock %}
       style="{% block form_style %}display:flex; flex-direction:column; gap:12px;{% endblock %}">
   {% block dialog_body %}{% endblock %}

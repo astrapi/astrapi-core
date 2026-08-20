@@ -59,6 +59,7 @@ module = load_modul(
                 hx_get="/ui/activity_log/clear-confirm",
                 hx_target="body",
                 style="danger",
+                icon="trash",
             ),
         ]
     ),
