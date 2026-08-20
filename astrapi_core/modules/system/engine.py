@@ -429,7 +429,14 @@ def _packages_to_update() -> list:
 
 
 def _packages_to_display() -> list:
-    """Alle direkten Abhängigkeiten des App-Pakets für die Anzeige."""
+    """Alle direkten Abhängigkeiten des App-Pakets für die Anzeige.
+
+    Nur im Debug-Betrieb (lokale Testinstanzen, `--debug`) relevant -- auf
+    dem Produktivserver reicht `_packages_to_update()`, da Drittanbieter-
+    Module dort ohnehin nie tatsächlich aktualisiert werden (T-172-CORE).
+    Das Testen/Freigeben neuer Modul-Versionen läuft stattdessen lokal über
+    `test_dep_update.py` + `pin_deps.py`, bevor ein Release sie ausrollt.
+    """
     import re
     from importlib.metadata import requires as pkg_requires
 
@@ -460,6 +467,18 @@ def _packages_to_display() -> list:
     for name in sorted(rest, key=lambda n: n.lower()):
         _add(name)
     return pkgs
+
+
+def _packages_to_check() -> list:
+    """Wählt die Paketliste für Prüfung/Anzeige je nach Betriebsmodus.
+
+    Debug (lokale Testinstanzen, `--debug`): alle direkten Abhängigkeiten,
+    wie vor T-172-CORE. Produktiv: nur App-Paket + astrapi-core, identisch
+    zu dem, was `_do_update()` tatsächlich aktualisiert.
+    """
+    from astrapi_core.system.paths import is_debug
+
+    return _packages_to_display() if is_debug() else _packages_to_update()
 
 
 def _installed_version(package: str) -> str:
@@ -514,7 +533,7 @@ def _do_check_updates() -> None:
     # try/finally: bleibt der Status auf "checking" haengen, lehnt run_update()
     # danach jeden Update-Start stillschweigend ab.
     try:
-        for pip_name in _packages_to_display():
+        for pip_name in _packages_to_check():
             installed = _installed_version(pip_name)
             error = None
             try:
@@ -854,5 +873,5 @@ def get_packages_with_versions() -> list:
             "update_available": False,
             "error": None,
         }
-        for p in _packages_to_display()
+        for p in _packages_to_check()
     ]
