@@ -1346,6 +1346,17 @@ body.mobile-nav-open #sidebar-overlay { display:block; }
   }
   .m-card-footer-actions { margin-left:auto; display:flex; gap:4px; }
 
+  /* Leichtes Gruppen-Label ueber einer Karten-Liste (z.B. "Kanaele" vor den
+     Notify-Kanal-Karten) -- bewusst ohne eigene Card-Flaeche, sonst entsteht
+     eine Karte-in-Karte-Optik, weil die Karten darunter dieselbe --card-
+     Hintergrundfarbe haben. */
+  .m-list-section-label {
+    font-size:12px; font-weight:600; color:var(--text-3);
+    text-transform:uppercase; letter-spacing:0.04em;
+    margin:4px 2px 10px;
+  }
+  .m-list-section-label:not(:first-child) { margin-top:22px; }
+
   .sysinfo-last-checked { display:none; }
   /* Anwendungen: eine einzige Zeilenliste direkt in der (unveränderten)
      .sysinfo-info-card -- keine verschachtelte zweite Karte mehr. */
@@ -1530,6 +1541,14 @@ body.mobile-nav-open #sidebar-overlay { display:block; }
   }
   .content-header-actions > .btn.btn-primary, .sysinfo-card-header .btn.btn-primary {
     box-shadow:0 4px 20px rgba(37,99,235,0.5), 0 2px 6px rgba(0,0,0,0.3);
+  }
+  /* .btn-danger ist auf Desktop bewusst dezent (12% Alpha-Rot, fuegt sich
+     neben einer Tabelle ein) -- als freischwebender FAB wirkt dieselbe
+     Flaeche vor beliebigem Hintergrund halbtransparent/verwaschen statt wie
+     ein echter Button. Hier wie .btn-primary auf volle Deckkraft heben. */
+  .content-header-actions > .btn.btn-danger, .sysinfo-card-header .btn.btn-danger {
+    background:var(--r); color:#fff; border-color:var(--r);
+    box-shadow:0 4px 20px rgba(220,38,38,0.5), 0 2px 6px rgba(0,0,0,0.3);
   }
   .content-header-actions > .btn svg, .sysinfo-card-header .btn svg {
     width:20px; height:20px; flex-shrink:0;
