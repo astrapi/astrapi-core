@@ -20,7 +20,17 @@
         {# id ist bewusst modulweit konstant (wie #dialog bei Modals): es
            existiert immer nur ein aktives Panel, fuer das gerade geladene
            Modul. #}
-        <div class="content-header-filters" id="mobile-filter-panel">
+        {%- set _any_filter_active = namespace(v=false) -%}
+        {%- for ctrl in _filter_ctrls -%}
+          {%- for fd in (filter_defs | default([])) -%}
+            {%- if fd.param == ctrl.name and fd.active -%}{%- set _any_filter_active.v = true -%}{%- endif -%}
+          {%- endfor -%}
+        {%- endfor -%}
+        {# data-filters-active steuert den Badge-Punkt auf #mobile-filter-btn
+           in der App-Bar (siehe app.css) -- reine Existenzprüfung per
+           :has(), analog zur bereits bestehenden Sichtbarkeits-Regel des
+           Buttons selbst. #}
+        <div class="content-header-filters" id="mobile-filter-panel"{{ ' data-filters-active="1"' if _any_filter_active.v else '' }}>
           <div class="m-filter-panel-header">
             <span>Filter</span>
             <button type="button" class="btn-icon" onclick="closeFilterPanel()" title="Schließen">

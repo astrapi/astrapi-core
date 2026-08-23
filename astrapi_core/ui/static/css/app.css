@@ -1441,6 +1441,7 @@ body.mobile-nav-open #sidebar-overlay { display:block; }
      Filter-Panel mitbringt. */
   #mobile-filter-btn {
     display:none;
+    position:relative;
     width:40px; height:40px; border-radius:8px;
     align-items:center; justify-content:center;
     background:transparent; border:none; color:var(--text-2);
@@ -1448,6 +1449,22 @@ body.mobile-nav-open #sidebar-overlay { display:block; }
   }
   .app-layout:has(#mobile-filter-panel) #mobile-filter-btn { display:flex; }
   #mobile-filter-btn:hover { background:var(--sel); }
+
+  /* Badge-Punkt: zeigt an, dass mindestens ein Filter auf einen
+     Nicht-Standard-Wert gesetzt ist (data-filters-active kommt vom Server,
+     siehe content.html). Gleiches :has()-Muster wie die Sichtbarkeit des
+     Buttons selbst -- kein JS noetig, reagiert automatisch auf htmx-Swaps. */
+  #mobile-filter-btn::after {
+    content:"";
+    display:none;
+    position:absolute; top:5px; right:5px;
+    width:9px; height:9px; border-radius:50%;
+    background:var(--b);
+    border:2px solid var(--bg);
+  }
+  .app-layout:has(#mobile-filter-panel[data-filters-active]) #mobile-filter-btn::after {
+    display:block;
+  }
 
   #mobile-filter-overlay {
     display:none;
