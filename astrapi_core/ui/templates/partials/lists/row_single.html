@@ -33,7 +33,7 @@
 {%- set _card_actions = module_card_actions(module) -%}
 {%- set is_running = (module ~ ":" ~ item_name) in (running or {}) -%}
 
-<tr id="row-{{ module }}-{{ item_name }}" class="{{ 'on' if item_data.enabled else 'off' }}">
+<tr id="row-{{ module }}-{{ item_name }}" class="{{ 'on' if item_data.get('enabled', True) else 'off' }}">
   <td class="col-name">
     {{ item_data.description or item_data.job or item_data.host or item_name }}
   </td>
