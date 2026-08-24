@@ -166,7 +166,14 @@ def make_crud_router(
                 continue
             name = field["name"]
             if field.get("type") == "boolean":
-                data[name] = name in form
+                # toggle_field() sendet immer ein hidden value="0" VOR der
+                # eigentlichen Checkbox (value="1") -- der Feldname ist also
+                # unabhaengig vom Schalterzustand immer im Formular
+                # vorhanden. "name in form" pruefte nur Praesenz, nicht den
+                # tatsaechlich uebermittelten Wert -- Deaktivieren wurde nie
+                # gespeichert, da "1" nur bei eingeschaltetem Schalter
+                # zusaetzlich zum immer vorhandenen "0" mitgesendet wird.
+                data[name] = "1" in form.getlist(name)
             elif field.get("type") in ("multiselect", "list"):
                 data[name] = list(form.getlist(name))
             elif field.get("type") == "password":
