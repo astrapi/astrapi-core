@@ -8,8 +8,8 @@
     Logs:    GET  /api/{module}/{item}/logs
 #}
 
-{% macro edit_button(module=None, item=None, container_id=None, loading_id=None, item_prefix='') %}
-  <button hx-get="/ui/{{ module }}/{{ item_prefix }}{{ item }}/edit?container_id={{ container_id }}&loading_id={{ loading_id }}"
+{% macro edit_button(module=None, item=None, container_id=None, loading_id=None, item_prefix='', page=None) %}
+  <button hx-get="/ui/{{ module }}/{{ item_prefix }}{{ item }}/edit?container_id={{ container_id }}&loading_id={{ loading_id }}{{ '&page=' ~ page if page else '' }}"
     hx-target="body" hx-swap="beforeend" class="btn-icon" title="Bearbeiten" aria-label="Bearbeiten">
     <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" stroke="none"><use href="#icon-edit"></use></svg>
   </button>

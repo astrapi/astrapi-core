@@ -74,15 +74,15 @@
 
 {# Standard-CRUD-Footer: card_actions (modul.yaml) + Edit + Delete, wie der
    generische Fallback. Deckt Muster 3 (reines CRUD) direkt ab. #}
-{% macro m_card_actions_default(module, item, item_data, container_id, loading_id, item_prefix='', has_edit=True, has_delete=True, card_actions=[]) %}
+{% macro m_card_actions_default(module, item, item_data, container_id, loading_id, item_prefix='', has_edit=True, has_delete=True, card_actions=[], page=1) %}
 {% for action in card_actions %}{{ ui.card_action_button(action, item, item_data, container_id, loading_id) }}{% endfor %}
-{% if has_edit %}{{ ui.edit_button(module=module, item=item, container_id=container_id, loading_id=loading_id, item_prefix=item_prefix) }}{% endif %}
+{% if has_edit %}{{ ui.edit_button(module=module, item=item, container_id=container_id, loading_id=loading_id, item_prefix=item_prefix, page=page) }}{% endif %}
 {% if has_delete %}{{ ui.delete_button(module=module, item=item, container_id=container_id, loading_id=loading_id, description=item_data.get('description') or item, item_prefix=item_prefix) }}{% endif %}
 {% endmacro %}
 
 {# Build/Run-Footer: Run-Button zusätzlich zu Edit/Delete -- Muster 5
    (proxmox_client, builder, packages). #}
-{% macro m_card_run_actions(module, item, item_data, container_id, loading_id, item_prefix='', has_edit=True, has_delete=True, card_actions=[]) %}
+{% macro m_card_run_actions(module, item, item_data, container_id, loading_id, item_prefix='', has_edit=True, has_delete=True, card_actions=[], page=1) %}
 {{ ui.run_button(module=module, item=item, container_id=container_id, enabled=item_data.get('enabled', True)) }}
-{{ m_card_actions_default(module, item, item_data, container_id, loading_id, item_prefix, has_edit, has_delete, card_actions) }}
+{{ m_card_actions_default(module, item, item_data, container_id, loading_id, item_prefix, has_edit, has_delete, card_actions, page) }}
 {% endmacro %}

@@ -12,6 +12,7 @@
     _ui_cols         – deklarative Spalten (Col-Instanzen) oder []
     _card_actions    – Aktions-Buttons (aus modul.yaml card_actions)
     _item_url_prefix – URL-Präfix für Item-Links
+    _page            – aktuelle Seitenzahl (an den Bearbeiten-Dialog durchgereicht)
     has_status       – bool
     has_run_buttons  – bool
     has_edit         – bool
@@ -67,7 +68,7 @@
 
       <div class="m-card-footer">
         {% for action in _card_actions %}{{ ui.card_action_button(action, item_name, item_data, container_id, loading_id) }}{% endfor %}
-        {% if has_edit | default(True) %}{{ ui.edit_button(module=module, item=item_name, container_id=container_id, loading_id=loading_id, item_prefix=_item_url_prefix) }}{% endif %}
+        {% if has_edit | default(True) %}{{ ui.edit_button(module=module, item=item_name, container_id=container_id, loading_id=loading_id, item_prefix=_item_url_prefix, page=_page) }}{% endif %}
         {% if has_delete | default(True) %}{{ ui.delete_button(module=module, item=item_name, container_id=container_id, loading_id=loading_id, description=_title, item_prefix=_item_url_prefix) }}{% endif %}
       </div>
 

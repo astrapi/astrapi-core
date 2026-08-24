@@ -41,6 +41,9 @@
 {%- endif -%}
 {%- set _ui_cols = _ui_content.columns if (_ui_content and _ui_content.type == 'table') else [] -%}
 {%- set _item_url_prefix = (_col_obj.item_url_prefix if (_col_obj is defined and _col_obj) else (_ui_content.item_url_prefix if (_ui_content and _ui_content.item_url_prefix) else '')) -%}
+{# Aktuelle Seite an den Bearbeiten-Dialog durchreichen, damit man nach dem
+   Speichern auf derselben Seite bleibt statt auf Seite 1 zu springen. #}
+{%- set _page = pagination.page if pagination else 1 -%}
 
 {# Überschreibe has_run_buttons / has_edit / has_delete aus ui_content wenn gesetzt #}
 {%- if _ui_content -%}
@@ -129,7 +132,7 @@
                                  + (1 if extra_actions_template else 0) -%}
               {% if _n_actions == 1 %}
                 {% for action in _card_actions %}{{ ui.card_action_button(action, item_name, item_data, container_id, loading_id) }}{% endfor %}
-                {% if has_edit | default(True) %}{{ ui.edit_button(module=module, item=item_name, container_id=container_id, loading_id=loading_id, item_prefix=_item_url_prefix) }}{% endif %}
+                {% if has_edit | default(True) %}{{ ui.edit_button(module=module, item=item_name, container_id=container_id, loading_id=loading_id, item_prefix=_item_url_prefix, page=_page) }}{% endif %}
                 {% if has_delete | default(True) %}{{ ui.delete_button(module=module, item=item_name, container_id=container_id, loading_id=loading_id, description=item_data.description or item_data.job or item_data.host or item_name, item_prefix=_item_url_prefix) }}{% endif %}
               {% else %}
               <div class="table-ctx-menu"
@@ -142,7 +145,7 @@
                   {% for action in _card_actions %}{{ ui.card_action_button(action, item_name, item_data, container_id, loading_id) }}{% endfor %}
                   {% if extra_actions_template %}{% include extra_actions_template ignore missing %}{% endif %}
                   {% if has_edit | default(True) %}
-                  {{ ui.edit_button(module=module, item=item_name, container_id=container_id, loading_id=loading_id, item_prefix=_item_url_prefix) }}
+                  {{ ui.edit_button(module=module, item=item_name, container_id=container_id, loading_id=loading_id, item_prefix=_item_url_prefix, page=_page) }}
                   {% endif %}
                   {% if has_delete | default(True) %}
                   {{ ui.delete_button(module=module, item=item_name, container_id=container_id, loading_id=loading_id, description=item_data.description or item_data.job or item_data.host or item_name, item_prefix=_item_url_prefix) }}

@@ -254,6 +254,7 @@ def make_crud_router(
 
         @router.get(f"/ui/{key}/create", response_class=HTMLResponse)
         def create_modal(request: Request):
+            _page = request.query_params.get("page")
             return render(
                 request,
                 "partials/create_edit/create_edit_modal.html",
@@ -263,7 +264,7 @@ def make_crud_router(
                     modal_width=schema["modal_width"],
                     item=None,
                     item_id=None,
-                    submit_url=f"/ui/{key}/",
+                    submit_url=f"/ui/{key}/?page={_page}" if _page else f"/ui/{key}/",
                     method="post",
                     title=f"Neuer {_label}",
                     reload_url=f"/ui/{key}/content",
@@ -281,6 +282,8 @@ def make_crud_router(
             item = store.get(item_id)
             if item is None:
                 return HTMLResponse(f"{_label} nicht gefunden", status_code=404)
+            _page = request.query_params.get("page")
+            _update_url = f"/ui/{key}/{item_id}/update"
             return render(
                 request,
                 "partials/create_edit/create_edit_modal.html",
@@ -290,7 +293,7 @@ def make_crud_router(
                     modal_width=schema["modal_width"],
                     item=item,
                     item_id=item_id,
-                    submit_url=f"/ui/{key}/{item_id}/update",
+                    submit_url=f"{_update_url}?page={_page}" if _page else _update_url,
                     method="post",
                     title=f"{_label} bearbeiten",
                     reload_url=f"/ui/{key}/content",
