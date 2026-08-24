@@ -362,7 +362,7 @@ def make_crud_router(
             store.create(item_id, data)
         except KeyError:
             return HTMLResponse("Bereits vorhanden", status_code=409)
-        return render(request, "content.html", _ctx())
+        return render(request, "content.html", _content_ctx(request))
 
     @router.post(f"/ui/{key}/{{item_id}}/update", response_class=HTMLResponse)
     async def edit_apply(item_id: str, request: Request):
@@ -371,7 +371,7 @@ def make_crud_router(
             store.update(item_id, _form_data(form))
         except KeyError:
             return HTMLResponse("Nicht gefunden", status_code=404)
-        return render(request, "content.html", _ctx())
+        return render(request, "content.html", _content_ctx(request))
 
     return router
 
