@@ -220,6 +220,7 @@ class HeaderControl:
     # Für action_button
     icon: str = ""  # Icon-Name aus ui/icons/, z.B. "plus" (leer = kein Icon)
     css_class: str = ""  # zusätzliche CSS-Klasse am <button>, z.B. für Mobile-FAB-Positionierung
+    busy_label: str = ""  # nicht leer = Button zeigt waehrend der Anfrage Spinner + diesen Text
 
     # Marker-Attribute
     data_attr: str = ""  # z.B. "data-actlog-filter" für individuelles hx-include
@@ -271,6 +272,7 @@ class Header:
         style: str = "accent",
         icon: str = "",
         css_class: str = "",
+        busy_label: str = "",
     ) -> HeaderControl:
         return HeaderControl(
             type="action_button",
@@ -282,6 +284,7 @@ class Header:
             style=style,
             icon=icon,
             css_class=css_class,
+            busy_label=busy_label,
         )
 
 

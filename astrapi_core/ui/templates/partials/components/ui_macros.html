@@ -549,7 +549,7 @@
 {%- set _attrs = (('hx-get="'  ~ ctrl.hx_get  ~ '" ') if ctrl.hx_get  else '')
                ~ (('hx-post="' ~ ctrl.hx_post ~ '" ') if ctrl.hx_post else '')
                ~ (('hx-target="' ~ (ctrl.hx_target or 'body') ~ '" hx-swap="' ~ (ctrl.hx_swap or 'beforeend') ~ '"') if (ctrl.hx_get or ctrl.hx_post) else '') -%}
-{{ btn(ctrl.label, variant=ctrl.style or 'primary', attrs=_attrs, icon=ctrl.icon or none, extra_class=ctrl.css_class or none) }}
+{{ btn(ctrl.label, variant=ctrl.style or 'primary', attrs=_attrs, icon=ctrl.icon or none, extra_class=ctrl.css_class or none, busy_label=ctrl.busy_label or none) }}
 {%- endif %}
 {% endmacro %}
 
