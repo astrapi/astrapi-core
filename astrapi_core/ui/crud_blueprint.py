@@ -91,6 +91,7 @@ def make_crud_router(
     extra_buttons: list[dict] | None = None,
     embed_target_id: str | None = None,
     delete_preview_fn: Callable[[str], list[str]] | None = None,
+    list_item_transform: Callable[[dict], dict] | None = None,
 ) -> APIRouter:
     """Erstellt einen generischen CRUD-APIRouter.
 
@@ -116,6 +117,15 @@ def make_crud_router(
                            mitgelöscht würden (z.B. verwaiste Abhängigkeiten).
                            Wird im Bestätigungsdialog aufgelistet, damit die
                            Kaskade vor dem Klick sichtbar ist statt danach.
+        list_item_transform: Optionale Funktion (item_id, item_dict) -> item_dict,
+                           die JEDES Item nur für die Listen-ANZEIGE
+                           transformiert (z.B. rohe Fremdschlüssel-IDs gegen
+                           ein anderes Modul zu Anzeigenamen auflösen, oder
+                           einen Anzeigewert aus dem Activity Log ableiten).
+                           Bekommt eine flache Kopie, damit store.list()/
+                           store.get() für Bearbeiten-Formulare weiterhin
+                           die echten, unveränderten Rohwerte liefern
+                           (T-225-SYNC, T-226-SYNC).
 
     Returns:
         FastAPI APIRouter mit allen Standard-UI-Routen
@@ -241,6 +251,12 @@ def make_crud_router(
     def _content_ctx(request: Request) -> dict:
         items, extra = resolve_filters_for_request(key, request, store.list())
         paged_items, pagination = _paginate(request, items)
+        if list_item_transform is not None:
+            # Flache Kopie je Item -- store.list()/store.get() (Bearbeiten-
+            # Formular, Filter, sonstige Logik) bekommen weiterhin die
+            # unveraenderten Rohwerte, nur die Listen-ANZEIGE hier sieht die
+            # transformierte Kopie.
+            paged_items = {k: list_item_transform(k, dict(v)) for k, v in paged_items.items()}
         return _ctx(cfg=paged_items, pagination=pagination, **extra)
 
     @router.get(f"/ui/{key}/content", response_class=HTMLResponse)

@@ -58,6 +58,9 @@
               {%- if col.type == 'status' -%}{{ ui.status_inline(_val) }}
               {%- elif col.type == 'badge_enum' and col.enum -%}{%- set _e = col.enum.get(_val) -%}{{ _e.label if _e else _val }}
               {%- elif col.type == 'version_badge' -%}{{ _val }}
+              {%- elif col.type == 'join' -%}
+                {%- set _list = _val if (_val is iterable and _val is not string) else [] -%}
+                {{ _list | join(col.sep) }}
               {%- else -%}{{ _val }}{%- endif -%}
             </span>
           </div>
