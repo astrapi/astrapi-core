@@ -65,8 +65,14 @@ _mod_registry: dict = _instance._registry
 # ── Laden ─────────────────────────────────────────────────────────────────────
 
 
-def _load_from_dir(modules_dir: Path, pkg_prefix: str) -> tuple[dict, set[str]]:
+def _load_from_dir(
+    modules_dir: Path, pkg_prefix: str, skip: set[str] | None = None
+) -> tuple[dict, set[str]]:
     """Lädt alle Module-Instanzen aus einem Verzeichnis.
+
+    skip: Modul-Namen, die gar nicht erst importiert werden (siehe
+    get_disabled_modules()) -- verhindert auch Lade-Nebenwirkungen
+    (Tabellen-Registrierung etc.), nicht nur die Navigation-Anzeige.
 
     Returns:
         (found, failed) – found: {key: instance}, failed: Modulnamen die nicht geladen wurden
@@ -93,6 +99,8 @@ def _load_from_dir(modules_dir: Path, pkg_prefix: str) -> tuple[dict, set[str]]:
 
     for entry in sorted(modules_dir.iterdir()):
         if entry.name.startswith("_"):
+            continue
+        if skip and entry.stem in skip:
             continue
 
         if entry.is_dir():
@@ -155,8 +163,12 @@ def load_modules(app_root: Path) -> list:
     """
     import importlib as _il
 
+    from astrapi_core.system.version import get_disabled_modules
+
+    disabled = set(get_disabled_modules(app_root))
+
     _il.import_module("astrapi_core.modules")
-    core_mods, core_failed = _load_from_dir(CORE_MOD_DIR, "astrapi_core.modules")
+    core_mods, core_failed = _load_from_dir(CORE_MOD_DIR, "astrapi_core.modules", skip=disabled)
     ext_mods, ext_failed = _load_from_dir(app_root / "overrides", "app.overrides")
     app_mods, app_failed = _load_from_dir(app_root / "modules", "app.modules")
     failed_keys: set[str] = core_failed | ext_failed | app_failed

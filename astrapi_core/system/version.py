@@ -30,6 +30,15 @@ def get_display_name(app_root: Path, default: str = "App") -> str:
     return str(_read_yaml(app_root / "app.yaml").get("display_name", default))
 
 
+def get_disabled_modules(app_root: Path) -> list[str]:
+    """Core-Module (Keys, z.B. 'scheduler'), die diese App nicht laden will
+    (app.yaml: disabled_modules) -- für Core-Module, die zum App-Zweck nicht
+    passen (z.B. Scheduler bei rein ereignisgesteuerten Apps ohne
+    Zeitplanung). Betrifft nur core/modules/, keine App-eigenen Module."""
+    raw = _read_yaml(app_root / "app.yaml").get("disabled_modules", [])
+    return [str(x) for x in raw] if raw else []
+
+
 def _clean_version(v: str) -> str:
     """Bereinigt Dev-Versionen:
     - Entfernt lokalen Hash-Teil (+g...)
