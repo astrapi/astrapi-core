@@ -89,6 +89,17 @@
         {{ 'Update läuft…' if info.updater.status == 'running' else 'Prüfung läuft…' }}
       </span>
       {% else %}
+      {# Mobile hat keine Pro-Paket-Zeilen mit eigenem Update-Button (siehe
+         .mobile-view weiter unten, nur Name+Version, kein <td> für Aktionen)
+         -- ohne diesen Button liess sich ein verfuegbares Update auf Mobile
+         ueberhaupt nicht auslösen. Nur sichtbar, wenn tatsaechlich mindestens
+         ein Paket ein Update hat. #}
+      {% if info.updater.packages | selectattr('update_available') | list %}
+      <span class="mobile-view">
+        {{ btn('Update installieren', variant='primary', busy_label='Starte…', icon='refresh',
+               attrs='hx-post="/ui/system/update" hx-target="#system-metrics" hx-swap="outerHTML"') }}
+      </span>
+      {% endif %}
       {{ btn('Auf Updates prüfen', variant='primary', busy_label='Prüfe…', icon='refresh',
              attrs='hx-post="/ui/system/check" hx-target="#system-metrics" hx-swap="outerHTML"') }}
       {% endif %}
