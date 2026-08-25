@@ -128,6 +128,14 @@ _CARD_ACTION_TYPES: dict[str, dict] = {
         "style": "log",
         "href": "",
     },
+    "reconnect": {
+        "title": "Neu verbinden (neuer Pairing-Code)",
+        "icon": "refresh",
+        "style": "log",
+        "hx_get": "",
+        "hx_target": "body",
+        "hx_swap": "beforeend",
+    },
 }
 
 _POST_TYPES = {"run", "run_debug"}
