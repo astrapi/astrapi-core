@@ -106,6 +106,14 @@ _CARD_ACTION_TYPES: dict[str, dict] = {
         "hx_target": "body",
         "hx_swap": "beforeend",
     },
+    "files": {
+        "title": "Dateien durchsuchen",
+        "icon": "folder",
+        "style": "log",
+        "hx_get": "/api/{module}/{item}/files",
+        "hx_target": "body",
+        "hx_swap": "beforeend",
+    },
     "stats": {
         "title": "Info",
         "icon": "info",
