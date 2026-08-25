@@ -136,6 +136,14 @@ _CARD_ACTION_TYPES: dict[str, dict] = {
         "hx_target": "body",
         "hx_swap": "beforeend",
     },
+    "move": {
+        "title": "Speicherort verschieben",
+        "icon": "folder",
+        "style": "log",
+        "hx_get": "",
+        "hx_target": "body",
+        "hx_swap": "beforeend",
+    },
 }
 
 _POST_TYPES = {"run", "run_debug"}
