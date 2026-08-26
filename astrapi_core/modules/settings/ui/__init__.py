@@ -87,19 +87,15 @@ def _ctx(flash: str = "") -> dict:
     # "System" hat aktuell nur ein Feld (extra_disks) -- statt einer eigenen
     # Karte wird es direkt in "Allgemein" mit angezeigt/gespeichert (siehe
     # settings.html + settings_save_global unten).
-    system_settings = mod_settings.pop("system", None)
-    extra_disks = system_settings["values"].get("extra_disks", []) if system_settings else []
-    # Altlast: manche DBs haben hier eine leere Zeichenkette statt einer
-    # Liste gespeichert (siehe frühere module_card.html-Absicherung).
-    if not isinstance(extra_disks, list):
-        extra_disks = []
+    mod_settings.pop("system", None)
+    from astrapi_core.system.paths import extra_disk as _extra_disk
 
     return {
         "settings": all_settings(),
         "modules": modules,
         "flash_message": flash,
         "mod_settings": mod_settings,
-        "extra_disks": extra_disks,
+        "extra_disk": _extra_disk(),
     }
 
 
@@ -141,18 +137,9 @@ async def settings_save_global(request: Request):
     values = dict(form)
 
     # extra_disks (System) ist in die Allgemein-Karte mit eingezogen (siehe
-    # _ctx() oben) -- indizierte Felder wie beim generischen list-Feldtyp
-    # in settings_save_module, hier direkt mit dem module.system.-Praefix
-    # gespeichert statt ueber eine eigene Modul-Karte.
-    disks, i = [], 0
-    while True:
-        val = values.pop(f"extra_disks_{i}", None)
-        if val is None:
-            break
-        if val.strip():
-            disks.append(val.strip())
-        i += 1
-    values["module.system.extra_disks"] = disks
+    # _ctx() oben) -- direkt mit dem module.system.-Praefix gespeichert
+    # statt ueber eine eigene Modul-Karte.
+    values["module.system.extra_disks"] = values.pop("extra_disks", "").strip()
 
     set_many(values)
     return render(

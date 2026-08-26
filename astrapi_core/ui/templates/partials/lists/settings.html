@@ -46,33 +46,10 @@
             {# ── System: Zusätzlicher Speicher (frueher eigene Karte) ──────── #}
             <div class="form-group" style="margin:0;">
               <label class="form-label">Zusätzlicher Speicher</label>
-              <div x-data='{ "lines": {{ extra_disks | default([]) | tojson }},
-                             add() { this.lines.push("") },
-                             remove(i) { this.lines.splice(i, 1) } }'
-                   class="stack-sm">
-                <template x-for="(line, i) in lines" :key="i">
-                  <div class="inline-cluster">
-                    <input type="text"
-                           :name="`extra_disks_${i}`"
-                           x-model="lines[i]"
-                           class="form-input" {# G-013-Ausnahme: Alpine.js x-model mit dynamischem :name #}
-                           style="flex:1; font-family:var(--font-mono); font-size:13px;">
-                    <button type="button" @click="remove(i)"
-                            class="btn-icon btn-icon-danger" title="Entfernen" aria-label="Entfernen">
-                      <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" stroke="none">
-                        <use href="#icon-minus"></use>
-                      </svg>
-                    </button>
-                  </div>
-                </template>
-                <div class="list-field-add">
-                  {% call ui.btn(attrs='style="gap:5px;" @click="add()"') %}
-                    <svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor" stroke="none"><use href="#icon-plus"></use></svg>
-                    Hinzufügen
-                  {% endcall %}
-                </div>
-              </div>
-              <span class="form-help">Mountpoints für zusätzliche Festplatten-Karten</span>
+              {{ form_input('extra_disks', extra_disk | default(''),
+                           placeholder='/storage',
+                           attrs='style="font-family:var(--font-mono);"') }}
+              <span class="form-help">Pfad eines zusätzlichen Datenträgers -- von mirror, packages und sync zwingend benötigt, bei backup optional</span>
             </div>
 
             <div class="form-actions">

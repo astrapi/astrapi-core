@@ -60,6 +60,40 @@ def work_dir() -> Path:
     return Path(val)
 
 
+def extra_disk() -> str:
+    """Gibt den konfigurierten Zusatzspeicher-Pfad zurück, oder '' wenn nicht
+    gesetzt (Einstellungen → Allgemein → "Zusätzlicher Speicher",
+    module.system.extra_disks).
+
+    Robust gegen ältere gespeicherte Formate von vor der Vereinfachung auf
+    ein einzelnes Textfeld -- Liste (frühere Mehrfach-Eintrags-UI) oder
+    kommagetrennter String (noch früheres Format) werden beide auf den
+    ersten/einzigen Eintrag reduziert, ohne dass eine Datenmigration nötig
+    wäre."""
+    from astrapi_core.ui.settings_registry import get_module
+
+    raw = get_module("system", "extra_disks", "") or ""
+    if isinstance(raw, list):
+        raw = raw[0] if raw else ""
+    if isinstance(raw, str):
+        raw = raw.split(",")[0].strip()
+    return raw or ""
+
+
+def require_extra_disk() -> str:
+    """Wie extra_disk(), bricht aber mit klarer Fehlermeldung ab statt
+    still auf '' zurückzufallen -- für Apps, die zwingend einen
+    Zusatzspeicher benötigen (mirror, packages, sync)."""
+    disk = extra_disk()
+    if not disk:
+        raise RuntimeError(
+            'Kein Zusätzlicher Speicher konfiguriert (Einstellungen → '
+            'Allgemein → "Zusätzlicher Speicher") -- diese App benötigt '
+            "zwingend einen."
+        )
+    return disk
+
+
 def db_path() -> Path:
     return work_dir() / "data" / "app.db"
 

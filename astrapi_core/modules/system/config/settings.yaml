@@ -5,7 +5,7 @@ fields:
 
   - key: extra_disks
     label: Zusätzlicher Speicher
-    type: list
-    description: "Mountpoints für zusätzliche Festplatten-Karten"
+    type: text
+    description: "Pfad eines zusätzlichen Datenträgers -- von mirror, packages und sync zwingend benötigt, bei backup optional"
     mono: true
-    default: []
+    default: ""
