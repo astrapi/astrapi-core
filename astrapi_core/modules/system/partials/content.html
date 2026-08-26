@@ -93,12 +93,18 @@
          .mobile-view weiter unten, nur Name+Version, kein <td> für Aktionen)
          -- ohne diesen Button liess sich ein verfuegbares Update auf Mobile
          ueberhaupt nicht auslösen. Nur sichtbar, wenn tatsaechlich mindestens
-         ein Paket ein Update hat. #}
+         ein Paket ein Update hat.
+         extra_class statt einem umschliessenden <span class="mobile-view">:
+         die mobile FAB-Regel (app.css, .sysinfo-card-header .btn) braucht
+         echte Geschwister-Buttons unter demselben Elternelement, damit
+         :not(:last-child) beide auseinanderhaelt -- ein Wrapper macht den
+         Button zum einzigen Kind seines eigenen Elternelements und damit
+         selbst wieder zu :last-child, wodurch die Stapel-Regel ihn nie traf
+         und er exakt hinter "Auf Updates prüfen" verschwand. #}
       {% if info.updater.packages | selectattr('update_available') | list %}
-      <span class="mobile-view">
-        {{ btn('Update installieren', variant='primary', busy_label='Starte…', icon='refresh',
-               attrs='hx-post="/ui/system/update" hx-target="#system-metrics" hx-swap="outerHTML"') }}
-      </span>
+      {{ btn('Update installieren', variant='primary', busy_label='Starte…', icon='refresh',
+             extra_class='mobile-view',
+             attrs='hx-post="/ui/system/update" hx-target="#system-metrics" hx-swap="outerHTML"') }}
       {% endif %}
       {{ btn('Auf Updates prüfen', variant='primary', busy_label='Prüfe…', icon='refresh',
              attrs='hx-post="/ui/system/check" hx-target="#system-metrics" hx-swap="outerHTML"') }}

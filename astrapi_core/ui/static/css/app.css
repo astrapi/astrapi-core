@@ -1557,8 +1557,15 @@ body.mobile-nav-open #sidebar-overlay { display:block; }
     transform:scale(0.96);
     box-shadow:0 2px 8px rgba(0,0,0,0.35), 0 1px 3px rgba(0,0,0,0.3);
   }
-  /* Mehrere Buttons stapeln sich nach oben statt sich zu überlappen. */
-  .content-header-actions > .btn:not(:last-child) {
+  /* Mehrere Buttons stapeln sich nach oben statt sich zu überlappen.
+     .sysinfo-card-header .btn:not(:last-child): seit T-234-SYNC kann die
+     System-Seite dort ebenfalls zwei Buttons haben ("Update installieren"
+     + "Auf Updates prüfen") -- ohne diese Zeile landeten beide exakt
+     uebereinander auf position:fixed bottom:24px;right:20px (siehe Regel
+     oben), der spaeter im DOM stehende ("Auf Updates prüfen") verdeckte
+     den ersten komplett. */
+  .content-header-actions > .btn:not(:last-child),
+  .sysinfo-card-header .btn:not(:last-child) {
     bottom:84px;
   }
   /* Ausnahme: Ghost-Buttons (z.B. "Auf Updates prüfen" bei debian/archlinux)
