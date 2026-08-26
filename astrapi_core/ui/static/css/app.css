@@ -1408,8 +1408,13 @@ body.mobile-nav-open #sidebar-overlay { display:block; }
     width:48px; height:48px; border-radius:50%;
   }
 
-  /* Sidebar + Overlay an neue App-Bar-Höhe anpassen */
-  #sidebar         { top:62px; width:min(280px, 82vw); }
+  /* Sidebar + Overlay an neue App-Bar-Höhe anpassen. Hintergrund bewusst
+     dunkler als die sonst ueberall verwendete --card-Farbe -- var(--bg)
+     ist in beiden Themes das dunklere/gedeckte Token (dark: #000 vs.
+     --card #1e1e1e; light: #e2e2e8 vs. --card #fff), damit die
+     ausklappbare Sidebar sich vom Seiteninhalt absetzt statt optisch mit
+     ihm zu verschmelzen. Auf Wunsch. */
+  #sidebar         { top:62px; width:min(280px, 82vw); background:var(--bg); }
   #sidebar-overlay { top:62px; }
 
   /* Hauptinhalt: genug Luft nach oben (App-Bar) + unten (FAB) */
@@ -1420,11 +1425,14 @@ body.mobile-nav-open #sidebar-overlay { display:block; }
     min-height:48px; padding:12px 16px;
     border-radius:12px; font-size:14px; font-weight:500;
   }
+  /* Grau statt Blau fuer den ausgewaehlten Punkt -- wie in der
+     Desktop-Ansicht (siehe .nav-item.active weiter oben), auf Wunsch
+     an die Mobile-Ansicht angeglichen. */
   .nav-item.active {
-    background:rgba(37,99,235,0.15);
-    color:var(--b);
+    background:rgba(255,255,255,0.05);
+    color:var(--text);
   }
-  .nav-item.active .nav-icon { color:var(--b); opacity:1; }
+  .nav-item.active .nav-icon { color:var(--text); opacity:1; }
   .nav-item:active            { background:rgba(37,99,235,0.12); }
 
   /* Karten: Material-Elevation + größerer Radius */
