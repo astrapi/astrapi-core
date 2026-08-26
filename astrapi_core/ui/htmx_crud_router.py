@@ -40,6 +40,7 @@ def make_htmx_crud_router(
     on_create: Callable[[str, dict], None] | None = None,
     on_update: Callable[[str, dict], None] | None = None,
     on_delete: Callable[[str], None] | None = None,
+    can_delete_fn: Callable[[str], str | None] | None = None,
 ) -> APIRouter:
     """Erstellt einen HTMX-CRUD-Router für ein Modul.
 
@@ -51,6 +52,12 @@ def make_htmx_crud_router(
         on_create:    Optionaler Callback nach dem Anlegen: on_create(item_id, data)
         on_update:    Optionaler Callback nach dem Aktualisieren: on_update(item_id, data)
         on_delete:    Optionaler Callback nach dem Löschen: on_delete(item_id)
+        can_delete_fn: Optionale Funktion (item_id) -> Fehlertext oder None.
+                      Liefert sie einen Text, wird das Löschen mit 409 UND
+                      diesem Text abgelehnt, BEVOR delete_item() läuft --
+                      anders als on_delete (feuert erst danach, Fehler werden
+                      verschluckt) kann das Löschen so tatsächlich verhindert
+                      werden, nicht nur nachträglich beobachtet.
     """
     router = APIRouter()
 
@@ -179,6 +186,10 @@ def make_htmx_crud_router(
     def _do_delete(request: Request, item_id: str, hx_request: str | None):
         from astrapi_core.system.db import delete_item
 
+        if can_delete_fn is not None:
+            reason = can_delete_fn(item_id)
+            if reason:
+                raise HTTPException(409, reason)
         if not delete_item(key, item_id):
             raise HTTPException(404, "Item not found")
         if on_delete is not None:

@@ -53,6 +53,42 @@ document.body.addEventListener("htmx:pushedIntoHistory", () => {
     updateActiveNav();
 });
 
+// ── Generischer Fehler-Toast für fehlgeschlagene HTMX-Requests ──────────────
+// Server-Ablehnungen (z.B. can_delete_fn-Sperren) landen sonst unsichtbar --
+// Bestätigungsdialoge schliessen sich bei Request-Ende unabhängig vom Erfolg
+// (siehe dialog_confirm.html), ohne den Fehlertext je anzuzeigen. Dieselbe
+// Optik wie partials/oob/toast_badge.html (dort für gezielte Erfolgs-/
+// Fehlermeldungen einzelner Endpunkte), hier aber automatisch für JEDEN
+// fehlgeschlagenen HTMX-Request in der ganzen App.
+function showErrorToast(msg) {
+    const el = document.createElement('div');
+    el.style.cssText = 'position:fixed; top:24px; left:50%; transform:translateX(-50%); z-index:9999; ' +
+        'font-size:13px; color:#fff; padding:8px 14px; border-radius:var(--rad); background:#dc2626; ' +
+        'display:flex; align-items:center; gap:6px; box-shadow:0 2px 8px rgba(0,0,0,.4); transition:opacity .2s ease;';
+    el.textContent = msg;
+    document.body.appendChild(el);
+    setTimeout(() => {
+        el.style.opacity = '0';
+        setTimeout(() => el.remove(), 200);
+    }, 4000);
+}
+
+function _htmxErrorMessage(xhr) {
+    try {
+        const data = JSON.parse(xhr.responseText);
+        if (data && typeof data.detail === 'string') return data.detail;
+    } catch (e) { /* keine JSON-Antwort */ }
+    return `Fehler (${xhr.status || '?'})`;
+}
+
+document.body.addEventListener('htmx:responseError', (evt) => {
+    showErrorToast(_htmxErrorMessage(evt.detail.xhr));
+});
+
+document.body.addEventListener('htmx:sendError', () => {
+    showErrorToast('Server nicht erreichbar');
+});
+
 // ── Spalteneinstellungen zurücksetzen ─────────────────────────────────────────
 function resetColSettings(module) {
     fetch(`/ui/preferences/col-widths/${module}`, {
