@@ -1135,9 +1135,15 @@ input,select,textarea { font-family:var(--font); }
 .sysinfo-gauge-ring { display:block; }
 .sysinfo-gauge-ring-value {
   position:absolute; top:50%; left:50%; transform:translate(-50%,-50%);
-  font-size:19px; font-weight:700; color:var(--text);
+  font-size:17px; font-weight:700; color:var(--text);
   display:flex; align-items:baseline; gap:1px;
+  white-space:nowrap;
 }
+/* Kleinere Einheit innerhalb des Rings -- die 88px-Ring-Innenflaeche
+   (siehe .sysinfo-gauge-ring-wrap) reicht sonst bei "100.0%" (Worst
+   Case) nicht: Zahl+Einheit ragten bei der vorherigen 72px-Groesse und
+   14px-Einheit ueber den Ring hinaus. */
+.sysinfo-gauge-ring-value .sysinfo-gauge-unit { font-size:11px; }
 
 /* ── Sysinfo: responsive Grids ───────────────────────────────── */
 @media (max-width:768px) {
