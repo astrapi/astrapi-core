@@ -55,16 +55,37 @@
     {% endcall %}
   {% endif %}
 
+  {# Sektionen mit nur einem Feld: die eigene Überschrift des Feldes (.form-label)
+     wiederholt die Section-Überschrift optisch praktisch 1:1 direkt darunter --
+     wirkt wie zwei Überschriften hintereinander. Für solche Ein-Feld-Sektionen
+     die .settings-section-label deshalb unterdrücken, das Feld-Label reicht. #}
+  {% set section_sizes = [] %}
+  {% set ns0 = namespace(count=0, started=False) %}
+  {% for field in render_fields %}
+    {% if field.get('type') == 'section' %}
+      {% if ns0.started %}{% set _ = section_sizes.append(ns0.count) %}{% endif %}
+      {% set ns0.count = 0 %}
+      {% set ns0.started = True %}
+    {% else %}
+      {% set ns0.count = ns0.count + 1 %}
+    {% endif %}
+  {% endfor %}
+  {% if ns0.started %}{% set _ = section_sizes.append(ns0.count) %}{% endif %}
+
   {% if has_sections %}
-    {% set ns = namespace(grid_open=False, first_section=True) %}
+    {% set ns = namespace(grid_open=False, first_section=True, section_idx=-1) %}
     {% for field in render_fields %}
       {% if field.get('type') == 'section' %}
         {% if ns.grid_open %}</div>{% endif %}
+        {% set ns.section_idx = ns.section_idx + 1 %}
+        {% set single_field_section = section_sizes[ns.section_idx] == 1 %}
+        {% if not single_field_section %}
         <div class="settings-section-label" style="margin-top:{% if ns.first_section %}4px{% else %}12px{% endif %};">
           {{ field.label }}
         </div>
+        {% endif %}
         {% set ns.first_section = False %}
-        <div class="form-grid" style="--cols:{{ field.get('cols', 2) }};">
+        <div class="form-grid" style="--cols:{{ field.get('cols', 2) }};{% if single_field_section %} margin-top:{% if ns.first_section %}4px{% else %}12px{% endif %};{% endif %}">
         {% set ns.grid_open = True %}
       {% else %}
         {% if not ns.grid_open %}
