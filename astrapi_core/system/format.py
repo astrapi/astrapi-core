@@ -17,3 +17,10 @@ def fmt_now() -> str:
     """Aktuellen Zeitstempel im deutschen Format: TT.MM.JJJJ HH:MM"""
     from datetime import datetime
     return datetime.now().strftime("%d.%m.%Y %H:%M")
+
+
+def fmt_timestamp(ts: float) -> str:
+    """Beliebigen Unix-Zeitstempel (z.B. Path.stat().st_mtime) im selben
+    deutschen Format wie fmt_now(): TT.MM.JJJJ HH:MM"""
+    from datetime import datetime
+    return datetime.fromtimestamp(ts).strftime("%d.%m.%Y %H:%M")
