@@ -57,7 +57,10 @@
             <span class="m-card-meta-value">
               {%- if col.type == 'status' -%}{{ ui.status_inline(_val) }}
               {%- elif col.type == 'badge_enum' and col.enum -%}{%- set _e = col.enum.get(_val) -%}{{ _e.label if _e else _val }}
-              {%- elif col.type == 'version_badge' -%}{{ _val }}
+              {%- elif col.type == 'version_badge' -%}
+                {%- set _upd = item_data.get(col.remote_key) if col.remote_key else '' -%}
+                {{- _val -}}
+                {%- if _upd and _upd != _val %}<span class="badge-pill badge-amber" style="margin-left:6px" title="Neue Version verfügbar: {{ _upd }}">{{ _upd }}</span>{% endif -%}
               {%- elif col.type == 'join' -%}
                 {%- set _list = _val if (_val is iterable and _val is not string) else [] -%}
                 {{ _list | join(col.sep) }}
