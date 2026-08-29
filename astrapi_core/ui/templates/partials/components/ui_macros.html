@@ -486,7 +486,7 @@
 {%- set _upd = item_data.get(col.remote_key) if col.remote_key else '' -%}
 <td class="{{ col.cls }}">
   {{- _val or '—' -}}
-  {%- if _upd and _upd != _val %}<span class="badge-pill badge-amber" style="margin-left:6px" title="Neue Version verfügbar: {{ _upd }}">{{ _upd }}</span>{% endif -%}
+  {%- if _upd and version_is_newer(_upd, _val) %}<span class="badge-pill badge-amber" style="margin-left:6px" title="Neue Version verfügbar: {{ _upd }}">{{ _upd }}</span>{% endif -%}
 </td>
 {%- elif col.type == 'status' -%}
 <td class="{{ col.cls }}">{{ status_inline(_val) }}</td>

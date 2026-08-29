@@ -24,3 +24,27 @@ def fmt_timestamp(ts: float) -> str:
     deutschen Format wie fmt_now(): TT.MM.JJJJ HH:MM"""
     from datetime import datetime
     return datetime.fromtimestamp(ts).strftime("%d.%m.%Y %H:%M")
+
+
+def _version_tokens(v: str) -> list[str]:
+    import re
+    return re.findall(r"\d+|\D+", v or "")
+
+
+def version_is_newer(a: str, b: str) -> bool:
+    """True wenn Versionsstring a echt neuer ist als b.
+
+    Natural-Version-Sort wie GNU `sort -V` (Ziffern-Laeufe numerisch,
+    Rest lexikografisch vergleichen) -- passt auf unsere ueblichen
+    punktgetrennten Versionen mit optionalem -pkgrel-Suffix
+    (z.B. "26.8.2-1" vs "26.8.1-1"). Keine echte pacman-vercmp-
+    Implementierung, aber fuer diesen Zweck (Badge "Update verfuegbar"
+    nur bei echtem Fortschritt zeigen) ausreichend.
+    """
+    for x, y in zip(_version_tokens(a), _version_tokens(b)):
+        if x == y:
+            continue
+        if x.isdigit() and y.isdigit():
+            return int(x) > int(y)
+        return x > y
+    return len(_version_tokens(a)) > len(_version_tokens(b))

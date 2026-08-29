@@ -223,6 +223,10 @@ def create(
 
     jinja_env.globals["resolve_remote_host"] = _resolve_remote_host
 
+    from ..system.format import version_is_newer
+
+    jinja_env.globals["version_is_newer"] = version_is_newer
+
     # module_obj als Jinja2-Global damit Makros (col_cell etc.) darauf zugreifen können
     def _module_obj(key: str):
         return _mod_map.get(key)
