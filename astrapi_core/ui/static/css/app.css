@@ -1301,7 +1301,10 @@ body.mobile-nav-open #sidebar-overlay { display:block; }
     display:flex; flex-wrap:wrap; gap:6px; margin-bottom:8px;
   }
   .m-module-actions .btn { flex:1 1 auto; justify-content:center; }
-  .m-card-meta-value .lr-date { min-width:0; }
+  /* min-width:0 hebt den Desktop-Abstand auf (dort trennt die feste
+     Breite Datum/Uhrzeit optisch, ohne dass ein Leerzeichen im Markup
+     steht) -- hier per margin ersetzen, sonst kleben beide zusammen. */
+  .m-card-meta-value .lr-date { min-width:0; margin-right:4px; }
   .m-card-meta-value .lr-time { min-width:0; }
 
   /* ── Mobile Karten ──────────────────────────────────────────── */
