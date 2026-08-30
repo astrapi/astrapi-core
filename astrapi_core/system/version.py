@@ -39,6 +39,22 @@ def get_disabled_modules(app_root: Path) -> list[str]:
     return [str(x) for x in raw] if raw else []
 
 
+def get_auth_config(app_root: Path) -> dict:
+    """Auth-Konfiguration aus app.yaml (Schlüssel `auth:`) -- opt-in pro App,
+    siehe ui/app.py::create() und [[E-003]]. `enabled` schaltet die
+    WebAuthn/Passkey-Login-Pflicht für die UI frei; rp_id/rp_name/origin
+    sind Startwerte für die gleichnamigen Settings (später über die
+    Settings-UI änderbar, ohne app.yaml erneut anzufassen)."""
+    raw = _read_yaml(app_root / "app.yaml").get("auth", {}) or {}
+    return {
+        "enabled": bool(raw.get("enabled", False)),
+        "rp_id": str(raw.get("rp_id", "")),
+        "rp_name": str(raw.get("rp_name", "")),
+        "origin": str(raw.get("origin", "")),
+        "exempt_prefixes": [str(x) for x in (raw.get("exempt_prefixes") or [])],
+    }
+
+
 def _clean_version(v: str) -> str:
     """Bereinigt Dev-Versionen:
     - Entfernt lokalen Hash-Teil (+g...)

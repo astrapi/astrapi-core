@@ -21,7 +21,13 @@ from fastapi.responses import JSONResponse, RedirectResponse
 from jinja2 import ChoiceLoader, FileSystemLoader
 
 from ..system.paths import is_debug, is_ui_debug
-from ..system.version import get_app_name, get_app_version, get_core_version, get_display_name
+from ..system.version import (
+    get_app_name,
+    get_app_version,
+    get_auth_config,
+    get_core_version,
+    get_display_name,
+)
 from .module_registry import (
     build_nav_items,
     load_modules,
@@ -162,6 +168,15 @@ def create(
     global_defaults.setdefault("DATE_FORMAT", "DD.MM.YYYY")
     global_defaults.setdefault("PAGINATION_PAGE_SIZE", 15)
     global_defaults.setdefault("ACTIVITY_LOG_RETENTION_DAYS", 90)
+
+    # Auth (WebAuthn/Passkey-Login, opt-in über app.yaml: auth.enabled) --
+    # Startwerte für rp_id/rp_name/origin, später über die Settings-UI
+    # änderbar ohne app.yaml erneut anzufassen (siehe [[E-003]]).
+    auth_cfg = get_auth_config(app_root)
+    global_defaults.setdefault("AUTH_RP_ID", auth_cfg["rp_id"])
+    global_defaults.setdefault("AUTH_RP_NAME", auth_cfg["rp_name"] or _display_name)
+    global_defaults.setdefault("AUTH_ORIGIN", auth_cfg["origin"])
+
     seed_defaults(global_defaults, modules, failed_module_keys)
 
     # Aufbewahrung durchsetzen (T-113/T-114): ein einmaliger Aufruf beim Start
@@ -307,6 +322,14 @@ def create(
             mod.register(api)
         elif hasattr(mod, "router"):
             api.include_router(mod.router)
+
+    # ── Auth-Routen + Login-Gate (nur wenn app.yaml: auth.enabled) ───────────
+    if auth_cfg["enabled"]:
+        from .auth_middleware import RequireLoginMiddleware
+        from .auth_routes import router as _auth_router
+
+        api.include_router(_auth_router)
+        api.add_middleware(RequireLoginMiddleware, exempt_prefixes=auth_cfg["exempt_prefixes"])
 
     # ── Preferences-Routen ────────────────────────────────────────────────────
     _register_preferences_routes(api)
