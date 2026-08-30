@@ -32,6 +32,57 @@ def _get_timezone() -> str:
         return TIMEZONE
 
 
+# ── Cron-Erklärung ───────────────────────────────────────────────────────────
+
+_CRON_DAYS = ["Sonntag", "Montag", "Dienstag", "Mittwoch", "Donnerstag", "Freitag", "Samstag"]
+_CRON_MONTHS = [
+    "", "Januar", "Februar", "März", "April", "Mai", "Juni",
+    "Juli", "August", "September", "Oktober", "November", "Dezember",
+]
+
+
+def cron_explain(expr: str | None) -> str:
+    """Menschenlesbare Kurzbeschreibung eines 5-Felder-Cron-Ausdrucks
+    (z.B. "Täglich um 03:00 Uhr"). 1:1 portiert aus derselben cronExplain()
+    in modules/scheduler/dialogs/edit/modal.html -- beide muessen
+    inhaltlich synchron bleiben, falls eine Seite geaendert wird."""
+    import re
+
+    expr = (expr or "").strip()
+    if not expr:
+        return ""
+    p = expr.split()
+    if len(p) != 5:
+        return "Ungültiges Format – 5 Felder erwartet (Min Std Tag Mon Wochentag)"
+    minute, hr, dom, mon, dow = p
+    if expr == "* * * * *":
+        return "Jede Minute"
+    if re.fullmatch(r"\*/\d+", minute) and hr == dom == mon == dow == "*":
+        return f"Alle {minute[2:]} Minuten"
+    if minute == "0" and re.fullmatch(r"\*/\d+", hr) and dom == mon == dow == "*":
+        return f"Alle {hr[2:]} Stunden"
+    if minute == "0" and hr == "*" and dom == mon == dow == "*":
+        return "Jede Stunde (zur vollen Stunde)"
+    time_str = ""
+    if minute.isdigit() and hr.isdigit():
+        time_str = f"{int(hr):02d}:{int(minute):02d} Uhr"
+    if not time_str:
+        return ""
+    if dom == "*" and mon == "*" and dow == "*":
+        return f"Täglich um {time_str}"
+    if dom == "*" and mon == "*" and dow == "1-5":
+        return f"Mo–Fr um {time_str}"
+    if dom == "*" and mon == "*" and re.fullmatch(r"\d", dow):
+        day = _CRON_DAYS[int(dow)] if int(dow) < len(_CRON_DAYS) else f"Wochentag {dow}"
+        return f"Jeden {day} um {time_str}"
+    if dom.isdigit() and mon == "*" and dow == "*":
+        return f"Monatlich am {dom}. um {time_str}"
+    if dom.isdigit() and mon.isdigit() and dow == "*":
+        month = _CRON_MONTHS[int(mon)] if 0 < int(mon) < len(_CRON_MONTHS) else mon
+        return f"Jährlich am {dom}. {month} um {time_str}"
+    return f"Täglich um {time_str} (mit Einschränkungen)"
+
+
 # ── Storage (lazy) ─────────────────────────────────────────────────────────────
 
 def _jobs_store():

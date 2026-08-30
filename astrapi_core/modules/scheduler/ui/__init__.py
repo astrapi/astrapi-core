@@ -21,7 +21,7 @@ _scheduler_table = ContentTable(
     has_toggle=False,
     item_url_prefix="job/",
     columns=[
-        Col.mono("cron", "Cron"),
+        Col.text("cron_desc", "Zeitplan", sortable=False),
         Col.text("next_run", "Nächster Lauf", sortable=False),
         Col.text("last_run", "Letzter Lauf", sortable=False),
         Col.text("last_duration", "Dauer", sortable=False),
@@ -52,12 +52,15 @@ register_content_renderer(KEY, _render_content)
 
 
 def _list_ctx() -> dict:
-    from astrapi_core.modules.scheduler.engine import get_registered_actions, list_jobs
+    from astrapi_core.modules.scheduler.engine import cron_explain, get_registered_actions, list_jobs
 
     jobs = list_jobs()
     return {
         "module": KEY,
-        "cfg": {j["id"]: {**j, "description": j["label"]} for j in jobs},
+        "cfg": {
+            j["id"]: {**j, "description": j["label"], "cron_desc": cron_explain(j.get("cron"))}
+            for j in jobs
+        },
         "actions": get_registered_actions(),
         "container_id": _C_ID,
         "loading_id": _L_ID,
