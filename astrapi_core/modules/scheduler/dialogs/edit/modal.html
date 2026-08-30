@@ -34,20 +34,63 @@
     <span class="form-error"></span>
   </div>
 
-  <!-- Cron-Ausdruck -->
+  <!-- Der eigentliche, submittete Wert -- immer im DOM, Sichtbarkeit/Befuellung
+       je nach Modus (siehe schedSetFreq/schedBuildCron unten). Bewusst EIN
+       Feld mit name="cron" statt zwei, damit nie zwei Werte submittet werden. -->
+  <input type="hidden" name="cron" id="cron-final" value="{{ job.cron if job else '' }}">
+
+  <!-- Häufigkeit -->
   <div class="form-group">
-    <label class="form-label">Cron-Ausdruck <span class="required-mark">*</span></label>
-    <input class="form-input" type="text" name="cron" id="cron-input"
-           value="{{ job.cron if job else '' }}"
-           placeholder="0 2 * * *" required
-           data-required="true" autocomplete="off"
-           oninput="cronUpdate(this.value)">
-    <span class="form-error"></span>
+    <label class="form-label">Häufigkeit</label>
+    <div class="sched-freq-grid">
+      <button type="button" class="sched-freq-btn" data-freq="daily" onclick="schedSetFreq('daily')">Täglich</button>
+      <button type="button" class="sched-freq-btn" data-freq="weekly" onclick="schedSetFreq('weekly')">Wöchentlich</button>
+      <button type="button" class="sched-freq-btn" data-freq="monthly" onclick="schedSetFreq('monthly')">Monatlich</button>
+      <button type="button" class="sched-freq-btn" data-freq="custom" onclick="schedSetFreq('custom')">Benutzerdefiniert</button>
+    </div>
   </div>
 
-  <!-- Cron-Helper -->
-  <div style="margin-top:-6px;">
-    <div style="display:flex; flex-wrap:wrap; gap:5px; margin-bottom:7px;">
+  <!-- Uhrzeit (Täglich/Wöchentlich/Monatlich) -->
+  <div class="form-group" id="sched-field-time">
+    <label class="form-label">Uhrzeit</label>
+    <input class="form-input" type="time" id="sched-time" value="02:00" onchange="schedBuildCron()">
+  </div>
+
+  <!-- Wochentag (nur Wöchentlich) -->
+  <div class="form-group" id="sched-field-weekday" style="display:none;">
+    <label class="form-label">Wochentag</label>
+    <select class="form-input" id="sched-weekday" onchange="schedBuildCron()">
+      <option value="1">Montag</option>
+      <option value="2">Dienstag</option>
+      <option value="3">Mittwoch</option>
+      <option value="4">Donnerstag</option>
+      <option value="5">Freitag</option>
+      <option value="6">Samstag</option>
+      <option value="0">Sonntag</option>
+    </select>
+  </div>
+
+  <!-- Tag im Monat (nur Monatlich) -->
+  <div class="form-group" id="sched-field-dom" style="display:none;">
+    <label class="form-label">Tag im Monat</label>
+    <input class="form-input" type="number" id="sched-dom" min="1" max="31" value="1" onchange="schedBuildCron()">
+  </div>
+
+  <!-- Vorschau -->
+  <div id="cron-explain-box" class="sched-explain-box">
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" stroke="none"><use href="#icon-clock"></use></svg>
+    <span id="cron-explain"></span>
+  </div>
+
+  <!-- Benutzerdefiniert: freies Cron-Feld + Presets fuer Faelle, die der
+       Picker nicht abbildet (Alle 15 Min, Mo-Fr, ...). -->
+  <div class="form-group" id="sched-field-custom" style="display:none;">
+    <label class="form-label">Cron-Ausdruck <span class="required-mark">*</span></label>
+    <input class="form-input" type="text" id="cron-custom"
+           placeholder="0 2 * * *" autocomplete="off"
+           oninput="schedCustomInput(this.value)">
+    <span class="form-error"></span>
+    <div style="display:flex; flex-wrap:wrap; gap:5px; margin-top:7px;">
       {% for label, expr in [
         ('Täglich 02:00',   '0 2 * * *'),
         ('Täglich 06:00',   '0 6 * * *'),
@@ -63,10 +106,25 @@
               onclick="cronSet('{{ expr }}')">{{ label }}</button>
       {% endfor %}
     </div>
-    <div id="cron-explain"
-         style="font-size:11px; color:var(--text-3); min-height:16px; transition:color .15s;">
-    </div>
   </div>
+
+  <style>
+    .sched-freq-grid { display:grid; grid-template-columns:1fr 1fr; gap:8px; }
+    .sched-freq-btn {
+      border:1px solid var(--border-s); background:var(--btn-2); color:var(--btn-2-t);
+      border-radius:var(--rad-lg); padding:12px; font-size:14px; font-weight:500;
+      cursor:pointer; text-align:center;
+    }
+    .sched-freq-btn.active {
+      background:rgba(37,99,235,0.15); border-color:rgba(37,99,235,0.5); color:var(--b);
+      font-weight:600;
+    }
+    .sched-explain-box {
+      display:flex; align-items:center; gap:8px; padding:10px 12px;
+      background:var(--card); border-radius:var(--rad-lg);
+      font-size:13px; color:var(--text-2);
+    }
+  </style>
 
   <!-- Schritte -->
   <div>
@@ -242,6 +300,14 @@
     var inputs = form.querySelectorAll('input[data-required]');
     var valid  = true;
     inputs.forEach(function (input) { if (!validateField(input)) valid = false; });
+    // Cron-final wird bei Taeglich/Woechentlich/Monatlich immer vom Picker
+    // befuellt -- nur bei "Benutzerdefiniert" kann das sichtbare Feld leer
+    // sein und muss geprueft werden.
+    if (currentFreq === 'custom') {
+      var custom = document.getElementById('cron-custom');
+      schedCustomInput(custom.value);
+      if (custom.value.trim() === '') valid = false;
+    }
     return valid;
   };
 
@@ -295,18 +361,99 @@
     el.style.color = text.startsWith('Ungültig') ? '#f87171' : 'var(--text-3)';
   };
 
-  window.cronSet = function (expr) {
-    var input = document.getElementById('cron-input');
-    if (!input) return;
-    input.value = expr;
-    input.dispatchEvent(new Event('input'));
-    input.classList.remove('is-invalid');
-    var err = input.parentElement.querySelector('.form-error');
-    if (err) { err.textContent = ''; err.classList.remove('visible'); }
+  // ── Häufigkeit-Picker: Täglich/Wöchentlich/Monatlich bauen den Cron-
+  // Ausdruck aus Uhrzeit + ggf. Wochentag/Tag-im-Monat, Benutzerdefiniert
+  // gibt das rohe Feld frei. #cron-final ist in jedem Modus der einzige
+  // Wert mit name="cron" -- die anderen Felder sind reine UI-Eingaben.
+  var currentFreq = 'daily';
+
+  window.schedSetFreq = function (freq) {
+    currentFreq = freq;
+    document.querySelectorAll('.sched-freq-btn').forEach(function (btn) {
+      btn.classList.toggle('active', btn.dataset.freq === freq);
+    });
+    document.getElementById('sched-field-time').style.display     = (freq === 'custom') ? 'none' : '';
+    document.getElementById('sched-field-weekday').style.display  = (freq === 'weekly') ? '' : 'none';
+    document.getElementById('sched-field-dom').style.display      = (freq === 'monthly') ? '' : 'none';
+    document.getElementById('sched-field-custom').style.display   = (freq === 'custom') ? '' : 'none';
+    document.getElementById('cron-explain-box').style.display     = (freq === 'custom') ? 'none' : '';
+    if (freq === 'custom') {
+      var custom = document.getElementById('cron-custom');
+      schedCustomInput(custom.value);
+    } else {
+      schedBuildCron();
+    }
   };
 
-  var initialCron = document.getElementById('cron-input');
-  if (initialCron && initialCron.value) cronUpdate(initialCron.value);
+  window.schedBuildCron = function () {
+    var time = document.getElementById('sched-time').value || '02:00';
+    var parts = time.split(':');
+    var hr = String(parseInt(parts[0], 10));
+    var min = String(parseInt(parts[1], 10));
+    var expr;
+    if (currentFreq === 'weekly') {
+      var dow = document.getElementById('sched-weekday').value;
+      expr = min + ' ' + hr + ' * * ' + dow;
+    } else if (currentFreq === 'monthly') {
+      var dom = document.getElementById('sched-dom').value || '1';
+      expr = min + ' ' + hr + ' ' + dom + ' * *';
+    } else {
+      expr = min + ' ' + hr + ' * * *';
+    }
+    document.getElementById('cron-final').value = expr;
+    cronUpdate(expr);
+  };
+
+  window.schedCustomInput = function (val) {
+    document.getElementById('cron-final').value = val;
+    cronUpdate(val);
+    var input = document.getElementById('cron-custom');
+    var err   = input.parentElement.querySelector('.form-error');
+    var empty = val.trim() === '';
+    input.classList.toggle('is-invalid', empty);
+    if (err) {
+      err.textContent = empty ? 'Dieses Feld ist erforderlich.' : '';
+      err.classList.toggle('visible', empty);
+    }
+  };
+
+  window.cronSet = function (expr) {
+    var input = document.getElementById('cron-custom');
+    if (!input) return;
+    input.value = expr;
+    schedCustomInput(expr);
+  };
+
+  // Bestehenden Cron-Ausdruck beim Bearbeiten in Häufigkeit/Uhrzeit/
+  // Wochentag/Tag zurueckuebersetzen, wo eindeutig moeglich -- sonst
+  // (z.B. "*/15 * * * *", "0 8 * * 1-5") faellt der Dialog auf
+  // "Benutzerdefiniert" mit dem rohen Ausdruck zurueck, statt etwas
+  // Falsches zu erraten.
+  function schedParseCron(expr) {
+    var p = (expr || '').trim().split(/\s+/);
+    if (p.length !== 5) return null;
+    var min = p[0], hr = p[1], dom = p[2], mon = p[3], dow = p[4];
+    if (!/^\d+$/.test(min) || !/^\d+$/.test(hr)) return null;
+    var time = hr.padStart(2, '0') + ':' + min.padStart(2, '0');
+    if (dom === '*' && mon === '*' && dow === '*') return { freq: 'daily', time: time };
+    if (dom === '*' && mon === '*' && /^\d$/.test(dow)) return { freq: 'weekly', time: time, dow: dow };
+    if (/^\d+$/.test(dom) && mon === '*' && dow === '*') return { freq: 'monthly', time: time, dom: dom };
+    return null;
+  }
+
+  var initialCron  = document.getElementById('cron-final').value;
+  var parsed       = initialCron ? schedParseCron(initialCron) : null;
+  if (parsed) {
+    document.getElementById('sched-time').value = parsed.time;
+    if (parsed.freq === 'weekly')  document.getElementById('sched-weekday').value = parsed.dow;
+    if (parsed.freq === 'monthly') document.getElementById('sched-dom').value     = parsed.dom;
+    schedSetFreq(parsed.freq);
+  } else if (initialCron) {
+    document.getElementById('cron-custom').value = initialCron;
+    schedSetFreq('custom');
+  } else {
+    schedSetFreq('daily');
+  }
 })();
 </script>
 {% endblock %}
