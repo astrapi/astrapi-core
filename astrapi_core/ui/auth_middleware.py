@@ -29,7 +29,7 @@ class RequireLoginMiddleware(BaseHTTPMiddleware):
         if any(path == p or path.startswith(p.rstrip("/") + "/") for p in self._exempt):
             return await call_next(request)
 
-        if not authmod.has_credentials():
+        if not authmod.is_configured():
             return RedirectResponse("/auth/register")
 
         token = request.cookies.get(authmod.SESSION_COOKIE_NAME)

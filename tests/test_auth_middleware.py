@@ -33,9 +33,9 @@ def _make_app(exempt_prefixes=None):
     return TestClient(app)
 
 
-def test_ohne_credentials_leitet_zu_register_um():
+def test_ohne_konfigurierte_anmeldemethode_leitet_zu_register_um():
     client = _make_app()
-    with patch("astrapi_core.ui.auth_middleware.authmod.has_credentials", return_value=False):
+    with patch("astrapi_core.ui.auth_middleware.authmod.is_configured", return_value=False):
         r = client.get("/protected", follow_redirects=False)
     assert r.status_code == 307
     assert r.headers["location"] == "/auth/register"
@@ -43,7 +43,7 @@ def test_ohne_credentials_leitet_zu_register_um():
 
 def test_ohne_gueltige_session_leitet_zu_login_um():
     client = _make_app()
-    with patch("astrapi_core.ui.auth_middleware.authmod.has_credentials", return_value=True), patch(
+    with patch("astrapi_core.ui.auth_middleware.authmod.is_configured", return_value=True), patch(
         "astrapi_core.ui.auth_middleware.authmod.is_logged_in", return_value=False
     ):
         r = client.get("/protected", follow_redirects=False)
@@ -53,7 +53,7 @@ def test_ohne_gueltige_session_leitet_zu_login_um():
 
 def test_mit_gueltiger_session_kommt_durch():
     client = _make_app()
-    with patch("astrapi_core.ui.auth_middleware.authmod.has_credentials", return_value=True), patch(
+    with patch("astrapi_core.ui.auth_middleware.authmod.is_configured", return_value=True), patch(
         "astrapi_core.ui.auth_middleware.authmod.is_logged_in", return_value=True
     ):
         r = client.get("/protected")
@@ -62,7 +62,7 @@ def test_mit_gueltiger_session_kommt_durch():
 
 def test_app_eigene_ausnahme_bleibt_ohne_session_erreichbar():
     client = _make_app(exempt_prefixes=["/api/agent"])
-    with patch("astrapi_core.ui.auth_middleware.authmod.has_credentials", return_value=True), patch(
+    with patch("astrapi_core.ui.auth_middleware.authmod.is_configured", return_value=True), patch(
         "astrapi_core.ui.auth_middleware.authmod.is_logged_in", return_value=False
     ):
         r = client.get("/api/agent/policy")
@@ -71,7 +71,7 @@ def test_app_eigene_ausnahme_bleibt_ohne_session_erreichbar():
 
 def test_health_und_static_sind_immer_ausgenommen():
     client = _make_app()
-    with patch("astrapi_core.ui.auth_middleware.authmod.has_credentials", return_value=True), patch(
+    with patch("astrapi_core.ui.auth_middleware.authmod.is_configured", return_value=True), patch(
         "astrapi_core.ui.auth_middleware.authmod.is_logged_in", return_value=False
     ):
         assert client.get("/health").status_code == 200
@@ -82,7 +82,7 @@ def test_ohne_exempt_prefixes_ist_nicht_gelistete_route_trotzdem_gesperrt():
     """Denylist-Default: eine App, die 'exempt_prefixes' vergisst, sperrt
     versehentlich zu viel statt zu wenig -- die sicherere Richtung."""
     client = _make_app(exempt_prefixes=None)
-    with patch("astrapi_core.ui.auth_middleware.authmod.has_credentials", return_value=True), patch(
+    with patch("astrapi_core.ui.auth_middleware.authmod.is_configured", return_value=True), patch(
         "astrapi_core.ui.auth_middleware.authmod.is_logged_in", return_value=False
     ):
         r = client.get("/api/agent/policy", follow_redirects=False)

@@ -1,20 +1,39 @@
 {% extends "_base.html" %}
-{% block title %}Passkey einrichten – {{ app_name }}{% endblock %}
+{% block title %}Anmeldung einrichten – {{ app_name }}{% endblock %}
 {% block content %}
 <div class="auth-page">
   <div class="auth-card">
     <h1>{{ app_name }}</h1>
-    <p id="auth-status" class="auth-status">Ersten Passkey für diese Anwendung einrichten</p>
-    <input id="passkey-label" type="text" placeholder="Gerätename (z. B. \"Laptop\")" class="auth-input" />
-    <button id="passkey-register" type="button" class="btn btn-primary">Passkey einrichten</button>
+    <p class="auth-status">Anmeldung für diese Anwendung einrichten</p>
+
+    <div id="passkey-section" style="display:none;">
+      <h2 class="auth-h2">Passkey (empfohlen)</h2>
+      <input id="passkey-label" type="text" placeholder="Gerätename (z. B. &quot;Laptop&quot;)" class="auth-input" />
+      <button id="passkey-register" type="button" class="btn btn-primary">Passkey einrichten</button>
+      <p id="passkey-status" class="auth-status"></p>
+      <div class="auth-divider">oder</div>
+    </div>
+    <p id="passkey-hint" class="auth-status" style="display:none;">
+      Passkeys benötigen HTTPS (oder localhost) -- über die aktuelle Verbindung nicht verfügbar.
+    </p>
+
+    <h2 class="auth-h2">Passwort</h2>
+    <form id="password-form" class="auth-form">
+      <input id="password-input" type="password" placeholder="Neues Passwort (mind. 8 Zeichen)" class="auth-input" autocomplete="new-password" required minlength="8" />
+      <button type="submit" class="btn btn-primary">Passwort festlegen</button>
+      <p id="password-status" class="auth-status"></p>
+    </form>
   </div>
 </div>
 <style>
 .auth-page { display:flex; align-items:center; justify-content:center; min-height:100vh; }
 .auth-card { max-width:360px; width:100%; padding:2rem; text-align:center; }
 .auth-card h1 { margin-bottom:.5rem; }
-.auth-status { color:var(--text-muted, #888); margin-bottom:1.5rem; }
+.auth-h2 { font-size:14px; text-transform:uppercase; color:var(--text-muted, #888); margin:1rem 0 .75rem; }
+.auth-status { color:var(--text-muted, #888); margin:.5rem 0 1rem; min-height:1.2em; }
 .auth-input { width:100%; margin-bottom:1rem; padding:8px 12px; border-radius:8px; border:1px solid var(--border, #444); background:var(--bg-2, transparent); color:inherit; }
+.auth-divider { color:var(--text-muted, #888); margin:1rem 0; font-size:12px; text-transform:uppercase; }
+.auth-form .btn { width:100%; }
 </style>
 {% endblock %}
 {% block extra_js %}
@@ -34,13 +53,19 @@ function bufToB64u(buf) {
   return btoa(bin).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
 }
 
+if (window.isSecureContext && window.PublicKeyCredential) {
+  document.getElementById('passkey-section').style.display = '';
+} else {
+  document.getElementById('passkey-hint').style.display = '';
+}
+
 document.getElementById('passkey-register').addEventListener('click', async () => {
-  const status = document.getElementById('auth-status');
+  const status = document.getElementById('passkey-status');
   const label = document.getElementById('passkey-label').value || 'Passkey';
   status.textContent = 'Warte auf Passkey …';
   try {
     const optRes = await fetch('/auth/register/options', { method: 'POST' });
-    if (!optRes.ok) throw new Error('Nicht berechtigt (bereits ein Passkey vorhanden, nicht angemeldet?)');
+    if (!optRes.ok) throw new Error('Nicht berechtigt (bereits eingerichtet, nicht angemeldet?)');
     const opts = await optRes.json();
     opts.challenge = b64uToBuf(opts.challenge);
     opts.user.id = b64uToBuf(opts.user.id);
@@ -72,6 +97,28 @@ document.getElementById('passkey-register').addEventListener('click', async () =
       window.location.href = '/';
     } else {
       status.textContent = 'Einrichtung fehlgeschlagen.';
+    }
+  } catch (e) {
+    status.textContent = 'Fehler: ' + e.message;
+  }
+});
+
+document.getElementById('password-form').addEventListener('submit', async (ev) => {
+  ev.preventDefault();
+  const status = document.getElementById('password-status');
+  const password = document.getElementById('password-input').value;
+  status.textContent = 'Speichere …';
+  try {
+    const res = await fetch('/auth/register/password', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ password }),
+    });
+    const result = await res.json();
+    if (result.ok) {
+      window.location.href = '/';
+    } else {
+      status.textContent = result.error || 'Einrichtung fehlgeschlagen.';
     }
   } catch (e) {
     status.textContent = 'Fehler: ' + e.message;

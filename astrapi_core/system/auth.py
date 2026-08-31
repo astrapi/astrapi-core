@@ -4,10 +4,23 @@ Opt-in pro App (`app.yaml: auth.enabled`, siehe ui/app.py::create() und
 ui/auth_middleware.py) -- ohne diesen Schalter bleibt eine App wie bisher
 offen im LAN. Hintergrund/Entscheidung: [[E-003]] in entscheidungen.md.
 
-Bewusst **Passkeys statt Passwort oder beliebigem WebAuthn**: Discoverable
-Credentials (`resident_key=required`) + `user_verification=required` --
-echte, phishing-resistente Passkeys mit Konten-Picker statt Login-Formular,
-kein Passwort-Hash/-Reset-Flow.
+Bevorzugt **Passkeys statt beliebigem WebAuthn**: Discoverable Credentials
+(`resident_key=required`) + `user_verification=required` -- echte,
+phishing-resistente Passkeys mit Konten-Picker statt Login-Formular.
+
+Zusätzlich ein **Passwort-Login als Fallback**: Passkeys funktionieren nur
+in einem sicheren Kontext (HTTPS oder `localhost`) -- solange eine App
+(noch) nicht per HTTPS erreichbar ist (LAN-Deployment ohne TLS, siehe
+Punkt 2 im 3-Punkte-Plan bei astrapi-admin), ist ein Passwort der einzige
+nutzbare Weg. PBKDF2-HMAC-SHA256 (stdlib `hashlib`, keine neue
+Abhängigkeit), 600.000 Iterationen (OWASP-2023-Empfehlung), einfache
+Brute-Force-Bremse (5 Fehlversuche → 30s Sperre, global -- kein
+Multi-User-Fall). **Wichtiger Unterschied zu Passkeys:** ein Passwort ist
+ein geteiltes Geheimnis, das bei jedem Login über die Leitung geht --
+über reines HTTP im Klartext mitlesbar. Passkeys übertragen nie ein
+Geheimnis (Challenge-Response mit einem privaten Schlüssel, der das
+Gerät nie verlässt). Das Passwort ist bewusst nur eine Übergangslösung
+bis HTTPS steht, kein gleichwertiger Ersatz.
 
 Single-Owner-Modell wie der Rest der astrapi-Familie: keine "users"-Tabelle
 mit Rollen. Jeder registrierte Passkey ist gleichwertig für denselben
@@ -25,6 +38,7 @@ Credentials sind keine UI-verwalteten Listen):
   in der DB steht nur der Hash)
 """
 import hashlib
+import hmac
 import json
 import secrets
 import time
@@ -280,6 +294,95 @@ def verify_authentication(
         (verified.new_sign_count, 1 if verified.credential_backed_up else 0, _now_iso(), row["id"]),
     )
     _conn().commit()
+    return True
+
+
+# ── Passwort (Fallback-Login, siehe Modul-Docstring) ─────────────────────
+
+_PBKDF2_ITERATIONS = 600_000
+_PASSWORD_LOCKOUT_THRESHOLD = 5
+_PASSWORD_LOCKOUT_SECONDS = 30
+
+
+def _hash_password(password: str) -> str:
+    salt = secrets.token_bytes(16)
+    dk = hashlib.pbkdf2_hmac("sha256", password.encode(), salt, _PBKDF2_ITERATIONS)
+    return f"pbkdf2_sha256${_PBKDF2_ITERATIONS}${bytes_to_base64url(salt)}${bytes_to_base64url(dk)}"
+
+
+def _verify_password_hash(password: str, stored: str) -> bool:
+    try:
+        algo, iterations, salt_b64, hash_b64 = stored.split("$")
+        if algo != "pbkdf2_sha256":
+            return False
+        salt = base64url_to_bytes(salt_b64)
+        expected = base64url_to_bytes(hash_b64)
+    except (ValueError, Exception):
+        return False
+    dk = hashlib.pbkdf2_hmac("sha256", password.encode(), salt, int(iterations))
+    return hmac.compare_digest(dk, expected)
+
+
+def has_password() -> bool:
+    from astrapi_core.system.db import kv_get
+
+    return bool(kv_get("_auth", "password_hash"))
+
+
+def is_configured() -> bool:
+    """True sobald IRGENDeine Anmeldemethode eingerichtet ist (Passkey
+    oder Passwort) -- steuert, ob die Bootstrap-Registrierung noch offen
+    ist (siehe ui/auth_routes.py::_may_register(), ui/auth_middleware.py)."""
+    return has_credentials() or has_password()
+
+
+def set_password(password: str) -> None:
+    from astrapi_core.system.db import kv_set
+
+    kv_set("_auth", "password_hash", _hash_password(password))
+
+
+def _failed_attempts() -> tuple[int, float]:
+    from astrapi_core.system.db import kv_get
+
+    raw = kv_get("_auth", "password_fail")
+    if not raw:
+        return 0, 0.0
+    try:
+        data = json.loads(raw)
+        return int(data.get("n", 0)), float(data.get("at", 0))
+    except (ValueError, TypeError):
+        return 0, 0.0
+
+
+def _record_failed_attempt(n: int) -> None:
+    from astrapi_core.system.db import kv_set
+
+    kv_set("_auth", "password_fail", json.dumps({"n": n + 1, "at": time.time()}))
+
+
+def _clear_failed_attempts() -> None:
+    from astrapi_core.system.db import kv_delete
+
+    kv_delete("_auth", "password_fail")
+
+
+def verify_password(password: str) -> bool:
+    """Einfache, global (kein Multi-User-Fall) geführte Brute-Force-Bremse:
+    nach 5 Fehlversuchen 30s Sperre -- kein volles Lockout-System mit
+    Admin-Reset, angemessen für ein Single-Owner-Tool."""
+    from astrapi_core.system.db import kv_get
+
+    n, at = _failed_attempts()
+    if n >= _PASSWORD_LOCKOUT_THRESHOLD and (time.time() - at) < _PASSWORD_LOCKOUT_SECONDS:
+        return False
+
+    stored = kv_get("_auth", "password_hash")
+    if not stored or not _verify_password_hash(password, stored):
+        _record_failed_attempt(n)
+        return False
+
+    _clear_failed_attempts()
     return True
 
 

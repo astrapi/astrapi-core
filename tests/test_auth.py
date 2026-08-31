@@ -214,3 +214,60 @@ def test_destroy_session_entzieht_zugriff():
     token = authmod.create_session()
     authmod.destroy_session(token)
     assert authmod.is_logged_in(token) is False
+
+
+# ── Passwort-Fallback ─────────────────────────────────────────────────────
+
+
+def test_has_password_ist_am_anfang_leer():
+    assert authmod.has_password() is False
+
+
+def test_is_configured_ist_am_anfang_falsch():
+    assert authmod.is_configured() is False
+
+
+def test_set_password_und_verify_password_erfolgreich():
+    authmod.set_password("ein-sicheres-passwort")
+    assert authmod.has_password() is True
+    assert authmod.is_configured() is True
+    assert authmod.verify_password("ein-sicheres-passwort") is True
+
+
+def test_verify_password_falsches_passwort_schlaegt_fehl():
+    authmod.set_password("richtig-123")
+    assert authmod.verify_password("falsch-456") is False
+
+
+def test_verify_password_ohne_gesetztes_passwort_schlaegt_fehl():
+    assert authmod.verify_password("irgendwas") is False
+
+
+def test_verify_password_sperrt_nach_fuenf_fehlversuchen():
+    authmod.set_password("richtig-123")
+    for _ in range(5):
+        assert authmod.verify_password("falsch") is False
+    # Sechster Versuch, korrektes Passwort -- trotzdem gesperrt, da die
+    # Sperre den Passwortvergleich selbst gar nicht erst durchführt.
+    assert authmod.verify_password("richtig-123") is False
+
+
+def test_verify_password_sperre_laeuft_nach_zeit_ab():
+    authmod.set_password("richtig-123")
+    with patch("astrapi_core.system.auth.time.time", return_value=1_000_000_000):
+        for _ in range(5):
+            authmod.verify_password("falsch")
+    with patch("astrapi_core.system.auth.time.time", return_value=1_000_000_000 + 31):
+        assert authmod.verify_password("richtig-123") is True
+
+
+def test_verify_password_erfolg_setzt_fehlversuche_zurueck():
+    authmod.set_password("richtig-123")
+    authmod.verify_password("falsch")
+    authmod.verify_password("falsch")
+    assert authmod.verify_password("richtig-123") is True
+    # Zaehler zurueckgesetzt -- vier weitere Fehlversuche noch unterhalb
+    # der Schwelle, kein Lockout.
+    for _ in range(4):
+        assert authmod.verify_password("falsch") is False
+    assert authmod.verify_password("richtig-123") is True
