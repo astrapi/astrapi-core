@@ -27,6 +27,7 @@ Verwendung:
 
 from __future__ import annotations
 
+import inspect
 from typing import Callable
 
 from fastapi import APIRouter, Request
@@ -81,7 +82,7 @@ def make_crud_router(
     has_run_buttons: bool = False,
     has_status: bool = True,
     has_toggle: bool = True,
-    resolve_fields_fn: Callable[[list], list] | None = None,
+    resolve_fields_fn: Callable[[list], list] | Callable[[list, dict | None], list] | None = None,
     extra_page_actions_template: str | None = None,
     extra_actions_template: str | None = None,
     prefill_template: str | None = None,
@@ -104,7 +105,11 @@ def make_crud_router(
         description_field: Feld des Items für die Modal-Beschreibung
         has_run_buttons:   Ob die Liste Run-Buttons anzeigen soll
         has_toggle:        Ob Toggle-Aktion verfügbar sein soll
-        resolve_fields_fn: Optionale Funktion zum Anreichern der Schema-Felder
+        resolve_fields_fn: Optionale Funktion zum Anreichern der Schema-Felder,
+                           entweder fn(fields) oder fn(fields, item) -- item ist
+                           das gerade bearbeitete Objekt (None bei "Neu"), damit
+                           z.B. Multiselect-Optionen abhaengig vom Datensatz als
+                           "locked" markiert werden koennen (siehe field_renderer.html)
         extra_page_actions_template: Optionales Template für zusätzliche Page-Actions
         running_fn:        Optionale Funktion () -> dict mit laufenden Jobs
         embed_target_id:   Optionales HTMX-Swap-Ziel (z.B. "#mod-os_types") für
@@ -163,11 +168,18 @@ def make_crud_router(
         ctx.update(extra)
         return ctx
 
-    def _resolved_fields() -> list:
+    def _resolved_fields(item: dict | None = None) -> list:
         fields = schema["fields"]
-        if resolve_fields_fn is not None:
-            return resolve_fields_fn(fields)
-        return fields
+        if resolve_fields_fn is None:
+            return fields
+        # resolve_fields_fn(fields) ist der ueberwiegende, bestehende Fall in
+        # allen Apps -- fn(fields, item) ist ein neuer, optionaler Opt-in
+        # (z.B. um Multiselect-Optionen abhaengig vom Datensatz als "locked"
+        # zu markieren), rueckwaertskompatibel per Arity-Check statt eines
+        # Pflicht-Parameters ueberall.
+        if len(inspect.signature(resolve_fields_fn).parameters) >= 2:
+            return resolve_fields_fn(fields, item)
+        return resolve_fields_fn(fields)
 
     def _form_data(form) -> dict:
         data = {}
@@ -311,7 +323,7 @@ def make_crud_router(
                 request,
                 "partials/create_edit/create_edit_modal.html",
                 dict(
-                    schema=_resolved_fields(),
+                    schema=_resolved_fields(item),
                     id_field=schema["id_field"],
                     modal_width=schema["modal_width"],
                     item=item,

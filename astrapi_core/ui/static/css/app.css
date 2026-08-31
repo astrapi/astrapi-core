@@ -457,6 +457,15 @@ input,select,textarea { font-family:var(--font); }
   color:var(--text-3);
 }
 
+/* Multiselect: geerbte, nicht abwaehlbare Option (siehe field_renderer.html) */
+.badge-locked {
+  background:rgba(255,255,255,0.03);
+  color:var(--text-3);
+  border:1px dashed rgba(255,255,255,0.12);
+  cursor:default;
+  opacity:0.75;
+}
+
 .badge-status-ok,
 .badge-status-err,
 .badge-status-warn,
