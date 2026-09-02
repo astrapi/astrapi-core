@@ -111,6 +111,40 @@
               </div>
             </div>
 
+            {% elif ftype == 'tags' %}
+            {# Wie 'list' (gleiches Formular-Sende-Format: {{ fkey }}_0, _1, ...,
+               von settings_save_module() identisch geparst), aber als kompakte
+               Badges statt einer Eingabezeile pro Wert -- fuer Listen aus vielen
+               KURZEN Werten (Namen, Tags) uebersichtlicher als 'list', bei
+               laengeren/strukturierten Werten (Pfade o.ae.) bleibt 'list' die
+               bessere Wahl. #}
+            {% set flist = fval if fval is iterable and fval is not string else [] %}
+            <div x-data='{ "tags": {{ flist | tojson }}, draft: "",
+                           add() { const v = this.draft.trim(); if (v && !this.tags.includes(v)) { this.tags.push(v) } this.draft = "" },
+                           remove(i) { this.tags.splice(i, 1) } }'>
+              <div style="display:flex; flex-wrap:wrap; gap:6px; margin-bottom:8px;" x-show="tags.length">
+                <template x-for="(tag, i) in tags" :key="tag">
+                  <span class="badge-pill badge-grey" style="display:inline-flex; align-items:center; gap:5px;">
+                    <input type="hidden" :name="`{{ fkey }}_${i}`" :value="tag">
+                    <span x-text="tag" style="{% if field.get('mono') %}font-family:var(--font-mono);{% endif %}"></span>
+                    <button type="button" @click="remove(i)" title="Entfernen" aria-label="Entfernen"
+                            style="display:inline-flex; background:none; border:none; padding:0; cursor:pointer; color:inherit; opacity:.7;">
+                      <svg width="11" height="11" viewBox="0 0 24 24" fill="currentColor" stroke="none"><use href="#icon-close"></use></svg>
+                    </button>
+                  </span>
+                </template>
+              </div>
+              <div class="inline-cluster">
+                <input type="text" x-model="draft" @keydown.enter.prevent="add()"
+                       placeholder="{{ field.get('placeholder', 'Hinzufügen…') }}"
+                       class="form-input" style="flex:1;{% if field.get('mono') %}font-family:var(--font-mono);{% endif %}">
+                {% call btn(attrs='@click="add()" type="button"') %}
+                  <svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor" stroke="none"><use href="#icon-plus"></use></svg>
+                  Hinzufügen
+                {% endcall %}
+              </div>
+            </div>
+
             {% elif ftype == 'textarea' %}
             {%- set _ta_attrs -%}
               style="resize:vertical; font-family:{% if field.get('mono') %}var(--font-mono){% else %}inherit{% endif %};"

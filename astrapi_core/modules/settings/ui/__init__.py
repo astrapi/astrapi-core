@@ -159,7 +159,10 @@ async def settings_save_module(module_key: str, request: Request):
 
     schema = mod.settings_schema or []
     password_keys = {f["key"] for f in schema if f.get("type") == "password"}
-    list_keys = {f["key"] for f in schema if f.get("type") == "list"}
+    # 'tags' sendet dasselbe {key}_0, {key}_1, ...-Format wie 'list' (siehe
+    # module_card.html) -- nur die Darstellung (Badges statt Eingabezeilen)
+    # unterscheidet sich, das Parsen ist identisch.
+    list_keys = {f["key"] for f in schema if f.get("type") in ("list", "tags")}
 
     form = await request.form()
     prefixed = {}
