@@ -138,7 +138,7 @@ _CARD_ACTION_TYPES: dict[str, dict] = {
     },
     "reconnect": {
         "title": "Neu verbinden (neuer Pairing-Code)",
-        "icon": "refresh",
+        "icon": "connection",
         "style": "log",
         "hx_get": "",
         "hx_target": "body",
