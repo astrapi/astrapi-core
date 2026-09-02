@@ -37,6 +37,13 @@
 
   <!-- Aktionen -->
   <div class="sb-actions">
+    {% if auth_enabled %}
+    <form method="post" action="/auth/logout" style="display:contents;">
+      <button type="submit" class="btn-theme" title="Abmelden">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor" stroke="none"><use href="#icon-logout"></use></svg>
+      </button>
+    </form>
+    {% endif %}
     <button class="btn-theme" id="btn-theme-toggle" onclick="toggleDarkMode()" title="Erscheinungsbild">
       <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor" stroke="none"><use id="theme-toggle-icon" href="#icon-moon"></use></svg>
     </button>

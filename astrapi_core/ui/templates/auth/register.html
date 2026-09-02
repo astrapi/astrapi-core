@@ -7,22 +7,24 @@
     <p class="auth-status">Anmeldung für diese Anwendung einrichten</p>
 
     <div id="passkey-section" style="display:none;">
-      <h2 class="auth-h2">Passkey (empfohlen)</h2>
+      <h2 class="auth-h2">Passkey{{ ' (empfohlen)' if password_fallback else '' }}</h2>
       <input id="passkey-label" type="text" placeholder="Gerätename (z. B. &quot;Laptop&quot;)" class="auth-input" />
       <button id="passkey-register" type="button" class="btn btn-primary">Passkey einrichten</button>
       <p id="passkey-status" class="auth-status"></p>
-      <div class="auth-divider">oder</div>
+      {% if password_fallback %}<div class="auth-divider">oder</div>{% endif %}
     </div>
     <p id="passkey-hint" class="auth-status" style="display:none;">
       Passkeys benötigen HTTPS (oder localhost) -- über die aktuelle Verbindung nicht verfügbar.
     </p>
 
+    {% if password_fallback %}
     <h2 class="auth-h2">Passwort</h2>
     <form id="password-form" class="auth-form">
       <input id="password-input" type="password" placeholder="Neues Passwort (mind. 8 Zeichen)" class="auth-input" autocomplete="new-password" required minlength="8" />
       <button type="submit" class="btn btn-primary">Passwort festlegen</button>
       <p id="password-status" class="auth-status"></p>
     </form>
+    {% endif %}
   </div>
 </div>
 <style>
@@ -103,26 +105,29 @@ document.getElementById('passkey-register').addEventListener('click', async () =
   }
 });
 
-document.getElementById('password-form').addEventListener('submit', async (ev) => {
-  ev.preventDefault();
-  const status = document.getElementById('password-status');
-  const password = document.getElementById('password-input').value;
-  status.textContent = 'Speichere …';
-  try {
-    const res = await fetch('/auth/register/password', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ password }),
-    });
-    const result = await res.json();
-    if (result.ok) {
-      window.location.href = '/';
-    } else {
-      status.textContent = result.error || 'Einrichtung fehlgeschlagen.';
+const passwordForm = document.getElementById('password-form');
+if (passwordForm) {
+  passwordForm.addEventListener('submit', async (ev) => {
+    ev.preventDefault();
+    const status = document.getElementById('password-status');
+    const password = document.getElementById('password-input').value;
+    status.textContent = 'Speichere …';
+    try {
+      const res = await fetch('/auth/register/password', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ password }),
+      });
+      const result = await res.json();
+      if (result.ok) {
+        window.location.href = '/';
+      } else {
+        status.textContent = result.error || 'Einrichtung fehlgeschlagen.';
+      }
+    } catch (e) {
+      status.textContent = 'Fehler: ' + e.message;
     }
-  } catch (e) {
-    status.textContent = 'Fehler: ' + e.message;
-  }
-});
+  });
+}
 </script>
 {% endblock %}

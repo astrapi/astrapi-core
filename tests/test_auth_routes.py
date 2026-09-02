@@ -69,3 +69,25 @@ def test_session_cookie_ist_ueber_http_nicht_secure(client):
     set_cookie_header = r.headers.get("set-cookie", "")
     assert "Secure" not in set_cookie_header
     assert "HttpOnly" in set_cookie_header
+
+
+# ── password_fallback: false (Apps mit HTTPS koennen den Passwort-Weg
+# komplett abschalten, nicht nur in der UI verstecken) ──────────────────
+
+
+def test_login_password_deaktiviert_gibt_404(client, monkeypatch):
+    import astrapi_core.ui.auth_routes as routes
+
+    authmod.set_password("richtig-123")
+    monkeypatch.setattr(routes, "settings_get", lambda key, default=None: False)
+    r = client.post("/auth/login/password", json={"password": "richtig-123"})
+    assert r.status_code == 404
+
+
+def test_register_password_deaktiviert_gibt_404(client, monkeypatch):
+    import astrapi_core.ui.auth_routes as routes
+
+    monkeypatch.setattr(routes, "settings_get", lambda key, default=None: False)
+    r = client.post("/auth/register/password", json={"password": "acht-zeichen"})
+    assert r.status_code == 404
+    assert authmod.has_password() is False

@@ -50,6 +50,10 @@ def _session_cookie(request: Request) -> str | None:
     return request.cookies.get(authmod.SESSION_COOKIE_NAME)
 
 
+def _password_fallback_enabled() -> bool:
+    return bool(settings_get("AUTH_PASSWORD_FALLBACK", True))
+
+
 def _may_register(request: Request) -> bool:
     """Bootstrap (noch keine Anmeldemethode) ODER bereits eingeloggt
     (weiteres Gerät/Passwort ändern)."""
@@ -62,7 +66,11 @@ def login_page(request: Request):
         return RedirectResponse("/")
     if not authmod.is_configured():
         return RedirectResponse("/auth/register")
-    return render(request, "auth/login.html", {"has_passkey": authmod.has_credentials()})
+    return render(
+        request,
+        "auth/login.html",
+        {"has_passkey": authmod.has_credentials(), "password_fallback": _password_fallback_enabled()},
+    )
 
 
 @router.post("/login/options")
@@ -90,6 +98,8 @@ async def login_verify(request: Request):
 
 @router.post("/login/password")
 async def login_password(request: Request):
+    if not _password_fallback_enabled():
+        return JSONResponse({"error": "Passwort-Login deaktiviert"}, status_code=404)
     body = await request.json()
     password = body.get("password", "")
     if not authmod.verify_password(password):
@@ -104,7 +114,7 @@ async def login_password(request: Request):
 def register_page(request: Request):
     if not _may_register(request):
         return RedirectResponse("/auth/login")
-    return render(request, "auth/register.html", {})
+    return render(request, "auth/register.html", {"password_fallback": _password_fallback_enabled()})
 
 
 @router.post("/register/options")
@@ -139,6 +149,8 @@ async def register_verify(request: Request):
 
 @router.post("/register/password")
 async def register_password(request: Request):
+    if not _password_fallback_enabled():
+        return JSONResponse({"error": "Passwort-Login deaktiviert"}, status_code=404)
     if not _may_register(request):
         return JSONResponse({"ok": False}, status_code=403)
     body = await request.json()

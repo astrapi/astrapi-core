@@ -52,6 +52,11 @@ def get_auth_config(app_root: Path) -> dict:
         "rp_name": str(raw.get("rp_name", "")),
         "origin": str(raw.get("origin", "")),
         "exempt_prefixes": [str(x) for x in (raw.get("exempt_prefixes") or [])],
+        # Default True (Rückwärtskompatibel) -- Apps ohne HTTPS brauchen das
+        # Passwort weiterhin als einzigen nutzbaren Weg (Passkeys erfordern
+        # einen sicheren Kontext). Apps mit HTTPS koennen es gezielt
+        # abschalten, siehe system/auth.py-Docstring.
+        "password_fallback": bool(raw.get("password_fallback", True)),
     }
 
 

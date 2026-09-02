@@ -8,14 +8,16 @@
     <div id="passkey-section" style="display:none;">
       <p id="auth-status" class="auth-status">Mit Passkey anmelden</p>
       <button id="passkey-login" type="button" class="btn btn-primary">Mit Passkey anmelden</button>
-      <div class="auth-divider">oder</div>
+      {% if password_fallback %}<div class="auth-divider">oder</div>{% endif %}
     </div>
 
+    {% if password_fallback %}
     <form id="password-form" class="auth-form">
       <input id="password-input" type="password" placeholder="Passwort" class="auth-input" autocomplete="current-password" required />
       <button type="submit" class="btn btn-primary">Anmelden</button>
       <p id="password-status" class="auth-status"></p>
     </form>
+    {% endif %}
   </div>
 </div>
 <style>
@@ -91,26 +93,29 @@ document.getElementById('passkey-login').addEventListener('click', async () => {
   }
 });
 
-document.getElementById('password-form').addEventListener('submit', async (ev) => {
-  ev.preventDefault();
-  const status = document.getElementById('password-status');
-  const password = document.getElementById('password-input').value;
-  status.textContent = 'Prüfe …';
-  try {
-    const res = await fetch('/auth/login/password', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ password }),
-    });
-    const result = await res.json();
-    if (result.ok) {
-      window.location.href = result.redirect || '/';
-    } else {
-      status.textContent = 'Falsches Passwort.';
+const passwordForm = document.getElementById('password-form');
+if (passwordForm) {
+  passwordForm.addEventListener('submit', async (ev) => {
+    ev.preventDefault();
+    const status = document.getElementById('password-status');
+    const password = document.getElementById('password-input').value;
+    status.textContent = 'Prüfe …';
+    try {
+      const res = await fetch('/auth/login/password', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ password }),
+      });
+      const result = await res.json();
+      if (result.ok) {
+        window.location.href = result.redirect || '/';
+      } else {
+        status.textContent = 'Falsches Passwort.';
+      }
+    } catch (e) {
+      status.textContent = 'Fehler: ' + e.message;
     }
-  } catch (e) {
-    status.textContent = 'Fehler: ' + e.message;
-  }
-});
+  });
+}
 </script>
 {% endblock %}

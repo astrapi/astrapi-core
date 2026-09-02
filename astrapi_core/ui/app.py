@@ -176,6 +176,7 @@ def create(
     global_defaults.setdefault("AUTH_RP_ID", auth_cfg["rp_id"])
     global_defaults.setdefault("AUTH_RP_NAME", auth_cfg["rp_name"] or _display_name)
     global_defaults.setdefault("AUTH_ORIGIN", auth_cfg["origin"])
+    global_defaults.setdefault("AUTH_PASSWORD_FALLBACK", auth_cfg["password_fallback"])
 
     seed_defaults(global_defaults, modules, failed_module_keys)
 
@@ -296,6 +297,7 @@ def create(
             "last_run_status": last_run_status,
             "show_ssh_key": app_cfg.get("SHOW_SSH_KEY", False),
             "nav_items": _nav_items_ref[0],
+            "auth_enabled": auth_cfg["enabled"],
             "is_debug": is_debug(),
             "is_ui_debug": is_ui_debug(),
             "static_v": _static_v,
