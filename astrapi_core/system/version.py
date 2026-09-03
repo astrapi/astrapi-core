@@ -30,6 +30,26 @@ def get_display_name(app_root: Path, default: str = "App") -> str:
     return str(_read_yaml(app_root / "app.yaml").get("display_name", default))
 
 
+# Generischer Kreis-Haken -- EINZIGE Quelle, damit Favicon/Apple-Touch-Icon/
+# PWA-Manifest (system/manifest.py) garantiert denselben Default zeigen statt
+# an zwei Stellen leicht auseinanderzudriften.
+DEFAULT_ICON_SVG = (
+    "data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' "
+    "fill='none' stroke='%23a3a3a3' stroke-width='1.8'><circle cx='12' cy='12' r='10'/>"
+    "<polyline points='9 12 11 14 15 10'/></svg>"
+)
+
+
+def get_app_icon_svg(app_root: Path) -> str | None:
+    """Eigenes Icon fuer Favicon + PWA-Manifest (app.yaml: `icon_svg`, ein
+    kompletter data:image/svg+xml,...-URI, gleiches Format wie
+    DEFAULT_ICON_SVG). Ohne gesetzten Wert None -- Aufrufer entscheiden
+    selbst, ob/wo DEFAULT_ICON_SVG als Fallback einspringt (siehe
+    ui/app.py::create() und system/manifest.py::register_manifest())."""
+    raw = _read_yaml(app_root / "app.yaml").get("icon_svg")
+    return str(raw) if raw else None
+
+
 def get_disabled_modules(app_root: Path) -> list[str]:
     """Core-Module (Keys, z.B. 'scheduler'), die diese App nicht laden will
     (app.yaml: disabled_modules) -- für Core-Module, die zum App-Zweck nicht

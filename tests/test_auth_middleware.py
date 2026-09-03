@@ -30,6 +30,10 @@ def _make_app(exempt_prefixes=None):
     def static_css():
         return {"ok": True}
 
+    @app.get("/manifest.json")
+    def manifest():
+        return {"ok": True}
+
     return TestClient(app)
 
 
@@ -76,6 +80,17 @@ def test_health_und_static_sind_immer_ausgenommen():
     ):
         assert client.get("/health").status_code == 200
         assert client.get("/static/css/app.css").status_code == 200
+
+
+def test_manifest_json_ist_immer_ausgenommen():
+    """Der Browser ruft /manifest.json ab, bevor irgendeine Session
+    existiert (Installierbarkeits-Check) -- hinter dem Login-Gate wuerde
+    daraus eine HTML-Redirect-Seite statt JSON, PWA-Installation bricht."""
+    client = _make_app()
+    with patch("astrapi_core.ui.auth_middleware.authmod.is_configured", return_value=True), patch(
+        "astrapi_core.ui.auth_middleware.authmod.is_logged_in", return_value=False
+    ):
+        assert client.get("/manifest.json").status_code == 200
 
 
 def test_ohne_exempt_prefixes_ist_nicht_gelistete_route_trotzdem_gesperrt():

@@ -20,8 +20,11 @@ from fastapi import Request
 from fastapi.responses import JSONResponse, RedirectResponse
 from jinja2 import ChoiceLoader, FileSystemLoader
 
+from ..system.manifest import register_manifest
 from ..system.paths import is_debug, is_ui_debug
 from ..system.version import (
+    DEFAULT_ICON_SVG,
+    get_app_icon_svg,
     get_app_name,
     get_app_version,
     get_auth_config,
@@ -35,11 +38,11 @@ from .module_registry import (
 )
 from .page_factory import register_pages
 from .settings_registry import (
-    get_activity_log_retention_days,
-    seed_defaults,
+    get as settings_get,
 )
 from .settings_registry import (
-    get as settings_get,
+    get_activity_log_retention_days,
+    seed_defaults,
 )
 from .settings_registry import (
     init as settings_init,
@@ -47,6 +50,7 @@ from .settings_registry import (
 from .settings_registry import (
     set as settings_set,
 )
+
 CORE_ROOT = Path(__file__).resolve().parent
 
 
@@ -149,6 +153,7 @@ def create(
     _app_name = get_app_name(app_root)
     _display_name = get_display_name(app_root)
     _core_version = get_core_version(CORE_ROOT.parent)
+    _icon_svg = get_app_icon_svg(app_root) or DEFAULT_ICON_SVG
 
     # ── Module laden ──────────────────────────────────────────────────────────
     failed_module_keys: set = set()
@@ -285,7 +290,7 @@ def create(
             "app_name": _display_name,
             "app_version": _app_version,
             "core_version": _core_version,
-            "app_logo_svg": app_cfg.get("APP_LOGO_SVG", None),
+            "app_icon_svg": _icon_svg,
             "app_lang": _srget("APP_LANG", app_cfg.get("APP_LANG", "de")),
             "light_mode": (_light == "1" or _light is True),
             "modules": modules,
@@ -315,6 +320,9 @@ def create(
     # ── Seiten-Routen registrieren ────────────────────────────────────────────
     module_keys = {m.key for m in modules if m.ui_router is not None}
     register_pages(api, nav_items, shell_only_keys=module_keys)
+
+    # ── PWA-Manifest (Installierbarkeit unter Android/Chrome) ────────────────
+    register_manifest(api, _display_name, _icon_svg)
 
     # ── Optionale App-Blueprints / App-Routes ─────────────────────────────────
     routes_init_path = app_root / "routes" / "__init__.py"

@@ -16,7 +16,10 @@ from astrapi_core.system import auth as authmod
 # Login-Seite muss ihr CSS/JS laden können), Health-Check (Watchdog/Monitoring
 # dürfen nicht am Login scheitern), API-Doku (bereits heute ohne Auth in der
 # ganzen Familie).
-_ALWAYS_EXEMPT = ("/auth", "/static", "/health", "/api/docs", "/api/redoc", "/api/openapi.json")
+_ALWAYS_EXEMPT = (
+    "/auth", "/static", "/health", "/api/docs", "/api/redoc", "/api/openapi.json",
+    "/manifest.json",
+)
 
 
 class RequireLoginMiddleware(BaseHTTPMiddleware):
