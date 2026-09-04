@@ -51,6 +51,9 @@ class Col:
         link        – anklickbarer Link
         composed    – Template-String mit {key} Platzhaltern
         status      – Standard-Status-Badge via status_inline-Makro (ok/error/warning/running/…)
+        dot_text    – Text mit vorangestelltem Farbpunkt (category_key: eigenes
+                       Feld mit 'ok'/'warning'/'error'/'' -- Punktfarbe und
+                       Textwert kommen oft aus unabhaengigen Berechnungen)
     """
 
     type: str
@@ -65,6 +68,7 @@ class Col:
     sep: str = ", "  # für join
     template: str = ""  # für composed: "ctl/{item_name}:{key}"
     values: dict = field(default_factory=dict)  # für badge_enum / badge_list: {val: {label, cls}}
+    category_key: str = ""  # für dot_text: Feld mit 'ok'/'warning'/'error'/''
 
     # ── Factory-Methoden ──────────────────────────────────────────────────────
 
@@ -147,6 +151,16 @@ class Col:
     def status(cls, key: str, label: str, css: str = "col-status") -> "Col":
         """Standard-Status-Badge via status_inline-Makro (ok/error/warning/running/…)"""
         return cls(type="status", key=key, label=label, cls=css)
+
+    @classmethod
+    def dot_text(cls, key: str, label: str, category_key: str, css: str = "col-info") -> "Col":
+        """Text (key) mit vorangestelltem Farbpunkt, dessen Farbe aus einem
+        SEPARATEN Feld (category_key: 'ok'/'warning'/'error', leer = kein
+        Punkt) kommt -- anders als badge_enum, wo Text und Farbe aus
+        demselben Wert-Mapping stammen. Sinnvoll, wenn Text und
+        Schweregrad unabhaengig berechnet werden (z.B. "3 Updates
+        (1 sicherheitsrelevant)" mit Farbe "error")."""
+        return cls(type="dot_text", key=key, label=label, cls=css, category_key=category_key)
 
 
 # ── Card-Body-Felder (meta-grid) ───────────────────────────────────────────────

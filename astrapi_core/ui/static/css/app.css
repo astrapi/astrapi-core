@@ -311,6 +311,23 @@ input,select,textarea { font-family:var(--font); }
   flex-shrink:0;
 }
 
+/* Farbpunkt vor Zellentext (Col.dot_text), z.B. Updates-Spalte:
+   gruen = aktuell, orange = Updates, rot = sicherheitsrelevant. Anders
+   als .al-status-dot (Activity-Log-Mobilansicht) immer sichtbar, nicht
+   nur unter max-width:768px. */
+.dot-indicator {
+  display:inline-block;
+  width:8px;
+  height:8px;
+  border-radius:50%;
+  margin-right:6px;
+  vertical-align:middle;
+  flex-shrink:0;
+}
+.dot-indicator--ok      { background:var(--g); }
+.dot-indicator--warning { background:#f59e0b; }
+.dot-indicator--error   { background:var(--err); }
+
 .status-indicator.is-active {
   color:#4ade80;
   font-weight:600;

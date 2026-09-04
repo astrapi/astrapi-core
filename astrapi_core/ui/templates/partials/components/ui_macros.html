@@ -490,6 +490,12 @@
 </td>
 {%- elif col.type == 'status' -%}
 <td class="{{ col.cls }}">{{ status_inline(_val) }}</td>
+{%- elif col.type == 'dot_text' -%}
+{%- set _cat = item_data.get(col.category_key) if col.category_key else '' -%}
+<td class="{{ col.cls }}">
+  {%- if _cat %}<span class="dot-indicator dot-indicator--{{ _cat }}"></span>{% endif -%}
+  {{- _val or '—' -}}
+</td>
 {%- else -%}
 <td>{{ _val or '—' }}</td>
 {%- endif %}
