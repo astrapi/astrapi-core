@@ -4,6 +4,7 @@
 # Die App konfiguriert den DB-Pfad einmalig beim Start via configure().
 #
 import logging
+import re
 import sqlite3
 import threading
 from pathlib import Path
@@ -87,6 +88,47 @@ def _ensure_table(key: str) -> None:
     if cfg:
         _conn().execute(cfg["ddl"])
         _conn().commit()
+
+
+def _add_missing_column(con: sqlite3.Connection, key: str, error: sqlite3.OperationalError) -> bool:
+    """Ergänzt eine beim Schreiben fehlende Spalte per ALTER TABLE.
+
+    Kleinstmöglicher Ersatz für einen echten Migrationsmechanismus: die
+    DDL in register_table() legt Tabellen nur beim allerersten Mal an,
+    eine spätere Erweiterung um neue Spalten wird nie nachgezogen. Statt
+    dessen wird hier reaktiv beim ersten fehlschlagenden Schreibversuch
+    nachgerüstet (kein Spaltentyp nötig, SQLite macht daraus TEXT/NULL).
+    Gibt True zurück wenn eine Spalte ergänzt wurde (Aufrufer soll den
+    Schreibversuch wiederholen), sonst False (anderer Fehler, durchreichen).
+    """
+    msg = str(error)
+    match = re.search(r"no such column: (\w+)", msg) or re.search(
+        r"has no column named (\w+)", msg
+    )
+    if not match:
+        return False
+    col = match.group(1)
+    _logger.warning("Tabelle %s: fehlende Spalte %s wird per ALTER TABLE ergänzt", key, col)
+    con.execute(f"ALTER TABLE {key} ADD COLUMN {col}")
+    con.commit()
+    return True
+
+
+def _execute_retry(con: sqlite3.Connection, key: str, sql: str, params) -> sqlite3.Cursor:
+    """con.execute() mit Retry nach automatischer Spalten-Ergänzung.
+
+    Kann mehrfach fehlende Spalten nacheinander ergänzen (z. B. wenn eine
+    DDL um mehrere Felder auf einmal erweitert wurde). Obergrenze verhindert
+    eine Endlosschleife falls die Fehlermeldung sich wiederholt, ohne dass
+    ALTER TABLE das eigentliche Problem behebt.
+    """
+    for _ in range(10):
+        try:
+            return con.execute(sql, params)
+        except sqlite3.OperationalError as e:
+            if not _add_missing_column(con, key, e):
+                raise
+    return con.execute(sql, params)
 
 
 def create_all_registered_tables() -> None:
@@ -219,12 +261,12 @@ def save_item(key: str, item_id, item: dict) -> None:
         if existing:
             sets = ", ".join(f"{k}=?" for k in p)
             values = list(p.values()) + [iid]
-            con.execute(f"UPDATE {key} SET {sets} WHERE id=?", values)
+            _execute_retry(con, key, f"UPDATE {key} SET {sets} WHERE id=?", values)
             con.commit()
             return
     cols = ", ".join(p.keys())
     placeholders = ", ".join("?" * len(p))
-    con.execute(f"INSERT INTO {key} ({cols}) VALUES ({placeholders})", list(p.values()))
+    _execute_retry(con, key, f"INSERT INTO {key} ({cols}) VALUES ({placeholders})", list(p.values()))
     con.commit()
 
 
@@ -235,7 +277,7 @@ def create_item(key: str, item: dict) -> int:
     cols = ", ".join(p.keys())
     placeholders = ", ".join("?" * len(p))
     con = _conn()
-    cur = con.execute(f"INSERT INTO {key} ({cols}) VALUES ({placeholders})", list(p.values()))
+    cur = _execute_retry(con, key, f"INSERT INTO {key} ({cols}) VALUES ({placeholders})", list(p.values()))
     con.commit()
     return cur.lastrowid
 
@@ -266,8 +308,9 @@ def patch_item(key: str, item_id, **fields) -> None:
         return
     sets = ", ".join(f"{k}=?" for k in fields)
     values = list(fields.values()) + [iid]
-    _conn().execute(f"UPDATE {key} SET {sets} WHERE id=?", values)
-    _conn().commit()
+    con = _conn()
+    _execute_retry(con, key, f"UPDATE {key} SET {sets} WHERE id=?", values)
+    con.commit()
 
 
 def get_entry(config: dict, item_id) -> dict | None:

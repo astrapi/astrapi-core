@@ -22,3 +22,7 @@
 - key:   settings
   label: Einstellungen
   group: System
+
+- key:   users
+  label: Nutzer
+  group: System

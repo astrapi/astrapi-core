@@ -33,6 +33,12 @@
                   type='number', required=field.required, attrs=_attrs) }}
   {% endcall %}
 
+{% elif field.type == "color" %}
+  {% call form_group(field.label, required=field.required) %}
+    {{ form_input(field.name, (values[field.name] if values else '') or field.default | default('#6750a4'),
+                  type='color', required=field.required) }}
+  {% endcall %}
+
 {% elif field.type == "select" %}
   {% call form_group(field.label, required=field.required) %}
     {{ form_select(field.name, field.options,

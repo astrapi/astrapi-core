@@ -26,6 +26,25 @@ def test_password_fallback_explizit_deaktiviert(tmp_path):
     assert cfg["password_fallback"] is False
 
 
+def test_multi_user_default_false_ohne_app_yaml(tmp_path):
+    """Rueckwaertskompatibilitaet: astrapi-admin (einzige bisherige Nutzung
+    von auth.enabled) setzt diesen Schluessel nicht -- muss False bleiben."""
+    cfg = get_auth_config(tmp_path)
+    assert cfg["multi_user"] is False
+
+
+def test_multi_user_default_false_wenn_nicht_gesetzt(tmp_path):
+    _write_app_yaml(tmp_path, "auth:\n  enabled: true\n")
+    cfg = get_auth_config(tmp_path)
+    assert cfg["multi_user"] is False
+
+
+def test_multi_user_explizit_aktiviert(tmp_path):
+    _write_app_yaml(tmp_path, "auth:\n  enabled: true\n  multi_user: true\n")
+    cfg = get_auth_config(tmp_path)
+    assert cfg["multi_user"] is True
+
+
 def test_app_icon_svg_ohne_app_yaml_ist_none(tmp_path):
     assert get_app_icon_svg(tmp_path) is None
 

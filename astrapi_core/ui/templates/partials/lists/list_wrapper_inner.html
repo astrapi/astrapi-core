@@ -107,6 +107,15 @@
       {% for name, item in cfg.items() %}
         {% set item_name = name %}
         {% set item_data = item %}
+        {% if group_starts is defined and group_starts and item_name in group_starts %}
+          {% set _group = group_starts[item_name] %}
+          <tr class="group-header-row">
+            <td colspan="100">
+              {% if _group.color %}<span class="group-color-dot" style="background:{{ _group.color }};"></span>{% endif %}
+              {{ _group.label }}
+            </td>
+          </tr>
+        {% endif %}
         {% set is_running = (module ~ ":" ~ item_name) in (running or {}) %}
         <tr id="row-{{ module }}-{{ item_name }}" class="{{ 'on' if item_data.get('enabled', True) else 'off' }}">
           <td class="col-name">

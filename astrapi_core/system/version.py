@@ -54,9 +54,17 @@ def get_disabled_modules(app_root: Path) -> list[str]:
     """Core-Module (Keys, z.B. 'scheduler'), die diese App nicht laden will
     (app.yaml: disabled_modules) -- für Core-Module, die zum App-Zweck nicht
     passen (z.B. Scheduler bei rein ereignisgesteuerten Apps ohne
-    Zeitplanung). Betrifft nur core/modules/, keine App-eigenen Module."""
+    Zeitplanung). Betrifft nur core/modules/, keine App-eigenen Module.
+
+    "users" (Nutzerverwaltung) ist zusätzlich implizit deaktiviert, solange
+    auth.multi_user nicht gesetzt ist -- Single-Owner-Apps (astrapi-admin)
+    haben nur den einen impliziten Default-User, eine Nutzerliste ergäbe
+    dort keinen Sinn."""
     raw = _read_yaml(app_root / "app.yaml").get("disabled_modules", [])
-    return [str(x) for x in raw] if raw else []
+    disabled = [str(x) for x in raw] if raw else []
+    if not get_auth_config(app_root)["multi_user"] and "users" not in disabled:
+        disabled.append("users")
+    return disabled
 
 
 def get_auth_config(app_root: Path) -> dict:
@@ -77,6 +85,12 @@ def get_auth_config(app_root: Path) -> dict:
         # einen sicheren Kontext). Apps mit HTTPS koennen es gezielt
         # abschalten, siehe system/auth.py-Docstring.
         "password_fallback": bool(raw.get("password_fallback", True)),
+        # Default False -- Rückwärtskompatibilität: astrapi-admin (einzige
+        # bisherige Nutzung) setzt diesen Schlüssel nicht, bleibt exakt
+        # Single-Owner. Erst bei true werden die Einladungs-/
+        # Nutzerverwaltungsrouten (ui/multi_user_routes.py) überhaupt
+        # eingebunden, siehe ui/app.py::create().
+        "multi_user": bool(raw.get("multi_user", False)),
     }
 
 

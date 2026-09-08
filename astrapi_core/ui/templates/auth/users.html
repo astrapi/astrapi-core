@@ -1,0 +1,47 @@
+{% extends "_base.html" %}
+{% block title %}Nutzer – {{ app_name }}{% endblock %}
+{% block content %}
+<div class="auth-page">
+  <div class="auth-card users-card">
+    <h1>Nutzer</h1>
+    <p class="auth-status">Angemeldet als {{ current_user.display_name or current_user.username }}</p>
+
+    <ul class="users-list">
+      {% for u in users %}
+      <li>{{ u.display_name or u.username }}{% if u.id == current_user.id %} (du){% endif %}</li>
+      {% endfor %}
+    </ul>
+
+    <button id="invite-button" type="button" class="btn btn-primary">Nutzer einladen</button>
+    <div id="invite-result" style="display:none;">
+      <p class="auth-status">Link an die eingeladene Person schicken (läuft in 10 Minuten ab):</p>
+      <input id="invite-link" type="text" class="auth-input" readonly onclick="this.select()" />
+    </div>
+
+    <p style="margin-top:1.5rem;"><a href="/">Zurück</a></p>
+  </div>
+</div>
+<style>
+.auth-page { display:flex; align-items:center; justify-content:center; min-height:100vh; }
+.auth-card { max-width:420px; width:100%; padding:2rem; text-align:center; }
+.auth-card h1 { margin-bottom:.5rem; }
+.auth-status { color:var(--text-muted, #888); margin:.5rem 0 1rem; }
+.auth-input { width:100%; margin-bottom:1rem; padding:8px 12px; border-radius:8px; border:1px solid var(--border, #444); background:var(--bg-2, transparent); color:inherit; }
+.users-list { list-style:none; padding:0; margin:0 0 1.5rem; text-align:left; }
+.users-list li { padding:6px 0; border-bottom:1px solid var(--border, #333); }
+</style>
+{% endblock %}
+{% block extra_js %}
+<script>
+document.getElementById('invite-button').addEventListener('click', async () => {
+  const res = await fetch('/auth/users/invite', { method: 'POST' });
+  if (!res.ok) return;
+  const data = await res.json();
+  const link = window.location.origin + data.url;
+  const box = document.getElementById('invite-result');
+  const input = document.getElementById('invite-link');
+  input.value = link;
+  box.style.display = '';
+});
+</script>
+{% endblock %}

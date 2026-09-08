@@ -29,8 +29,8 @@ def _cookie_kw(request: Request) -> dict:
     return {"httponly": True, "secure": request.url.scheme == "https", "samesite": "lax"}
 
 
-def _set_session_cookie(request: Request, resp: JSONResponse) -> None:
-    token = authmod.create_session()
+def _set_session_cookie(request: Request, resp: JSONResponse, user_id: "int | None" = None) -> None:
+    token = authmod.create_session(user_id)
     resp.set_cookie(
         authmod.SESSION_COOKIE_NAME,
         token,
@@ -87,12 +87,13 @@ async def login_verify(request: Request):
     rp_id, _, origin = _rp_config()
     credential = await request.json()
     challenge_cookie = request.cookies.get(authmod.CHALLENGE_COOKIE_NAME)
-    if not authmod.verify_authentication(credential, challenge_cookie, rp_id, origin):
+    user = authmod.verify_authentication_full(credential, challenge_cookie, rp_id, origin)
+    if user is None:
         return JSONResponse({"ok": False}, status_code=401)
 
     resp = JSONResponse({"ok": True, "redirect": "/"})
     resp.delete_cookie(authmod.CHALLENGE_COOKIE_NAME)
-    _set_session_cookie(request, resp)
+    _set_session_cookie(request, resp, user_id=user["id"])
     return resp
 
 
@@ -122,7 +123,19 @@ def register_options(request: Request):
     if not _may_register(request):
         return JSONResponse({"error": "nicht angemeldet"}, status_code=403)
     rp_id, rp_name, _ = _rp_config()
-    options_json, cookie_value = authmod.build_registration_options(rp_id, rp_name)
+    # Bereits eingeloggt (weiteres Gerät): neue Passkey muss DIESEM Nutzer
+    # zugeordnet werden, nicht dem impliziten Default-User -- sonst würde
+    # z.B. ein per Einladung angelegter Zweitnutzer, der ein zweites Gerät
+    # registriert, versehentlich Passkeys des Default-Users bekommen.
+    # Bootstrap (noch niemand eingeloggt): current=None -> Default-User,
+    # exakt das bisherige Single-Owner-Verhalten.
+    current = authmod.get_current_user(_session_cookie(request))
+    user_id = current["id"] if current else None
+    username = current["username"] if current else None
+    display_name = current["display_name"] if current else None
+    options_json, cookie_value = authmod.build_registration_options(
+        rp_id, rp_name, user_id, username, display_name
+    )
     resp = JSONResponse(json.loads(options_json))
     resp.set_cookie(authmod.CHALLENGE_COOKIE_NAME, cookie_value, max_age=300, **_cookie_kw(request))
     return resp
@@ -137,13 +150,15 @@ async def register_verify(request: Request):
     credential = body.get("credential", body)
     label = body.get("label") or "Passkey"
     challenge_cookie = request.cookies.get(authmod.CHALLENGE_COOKIE_NAME)
-    ok = authmod.verify_registration(credential, challenge_cookie, rp_id, origin, label)
+    current = authmod.get_current_user(_session_cookie(request))
+    user_id = current["id"] if current else None
+    ok = authmod.verify_registration(credential, challenge_cookie, rp_id, origin, label, user_id)
 
     resp = JSONResponse({"ok": ok})
     resp.delete_cookie(authmod.CHALLENGE_COOKIE_NAME)
     if ok and not authmod.is_logged_in(_session_cookie(request)):
         # Bootstrap (erster Passkey): direkt einloggen, kein zweiter Schritt nötig.
-        _set_session_cookie(request, resp)
+        _set_session_cookie(request, resp, user_id=user_id)
     return resp
 
 

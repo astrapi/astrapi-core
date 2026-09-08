@@ -7,7 +7,7 @@
   <link rel="icon" type="image/svg+xml" href="{{ app_icon_svg | safe }}">
   <link rel="apple-touch-icon" href="{{ app_icon_svg | safe }}">
   <link rel="manifest" href="/manifest.json">
-  <title>{% block title %}{{ app_name }}{% if is_debug %} (Debug){% endif %}{% endblock %}</title>
+  <title>{% block title %}{{ app_name }}{% if is_debug %} - dev{% endif %}{% endblock %}</title>
   <meta name="mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">

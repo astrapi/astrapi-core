@@ -710,6 +710,22 @@ input,select,textarea { font-family:var(--font); }
 .ds-list-table tbody tr.off:nth-child(odd) { background:rgba(255,255,255,0.05); }
 .ds-list-table tbody tr.on:hover  { background:var(--sel); }
 .ds-list-table tbody tr.off:hover { background:var(--sel); }
+.ds-list-table tbody tr.group-header-row { background:transparent; }
+.ds-list-table tbody tr.group-header-row td {
+  padding:14px 14px 6px;
+  font-size:0.82em;
+  font-weight:600;
+  text-transform:uppercase;
+  letter-spacing:0.04em;
+  color:var(--text-muted);
+}
+.group-color-dot {
+  display:inline-block;
+  width:8px; height:8px;
+  border-radius:50%;
+  margin-right:6px;
+  vertical-align:middle;
+}
 .ds-list-table tbody td {
   padding:8px 14px; vertical-align:middle; text-align:left;
 }

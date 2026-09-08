@@ -1,6 +1,29 @@
 [project]
 name = "astrapi-core"
 dynamic = ["version"]   # Version kommt aus Git
+dependencies = [
+    "fastapi==0.141.1",
+    "uvicorn[standard]==0.52.4",
+    "jinja2==3.1.6",
+    "APScheduler==3.11.3",
+    "pyyaml==6.0.3",
+    "python-multipart==0.0.32",
+    "cryptography==50.0.0",
+    "requests==2.34.2",
+    "urllib3==2.7.0",
+    "psutil==7.2.2",
+    "packaging==26.3",
+    "apispec==6.10.0",
+    "webauthn==3.0.0",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=8.0",
+    "httpx>=0.27",
+    "playwright>=1.51",
+    "ruff>=0.4",
+]
 
 [build-system]
 requires = ["setuptools>=61", "setuptools-scm"]

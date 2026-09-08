@@ -164,8 +164,21 @@ def is_ui_debug() -> bool:
 def run_app(app: str, app_name: str, default_port: int = 5000) -> None:
     """Standardisierter CLI-Einstiegspunkt für astrapi-Apps.
 
-    Parst --host, --port, --debug und --work-dir, konfiguriert Pfade
-    und startet uvicorn. --debug aktiviert automatisch den Reload-Modus.
+    Parst --host, --port, --debug, --reload und --work-dir, konfiguriert
+    Pfade und startet uvicorn.
+
+    --debug und --reload sind bewusst getrennte Schalter (vorher hing
+    Reload komplett an --debug): --debug markiert nur noch die Instanz
+    als Dev/Debug (Titel-Suffix "- dev", Debug-Routen, kein automatischer
+    Uvicorn-Reload mehr). Reload watcht ohne explizites reload_dirs das
+    aktuelle Arbeitsverzeichnis -- auf einem Dev-LXC ohne WorkingDirectory=
+    in der systemd-Unit ist das "/" und beobachtet damit faktisch das
+    gesamte Dateisystem (100%-CPU-Vorfall auf sync-dev, 2026-09-07). Bei
+    einem über astrapi-admin/Claude gedeployten Dev-Server folgt ohnehin
+    immer ein expliziter `systemctl restart` nach jedem Deploy -- Reload
+    bringt dort keinen Nutzen, nur das Risiko. Für lokale Testinstanzen
+    (E-002, systemd --user) bleibt Reload weiterhin sinnvoll und muss dort
+    explizit per --reload zusätzlich zu --debug gesetzt werden.
 
     Verwendung in _cli.py::
 
@@ -179,6 +192,12 @@ def run_app(app: str, app_name: str, default_port: int = 5000) -> None:
     parser.add_argument("--port", type=int, default=default_port)
     parser.add_argument("--host", default="0.0.0.0")
     add_debug_argument(parser)
+    parser.add_argument(
+        "--reload",
+        action="store_true",
+        default=False,
+        help="Uvicorn-Autoreload bei Dateiänderungen (unabhängig von --debug)",
+    )
     parser.add_argument(
         "--ui-debug",
         action="store_true",
@@ -204,4 +223,4 @@ def run_app(app: str, app_name: str, default_port: int = 5000) -> None:
     if args.secret_key_path:
         os.environ["ASTRAPI_SECRET_KEY_PATH"] = args.secret_key_path
 
-    uvicorn.run(app, host=args.host, port=args.port, reload=args.debug)
+    uvicorn.run(app, host=args.host, port=args.port, reload=args.reload)

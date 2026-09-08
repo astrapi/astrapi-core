@@ -22,20 +22,30 @@ Geheimnis (Challenge-Response mit einem privaten Schlüssel, der das
 Gerät nie verlässt). Das Passwort ist bewusst nur eine Übergangslösung
 bis HTTPS steht, kein gleichwertiger Ersatz.
 
-Single-Owner-Modell wie der Rest der astrapi-Familie: keine "users"-Tabelle
-mit Rollen. Jeder registrierte Passkey ist gleichwertig für denselben
-Betreiber (mehrere Geräte möglich) -- ein fester, einmalig erzeugter
-WebAuthn-"User-Handle" statt echter Benutzerkonten.
+Ursprünglich Single-Owner-Modell wie der Rest der astrapi-Familie (keine
+"users"-Tabelle, jeder Passkey gleichwertig für denselben Betreiber). Seit
+astrapi-hub-Vault-Entscheidung "Multi-User astrapi-sync" additiv um echte,
+unterscheidbare Nutzerkonten erweitert -- **vollständig rückwärtskompatibel**:
+jede neue Funktion bekommt einen optionalen `user_id`-Parameter (Default
+`None`), der intern auf einen impliziten, lazy angelegten "Default-User"
+auflöst. Apps, die weiterhin nie ein `user_id` übergeben (z.B. astrapi-admin,
+siehe [[E-003]]), verhalten sich exakt wie vor dieser Erweiterung -- nur
+technisch als eine einzelne Zeile in `users` statt eines globalen
+KV-Store-Handles geführt. Multi-User-fähige Registrierungs-/Einladungsrouten
+liegen separat in `ui/multi_user_routes.py`, nur eingebunden bei
+`app.yaml: auth.multi_user: true` (Default `False`).
 
-Zwei eigenständig verwaltete Tabellen (nicht Teil des generischen
+Drei eigenständig verwaltete Tabellen (nicht Teil des generischen
 Modul-CRUD-Systems, siehe system/db.py::register_table() -- Sessions/
-Credentials sind keine UI-verwalteten Listen):
+Credentials/Users sind keine UI-verwalteten Listen):
 
-- auth_credentials -- registrierte Passkeys
+- users            -- Nutzerkonten (id, username, display_name, eigener
+  WebAuthn-User-Handle)
+- auth_credentials -- registrierte Passkeys, je einem User zugeordnet
 - auth_sessions    -- angemeldete Browser-Sessions, serverseitig per
   SHA-256-Hash abgleichbar (gleiches Muster wie Host-/Geräte-Token bei
   astrapi-sync/astrapi-admin: das Klartext-Token sieht nur der Client,
-  in der DB steht nur der Hash)
+  in der DB steht nur der Hash), je einem User zugeordnet
 """
 import hashlib
 import hmac
@@ -57,6 +67,15 @@ SESSION_COOKIE_NAME = "astrapi_session"
 CHALLENGE_COOKIE_NAME = "astrapi_webauthn_challenge"
 SESSION_TTL_DAYS = 30
 _CHALLENGE_TTL_SECONDS = 300
+
+_DDL_USERS = """
+    CREATE TABLE IF NOT EXISTS users (
+        id              INTEGER PRIMARY KEY AUTOINCREMENT,
+        username        TEXT    NOT NULL UNIQUE,
+        display_name    TEXT    NOT NULL DEFAULT '',
+        webauthn_handle BLOB    NOT NULL,
+        created_at      TEXT    NOT NULL
+    )"""
 
 _DDL_CREDENTIALS = """
     CREATE TABLE IF NOT EXISTS auth_credentials (
@@ -83,8 +102,35 @@ def _ensure_tables() -> None:
     from astrapi_core.system.db import _conn
 
     con = _conn()
+    con.execute(_DDL_USERS)
     con.execute(_DDL_CREDENTIALS)
     con.execute(_DDL_SESSIONS)
+    con.commit()
+    _migrate_user_id_columns(con)
+
+
+def _migrate_user_id_columns(con) -> None:
+    """auth_credentials/auth_sessions kannten urspruenglich kein user_id --
+    register_table()'s CREATE TABLE IF NOT EXISTS zieht bei Bestandstabellen
+    keine neue Spalte nach, deshalb hier per ALTER TABLE (gleiches Muster wie
+    astrapi_sync/_app.py::_migrate_folders_storage_location()). 0 = Sentinel
+    "noch nicht migriert" -- users-IDs starten bei 1 (AUTOINCREMENT),
+    kollisionsfrei. Laeuft bei JEDEM _ensure_tables()-Aufruf, idempotent."""
+    for table in ("auth_credentials", "auth_sessions"):
+        cols = [r[1] for r in con.execute(f"PRAGMA table_info({table})").fetchall()]
+        if "user_id" not in cols:
+            con.execute(f"ALTER TABLE {table} ADD COLUMN user_id INTEGER NOT NULL DEFAULT 0")
+            con.commit()
+
+    pending = con.execute(
+        "SELECT (SELECT COUNT(*) FROM auth_credentials WHERE user_id=0) "
+        "+ (SELECT COUNT(*) FROM auth_sessions WHERE user_id=0) AS n"
+    ).fetchone()["n"]
+    if not pending:
+        return
+    default_id = _get_or_create_default_user(con)
+    con.execute("UPDATE auth_credentials SET user_id=? WHERE user_id=0", (default_id,))
+    con.execute("UPDATE auth_sessions SET user_id=? WHERE user_id=0", (default_id,))
     con.commit()
 
 
@@ -96,18 +142,122 @@ def _hash(value: str) -> str:
     return hashlib.sha256(value.encode()).hexdigest()
 
 
-# ── User-Handle (ein fester "Betreiber", kein Multi-User) ──────────────────
+# ── Nutzerkonten ─────────────────────────────────────────────────────────
 
 
-def _user_handle() -> bytes:
-    from astrapi_core.system.db import kv_get, kv_set
+def _get_or_create_default_user(con) -> int:
+    """Kernlogik ohne _ensure_tables()-Aufruf -- wird sowohl aus der
+    Migration (Tabellen existieren dort schon per Definition) als auch aus
+    der oeffentlichen _default_user_id() (siehe unten) genutzt, ohne dass
+    beide sich gegenseitig in eine Rekursion mit _ensure_tables() treiben."""
+    row = con.execute("SELECT id FROM users WHERE username=?", ("_default",)).fetchone()
+    if row:
+        return row["id"]
 
-    raw = kv_get("_auth", "user_handle")
-    if raw:
-        return base64url_to_bytes(raw)
-    handle = secrets.token_bytes(32)
-    kv_set("_auth", "user_handle", bytes_to_base64url(handle))
-    return handle
+    from astrapi_core.system.db import kv_get
+
+    legacy_handle_b64 = kv_get("_auth", "user_handle")
+    handle = base64url_to_bytes(legacy_handle_b64) if legacy_handle_b64 else secrets.token_bytes(32)
+    cur = con.execute(
+        "INSERT INTO users (username, display_name, webauthn_handle, created_at) VALUES (?,?,?,?)",
+        ("_default", "", handle, _now_iso()),
+    )
+    con.commit()
+    return cur.lastrowid
+
+
+def _default_user_id() -> int:
+    """Get-or-create der impliziten "Default-User"-Zeile (username="_default")
+    -- Rückwärtskompatibilitäts-Anker für alle Aufrufer, die nie ein eigenes
+    user_id angeben (astrapi-admin, Single-Owner-Fall, siehe Modul-Docstring).
+    Übernimmt beim allerersten Anlegen den ALTEN globalen WebAuthn-Handle aus
+    dem KV-Store (falls vorhanden), damit bereits registrierte Passkeys nach
+    der Migration exakt denselben Account-Bezug behalten. Ruft selbst
+    _ensure_tables() auf, damit externe Aufrufer (z.B. astrapi-sync-
+    Migrationen) unabhängig von der Aufrufreihenfolge sind."""
+    _ensure_tables()
+    from astrapi_core.system.db import _conn
+
+    return _get_or_create_default_user(_conn())
+
+
+def _user_handle(user_id: int) -> bytes:
+    from astrapi_core.system.db import _conn
+
+    row = _conn().execute("SELECT webauthn_handle FROM users WHERE id=?", (user_id,)).fetchone()
+    if row is None:
+        raise ValueError(f"Unbekannter user_id: {user_id}")
+    return row["webauthn_handle"]
+
+
+def create_user(username: str, display_name: str = "") -> int:
+    """Legt eine neue, eigenständige Nutzerzeile mit eigenem WebAuthn-Handle
+    an -- genutzt vom Einladungs-Flow (ui/multi_user_routes.py)."""
+    _ensure_tables()
+    from astrapi_core.system.db import _conn
+
+    con = _conn()
+    cur = con.execute(
+        "INSERT INTO users (username, display_name, webauthn_handle, created_at) VALUES (?,?,?,?)",
+        (username, display_name, secrets.token_bytes(32), _now_iso()),
+    )
+    con.commit()
+    return cur.lastrowid
+
+
+def get_user(user_id: int) -> dict | None:
+    _ensure_tables()
+    from astrapi_core.system.db import _conn
+
+    row = _conn().execute(
+        "SELECT id, username, display_name, created_at FROM users WHERE id=?", (user_id,)
+    ).fetchone()
+    return dict(row) if row else None
+
+
+def list_users() -> list[dict]:
+    _ensure_tables()
+    from astrapi_core.system.db import _conn
+
+    rows = _conn().execute(
+        "SELECT id, username, display_name, created_at FROM users ORDER BY id"
+    ).fetchall()
+    return [dict(r) for r in rows]
+
+
+def delete_user(user_id: int) -> None:
+    """Löscht einen Nutzer inkl. all seiner Passkeys/Sessions (kein FK in
+    SQLite hier, daher manuelles Cascade). Blockiert das Löschen des
+    letzten verbleibenden Nutzers -- sonst kann sich niemand mehr
+    einloggen und die App ist für immer ausgesperrt (is_configured()
+    bliebe False, aber /auth/register bootstrapt nur, solange wirklich
+    NIEMAND existiert -- ein verwaister Zustand ohne jeden Nutzer ist
+    hier nicht vorgesehen)."""
+    _ensure_tables()
+    from astrapi_core.system.db import _conn
+
+    con = _conn()
+    n = con.execute("SELECT COUNT(*) AS n FROM users").fetchone()["n"]
+    if n <= 1:
+        raise ValueError("Der letzte verbleibende Nutzer kann nicht gelöscht werden.")
+    con.execute("DELETE FROM auth_credentials WHERE user_id=?", (user_id,))
+    con.execute("DELETE FROM auth_sessions WHERE user_id=?", (user_id,))
+    con.execute("DELETE FROM users WHERE id=?", (user_id,))
+    con.commit()
+
+
+def reset_credentials(user_id: int) -> None:
+    """Entfernt alle Passkeys eines Nutzers -- z.B. verlorenes Gerät, oder
+    eine abgebrochene Erst-Registrierung (Einladungs-Flow), die eine
+    credential-lose, unbenutzbare User-Zeile hinterlassen hat (siehe
+    modules/users). Macht den Nutzer wieder registrierbar über einen
+    frischen Einladungslink, der direkt an diese user_id gebunden ist
+    (auth_invites.create_invite_token(..., existing_user_id=user_id))."""
+    _ensure_tables()
+    from astrapi_core.system.db import _conn
+
+    _conn().execute("DELETE FROM auth_credentials WHERE user_id=?", (user_id,))
+    _conn().commit()
 
 
 # ── Bootstrap-Zustand ────────────────────────────────────────────────────
@@ -121,13 +271,22 @@ def has_credentials() -> bool:
     return bool(row["n"])
 
 
-def list_credentials() -> list[dict]:
+def list_credentials(user_id: int | None = None) -> list[dict]:
+    """user_id=None: alle Passkeys, unabhängig vom Besitzer (bisheriges
+    Verhalten -- kein bestehender Aufrufer nutzte das je pro Nutzer)."""
     _ensure_tables()
     from astrapi_core.system.db import _conn
 
-    rows = _conn().execute(
-        "SELECT id, label, created_at, last_used_at FROM auth_credentials ORDER BY id"
-    ).fetchall()
+    if user_id is None:
+        rows = _conn().execute(
+            "SELECT id, user_id, label, created_at, last_used_at FROM auth_credentials ORDER BY id"
+        ).fetchall()
+    else:
+        rows = _conn().execute(
+            "SELECT id, user_id, label, created_at, last_used_at FROM auth_credentials "
+            "WHERE user_id=? ORDER BY id",
+            (user_id,),
+        ).fetchall()
     return [dict(r) for r in rows]
 
 
@@ -171,20 +330,35 @@ def _unpack_challenge(cookie_value: str | None, expected_kind: str) -> bytes | N
 # ── Registrierung (Passkey anlegen) ─────────────────────────────────────
 
 
-def build_registration_options(rp_id: str, rp_name: str) -> tuple[str, str]:
-    """Gibt (options_json, challenge_cookie_value) zurück."""
+def build_registration_options(
+    rp_id: str,
+    rp_name: str,
+    user_id: int | None = None,
+    username: str | None = None,
+    display_name: str | None = None,
+) -> tuple[str, str]:
+    """Gibt (options_json, challenge_cookie_value) zurück.
+
+    user_id=None: exakt das bisherige Verhalten (impliziter Default-User,
+    user_name="admin") -- Rückwärtskompatibilität für astrapi-admin & Co.
+    user_id gesetzt (Einladungs-Flow, siehe ui/multi_user_routes.py):
+    echter Nutzername/Anzeigename dieser Person."""
     _ensure_tables()
     from astrapi_core.system.db import _conn
 
-    existing = _conn().execute("SELECT credential_id FROM auth_credentials").fetchall()
+    resolved_user_id = user_id if user_id is not None else _default_user_id()
+
+    existing = _conn().execute(
+        "SELECT credential_id FROM auth_credentials WHERE user_id=?", (resolved_user_id,)
+    ).fetchall()
     exclude = [PublicKeyCredentialDescriptor(id=row["credential_id"]) for row in existing]
 
     options = webauthn.generate_registration_options(
         rp_id=rp_id,
         rp_name=rp_name,
-        user_id=_user_handle(),
-        user_name="admin",
-        user_display_name=rp_name,
+        user_id=_user_handle(resolved_user_id),
+        user_name=username or "admin",
+        user_display_name=display_name or username or rp_name,
         authenticator_selection=AuthenticatorSelectionCriteria(
             resident_key=ResidentKeyRequirement.REQUIRED,
             user_verification=UserVerificationRequirement.REQUIRED,
@@ -195,7 +369,12 @@ def build_registration_options(rp_id: str, rp_name: str) -> tuple[str, str]:
 
 
 def verify_registration(
-    credential: dict, challenge_cookie: str | None, rp_id: str, origin: "str | list[str]", label: str
+    credential: dict,
+    challenge_cookie: str | None,
+    rp_id: str,
+    origin: "str | list[str]",
+    label: str,
+    user_id: int | None = None,
 ) -> bool:
     _ensure_tables()
     challenge = _unpack_challenge(challenge_cookie, "registration")
@@ -214,9 +393,11 @@ def verify_registration(
 
     from astrapi_core.system.db import _conn
 
+    resolved_user_id = user_id if user_id is not None else _default_user_id()
+
     _conn().execute(
         "INSERT INTO auth_credentials "
-        "(credential_id, public_key, sign_count, label, backed_up, created_at) VALUES (?,?,?,?,?,?)",
+        "(credential_id, public_key, sign_count, label, backed_up, created_at, user_id) VALUES (?,?,?,?,?,?,?)",
         (
             verified.credential_id,
             verified.credential_public_key,
@@ -224,6 +405,7 @@ def verify_registration(
             label or "Passkey",
             1 if verified.credential_backed_up else 0,
             _now_iso(),
+            resolved_user_id,
         ),
     )
     _conn().commit()
@@ -240,30 +422,35 @@ def build_authentication_options(rp_id: str) -> tuple[str, str]:
     return webauthn.options_to_json(options), _pack_challenge(options.challenge, "authentication")
 
 
-def verify_authentication(
+def verify_authentication_full(
     credential: dict, challenge_cookie: str | None, rp_id: str, origin: "str | list[str]"
-) -> bool:
+) -> dict | None:
+    """Volle Verifikationslogik, liefert bei Erfolg das Nutzerobjekt
+    ({"id", "username", "display_name"}) statt nur bool -- das Login ist
+    weiterhin "usernameless" (der Browser-Passkey-Picker identifiziert die
+    Person implizit über die gewählte Passkey), aber der Server erfährt
+    darüber jetzt WELCHER Nutzer sich einloggt (für create_session())."""
     _ensure_tables()
     challenge = _unpack_challenge(challenge_cookie, "authentication")
     if challenge is None:
-        return False
+        return None
 
     raw_id = credential.get("rawId") or credential.get("id") if isinstance(credential, dict) else None
     if not raw_id:
-        return False
+        return None
     try:
         credential_id = base64url_to_bytes(raw_id)
     except Exception:
-        return False
+        return None
 
     from astrapi_core.system.db import _conn
 
     row = _conn().execute(
-        "SELECT id, public_key, sign_count FROM auth_credentials WHERE credential_id=?",
+        "SELECT id, public_key, sign_count, user_id FROM auth_credentials WHERE credential_id=?",
         (credential_id,),
     ).fetchone()
     if row is None:
-        return False
+        return None
 
     try:
         verified = webauthn.verify_authentication_response(
@@ -276,7 +463,7 @@ def verify_authentication(
             require_user_verification=True,
         )
     except Exception:
-        return False
+        return None
 
     # Klon-Erkennung nur bei nicht synchronisierten Passkeys sinnvoll --
     # geräteübergreifend synchronisierte Passkeys (iCloud-Schlüsselbund,
@@ -287,14 +474,23 @@ def verify_authentication(
         and verified.new_sign_count != 0
         and verified.new_sign_count <= row["sign_count"]
     ):
-        return False
+        return None
 
     _conn().execute(
         "UPDATE auth_credentials SET sign_count=?, backed_up=?, last_used_at=? WHERE id=?",
         (verified.new_sign_count, 1 if verified.credential_backed_up else 0, _now_iso(), row["id"]),
     )
     _conn().commit()
-    return True
+    return get_user(row["user_id"])
+
+
+def verify_authentication(
+    credential: dict, challenge_cookie: str | None, rp_id: str, origin: "str | list[str]"
+) -> bool:
+    """Dünner Bool-Wrapper um verify_authentication_full() -- bestehende
+    Aufrufer, die nur wissen müssen OB der Login gültig war, bleiben
+    unverändert."""
+    return verify_authentication_full(credential, challenge_cookie, rp_id, origin) is not None
 
 
 # ── Passwort (Fallback-Login, siehe Modul-Docstring) ─────────────────────
@@ -389,17 +585,20 @@ def verify_password(password: str) -> bool:
 # ── Sessions ──────────────────────────────────────────────────────────────
 
 
-def create_session() -> str:
+def create_session(user_id: int | None = None) -> str:
     """Legt eine neue Session an, gibt das Klartext-Token zurück -- das sieht
-    nur hier der Client (landet als Cookie), in der DB nur dessen Hash."""
+    nur hier der Client (landet als Cookie), in der DB nur dessen Hash.
+    user_id=None: impliziter Default-User (Rückwärtskompatibilität)."""
     _ensure_tables()
     token = secrets.token_urlsafe(32)
     expires_iso = (datetime.now(timezone.utc) + timedelta(days=SESSION_TTL_DAYS)).isoformat()
     from astrapi_core.system.db import _conn
 
+    resolved_user_id = user_id if user_id is not None else _default_user_id()
+
     _conn().execute(
-        "INSERT INTO auth_sessions (session_hash, created_at, expires_at) VALUES (?,?,?)",
-        (_hash(token), _now_iso(), expires_iso),
+        "INSERT INTO auth_sessions (session_hash, created_at, expires_at, user_id) VALUES (?,?,?,?)",
+        (_hash(token), _now_iso(), expires_iso, resolved_user_id),
     )
     _conn().commit()
     return token
@@ -417,6 +616,25 @@ def is_logged_in(session_token: str | None) -> bool:
     if row is None:
         return False
     return row["expires_at"] > _now_iso()
+
+
+def get_current_user(session_token: str | None) -> dict | None:
+    """Wie is_logged_in(), liefert aber das Nutzerobjekt statt nur bool --
+    für Code, der die Identität braucht (z.B. astrapi-sync's Owner-Scoping).
+    None sowohl bei fehlender/abgelaufener Session als auch bei fehlendem
+    Token."""
+    if not session_token:
+        return None
+    _ensure_tables()
+    from astrapi_core.system.db import _conn
+
+    row = _conn().execute(
+        "SELECT expires_at, user_id FROM auth_sessions WHERE session_hash=?",
+        (_hash(session_token),),
+    ).fetchone()
+    if row is None or row["expires_at"] <= _now_iso():
+        return None
+    return get_user(row["user_id"])
 
 
 def destroy_session(session_token: str | None) -> None:

@@ -93,6 +93,8 @@ def make_crud_router(
     embed_target_id: str | None = None,
     delete_preview_fn: Callable[[str], list[str]] | None = None,
     list_item_transform: Callable[[dict], dict] | None = None,
+    group_by_field: str | None = None,
+    group_meta_fn: Callable[[], dict] | None = None,
 ) -> APIRouter:
     """Erstellt einen generischen CRUD-APIRouter.
 
@@ -122,6 +124,15 @@ def make_crud_router(
                            mitgelöscht würden (z.B. verwaiste Abhängigkeiten).
                            Wird im Bestätigungsdialog aufgelistet, damit die
                            Kaskade vor dem Klick sichtbar ist statt danach.
+        group_by_field:    Optionaler Feldname (z.B. "group_id"), nach dem
+                           list_wrapper_inner.html die Tabellenzeilen in
+                           Abschnitte mit Trennzeile gruppiert. None (Default)
+                           lässt die Ausgabe für alle Module unveraendert wie
+                           bisher -- reine Opt-in-Erweiterung.
+        group_meta_fn:     Optionale Funktion () -> {gruppen_id: {"label":
+                           str, "color": str|None}}, aufgeloest bei jedem
+                           Request (analog running_fn). Nur relevant wenn
+                           group_by_field gesetzt ist.
         list_item_transform: Optionale Funktion (item_id, item_dict) -> item_dict,
                            die JEDES Item nur für die Listen-ANZEIGE
                            transformiert (z.B. rohe Fremdschlüssel-IDs gegen
@@ -159,6 +170,9 @@ def make_crud_router(
             has_run_buttons=has_run_buttons,
             has_status=has_status,
         )
+        if group_by_field:
+            ctx["group_by_field"] = group_by_field
+            ctx["group_meta"] = group_meta_fn() if group_meta_fn else {}
         if extra_page_actions_template:
             ctx["extra_page_actions_template"] = extra_page_actions_template
         if extra_actions_template:
@@ -206,6 +220,33 @@ def make_crud_router(
             else:
                 data[name] = form.get(name, "")
         return data
+
+    def _group_sort_key(meta: dict, item: dict) -> tuple:
+        gid = item.get(group_by_field)
+        if not gid:
+            return (1, "")
+        label = (meta.get(gid) or {}).get("label") or gid
+        return (0, label.lower())
+
+    def _sort_by_group(items: dict, meta: dict) -> dict:
+        return dict(sorted(items.items(), key=lambda kv: _group_sort_key(meta, kv[1])))
+
+    def _group_starts(paged_items: dict, meta: dict) -> dict:
+        """Markiert nur die jeweils ERSTE Zeile einer neuen Gruppe (Reihenfolge
+        muss vorher schon per _sort_by_group hergestellt sein) -- der Wert ist
+        die Trennzeile, die list_wrapper_inner.html vor dieser Zeile einfuegt."""
+        starts: dict = {}
+        prev_gid = object()  # Sentinel, ungleich jeder echten group_id
+        for name, item in paged_items.items():
+            gid = item.get(group_by_field)
+            if gid != prev_gid:
+                gmeta = meta.get(gid) or {}
+                starts[name] = {
+                    "label": gmeta.get("label") or gid or "Ohne Gruppe",
+                    "color": gmeta.get("color"),
+                }
+                prev_gid = gid
+        return starts
 
     def _paginate(request: Request, items: dict) -> tuple[dict, dict]:
         from astrapi_core.ui.settings_registry import get_page_size
@@ -262,6 +303,9 @@ def make_crud_router(
 
     def _content_ctx(request: Request) -> dict:
         items, extra = resolve_filters_for_request(key, request, store.list())
+        group_meta = group_meta_fn() if group_by_field and group_meta_fn else {}
+        if group_by_field:
+            items = _sort_by_group(items, group_meta)
         paged_items, pagination = _paginate(request, items)
         if list_item_transform is not None:
             # Flache Kopie je Item -- store.list()/store.get() (Bearbeiten-
@@ -269,6 +313,8 @@ def make_crud_router(
             # unveraenderten Rohwerte, nur die Listen-ANZEIGE hier sieht die
             # transformierte Kopie.
             paged_items = {k: list_item_transform(k, dict(v)) for k, v in paged_items.items()}
+        if group_by_field:
+            extra = {**extra, "group_starts": _group_starts(paged_items, group_meta)}
         return _ctx(cfg=paged_items, pagination=pagination, **extra)
 
     @router.get(f"/ui/{key}/content", response_class=HTMLResponse)

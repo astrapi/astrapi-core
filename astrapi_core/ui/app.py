@@ -185,6 +185,21 @@ def create(
 
     seed_defaults(global_defaults, modules, failed_module_keys)
 
+    # Reparatur für Apps, die schon vor dieser Einführung von auth.enabled
+    # gelaufen sind: seed_defaults() schreibt einen Default nur EINMAL, wenn
+    # der Schlüssel noch fehlt. AUTH_RP_ID wurde aber schon bei jedem
+    # bisherigen Boot berechnet (get_auth_config() liefert "" wenn kein
+    # auth:-Block existiert) und dadurch als "" persistiert -- ein späteres
+    # Nachtragen von auth.rp_id in app.yaml hätte also NIE gegriffen, seed
+    # sieht den Schlüssel ja schon als vorhanden an. Ohne diese gezielte
+    # Korrektur bricht die WebAuthn-Registrierung mit "rp_id cannot be an
+    # empty string", sobald auth erstmals für eine bereits laufende App
+    # aktiviert wird (sync-dev, T-Multi-User). Überschreibt NUR den
+    # Leerstring-Fall -- ein über die Settings-UI bewusst gesetzter Wert
+    # bleibt unangetastet.
+    if auth_cfg["enabled"] and auth_cfg["rp_id"] and not settings_get("AUTH_RP_ID", ""):
+        settings_set("AUTH_RP_ID", auth_cfg["rp_id"])
+
     # Aufbewahrung durchsetzen (T-113/T-114): ein einmaliger Aufruf beim Start
     # reicht nicht -- die Prozesse laufen oft wochen- bis monatelang ohne
     # Neustart. Stattdessen ein Hintergrund-Thread, der sofort einmal prueft
@@ -340,6 +355,11 @@ def create(
 
         api.include_router(_auth_router)
         api.add_middleware(RequireLoginMiddleware, exempt_prefixes=auth_cfg["exempt_prefixes"])
+
+        if auth_cfg["multi_user"]:
+            from .multi_user_routes import router as _multi_user_router
+
+            api.include_router(_multi_user_router)
 
     # ── Preferences-Routen ────────────────────────────────────────────────────
     _register_preferences_routes(api)

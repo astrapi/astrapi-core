@@ -43,6 +43,20 @@
               </div>
             </div>
 
+            {# ── Anmeldung (WebAuthn/Passkey) -- nur wenn auth.enabled in
+               app.yaml. rp_id kommt initial aus app.yaml, ist aber pro
+               Instanz oft unterschiedlich (z.B. *-dev vs. Produktiv-Domain)
+               und muss hier korrigierbar sein, siehe system/auth.py und
+               ui/app.py (Startwert-Reparatur nur beim allerersten Boot mit
+               aktivem auth). #}
+            {% if auth_enabled %}
+            <div class="form-group" style="margin:0;">
+              <label class="form-label">Anmeldung: RP-ID (Domain)</label>
+              {{ form_input('AUTH_RP_ID', settings.get('AUTH_RP_ID', '')) }}
+              <span class="form-help">Muss exakt der Domain entsprechen, unter der diese Instanz im Browser aufgerufen wird (z.B. "sync-dev.simpsons.lan") -- sonst lehnt der Browser die Passkey-Erstellung mit "not a registrable domain" ab.</span>
+            </div>
+            {% endif %}
+
             {# ── System: Zusätzlicher Speicher (frueher eigene Karte) ──────── #}
             <div class="form-group" style="margin:0;">
               <label class="form-label">Zusätzlicher Speicher</label>

@@ -271,3 +271,165 @@ def test_verify_password_erfolg_setzt_fehlversuche_zurueck():
     for _ in range(4):
         assert authmod.verify_password("falsch") is False
     assert authmod.verify_password("richtig-123") is True
+
+
+# ── Multi-User (astrapi-hub-Vault: Multi-User astrapi-sync) ─────────────
+
+
+def test_default_user_id_ist_idempotent():
+    """Wiederholte Aufrufe liefern dieselbe Zeile, keine Duplikate."""
+    first = authmod._default_user_id()
+    second = authmod._default_user_id()
+    assert first == second
+    assert len(authmod.list_users()) == 1
+
+
+def test_default_user_id_uebernimmt_alten_globalen_webauthn_handle():
+    """Rueckwaertskompatibilitaet: existierte schon ein globaler Handle
+    (Alt-Installation vor der Multi-User-Erweiterung), muss der Default-User
+    GENAU diesen uebernehmen -- sonst wuerden bereits registrierte Passkeys
+    (z.B. astrapi-admin) nach der Migration einen neuen, nicht mehr
+    passenden Handle sehen."""
+    from astrapi_core.system.db import kv_set
+
+    legacy = authmod.bytes_to_base64url(b"alter-handle-32-bytes-lang-genug")
+    kv_set("_auth", "user_handle", legacy)
+
+    default_id = authmod._default_user_id()
+
+    assert authmod._user_handle(default_id) == b"alter-handle-32-bytes-lang-genug"
+
+
+def test_create_user_und_get_user():
+    uid = authmod.create_user("alice", "Alice")
+    user = authmod.get_user(uid)
+    assert user["username"] == "alice"
+    assert user["display_name"] == "Alice"
+
+
+def test_get_user_unbekannte_id_ist_none():
+    assert authmod.get_user(999) is None
+
+
+def test_list_users_enthaelt_default_und_eingeladene_nutzer():
+    authmod._default_user_id()
+    authmod.create_user("bob", "Bob")
+    usernames = {u["username"] for u in authmod.list_users()}
+    assert usernames == {"_default", "bob"}
+
+
+def test_zwei_nutzer_bekommen_unterschiedliche_webauthn_handles():
+    """Jede Person braucht einen eigenen WebAuthn-User-Handle, sonst
+    kollidieren die Passkey-Manager mehrerer Personen auf demselben rp_id."""
+    a = authmod.create_user("alice")
+    b = authmod.create_user("bob")
+    assert authmod._user_handle(a) != authmod._user_handle(b)
+
+
+def test_registration_und_login_fuer_zwei_unabhaengige_nutzer():
+    """Kernszenario der Mandantentrennung: zwei Personen registrieren
+    unabhaengig voneinander eine Passkey, der Login identifiziert danach
+    korrekt WER sich eingeloggt hat (get_current_user())."""
+    alice_id = authmod.create_user("alice", "Alice")
+    bob_id = authmod.create_user("bob", "Bob")
+
+    _, reg_cookie_a = authmod.build_registration_options("example.org", "Test", alice_id, "alice", "Alice")
+    with patch(
+        "astrapi_core.system.auth.webauthn.verify_registration_response",
+        return_value=_fake_verified_registration(credential_id=b"cred-alice"),
+    ):
+        assert authmod.verify_registration({"id": "x"}, reg_cookie_a, "example.org", "https://example.org", "L", alice_id)
+
+    _, reg_cookie_b = authmod.build_registration_options("example.org", "Test", bob_id, "bob", "Bob")
+    with patch(
+        "astrapi_core.system.auth.webauthn.verify_registration_response",
+        return_value=_fake_verified_registration(credential_id=b"cred-bob"),
+    ):
+        assert authmod.verify_registration({"id": "x"}, reg_cookie_b, "example.org", "https://example.org", "L", bob_id)
+
+    _, auth_cookie = authmod.build_authentication_options("example.org")
+    credential = {"rawId": authmod.bytes_to_base64url(b"cred-bob")}
+    with patch(
+        "astrapi_core.system.auth.webauthn.verify_authentication_response",
+        return_value=_fake_verified_authentication(new_sign_count=1),
+    ):
+        user = authmod.verify_authentication_full(credential, auth_cookie, "example.org", "https://example.org")
+
+    assert user["username"] == "bob"
+    assert user["id"] == bob_id
+
+
+def test_verify_authentication_bool_wrapper_bleibt_kompatibel():
+    """verify_authentication() (bool) muss weiterhin exakt dasselbe Ergebnis
+    liefern wie verify_authentication_full() is not None -- bestehende
+    Aufrufer (z.B. auth_routes.py vor dieser Erweiterung) duerfen sich
+    nicht aendern."""
+    _register_one_credential(sign_count=0)
+    _, cookie = authmod.build_authentication_options("example.org")
+    credential = {"rawId": authmod.bytes_to_base64url(b"cred-1")}
+    with patch(
+        "astrapi_core.system.auth.webauthn.verify_authentication_response",
+        return_value=_fake_verified_authentication(new_sign_count=5),
+    ):
+        assert authmod.verify_authentication(credential, cookie, "example.org", "https://example.org") is True
+
+
+def test_create_session_ordnet_user_id_zu():
+    alice_id = authmod.create_user("alice")
+    token = authmod.create_session(alice_id)
+    user = authmod.get_current_user(token)
+    assert user["id"] == alice_id
+    assert user["username"] == "alice"
+
+
+def test_create_session_ohne_user_id_nutzt_default_user():
+    """Rueckwaertskompatibilitaet: kein user_id angegeben (z.B. astrapi-admin)
+    -> impliziter Default-User, exakt das Verhalten vor dieser Erweiterung."""
+    token = authmod.create_session()
+    user = authmod.get_current_user(token)
+    assert user["username"] == "_default"
+
+
+def test_get_current_user_ohne_token_ist_none():
+    assert authmod.get_current_user(None) is None
+    assert authmod.get_current_user("") is None
+
+
+def test_get_current_user_mit_abgelaufener_session_ist_none():
+    token = authmod.create_session()
+    authmod.destroy_session(token)
+    assert authmod.get_current_user(token) is None
+
+
+def test_migration_bestandskredentiale_ohne_user_id_werden_default_user_zugeordnet():
+    """Simuliert eine Alt-DB (Schema vor der Multi-User-Erweiterung): eine
+    Passkey wurde registriert, BEVOR die user_id-Spalte existierte. Nach
+    einer erneuten Migration (_ensure_tables()) muss sie automatisch dem
+    Default-User zugeordnet sein -- kein manueller Schritt fuer
+    Bestandsinstallationen (astrapi-admin!) noetig."""
+    from astrapi_core.system.db import _conn
+
+    con = _conn()
+    con.execute("DROP TABLE IF EXISTS auth_credentials")
+    con.execute("""
+        CREATE TABLE auth_credentials (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            credential_id BLOB NOT NULL UNIQUE,
+            public_key BLOB NOT NULL,
+            sign_count INTEGER NOT NULL DEFAULT 0,
+            label TEXT NOT NULL DEFAULT '',
+            backed_up INTEGER NOT NULL DEFAULT 0,
+            created_at TEXT NOT NULL,
+            last_used_at TEXT NOT NULL DEFAULT ''
+        )
+    """)
+    con.execute(
+        "INSERT INTO auth_credentials (credential_id, public_key, label, created_at) VALUES (?,?,?,?)",
+        (b"alt-cred", b"alt-key", "Alter Laptop", "2026-01-01T00:00:00"),
+    )
+    con.commit()
+
+    authmod._ensure_tables()
+
+    row = con.execute("SELECT user_id FROM auth_credentials WHERE credential_id=?", (b"alt-cred",)).fetchone()
+    assert row["user_id"] == authmod._default_user_id()
