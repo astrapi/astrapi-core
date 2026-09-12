@@ -169,20 +169,34 @@
                immer wieder verloren). Die Start-Auswahl wird deshalb direkt
                von Jinja mit "selected" gerendert (kein Timing-Risiko),
                JS/Alpine uebernimmt nur noch das Nachladen der Staedte-Liste
-               bei einem Regionswechsel danach. #}
+               bei einem Regionswechsel danach.
+
+               Die Nachlade-Logik lebt bewusst als BENANNTE METHODE in
+               x-data, nicht als Mehrzeiler direkt in @change: Alpine
+               wertet eine @-Direktive als EINEN Ausdruck aus (intern
+               "return <Ausdruck>") -- ein "var"-Statement darin ist kein
+               gueltiger Ausdruck und wirft "Unexpected token 'var'" (live
+               in der Konsole beobachtet). Ein einzelner Methodenaufruf
+               (@change="updateCities($event)") ist dagegen ein gueltiger
+               Ausdruck, die eigentliche Mehrzeiler-Logik darf innerhalb
+               der Methode selbst beliebig viele Statements haben. #}
             {% set cur_region = fval.split('/', 1)[0] if fval else '' %}
-            <div x-data='{ groups: {{ timezone_groups | tojson }} }' style="display:flex; gap:8px;">
+            <div x-data='{
+                   groups: {{ timezone_groups | tojson }},
+                   updateCities(event) {
+                     var city = this.$refs["tzCity_{{ fkey }}"];
+                     city.innerHTML = "<option value=\"\">– bitte wählen –</option>";
+                     (this.groups[event.target.value] || []).forEach(function (z) {
+                       var opt = document.createElement("option");
+                       opt.value = z;
+                       opt.textContent = z.includes("/") ? z.split("/").slice(1).join("/") : z;
+                       city.appendChild(opt);
+                     });
+                   }
+                 }'
+                 style="display:flex; gap:8px;">
               <select class="form-select" style="flex:1;" x-ref="tzRegion_{{ fkey }}"
-                      @change="
-                        var city = $refs['tzCity_{{ fkey }}'];
-                        city.innerHTML = '<option value=&quot;&quot;>– bitte wählen –</option>';
-                        (groups[$event.target.value] || []).forEach(function (z) {
-                          var opt = document.createElement('option');
-                          opt.value = z;
-                          opt.textContent = z.includes('/') ? z.split('/').slice(1).join('/') : z;
-                          city.appendChild(opt);
-                        });
-                      ">
+                      @change="updateCities($event)">
                 <option value="" {% if not cur_region %}selected{% endif %}>Nicht verwalten</option>
                 {% for region in timezone_groups.keys() %}
                 <option value="{{ region }}" {% if region == cur_region %}selected{% endif %}>{{ region }}</option>
