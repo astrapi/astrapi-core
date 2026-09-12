@@ -159,23 +159,40 @@
                statt Freitext, deckt alle IANA-Zeitzonen ab, ohne eine
                ~600-Eintraege-Liste in einem einzigen <select> anzuzeigen.
                "Nicht verwalten" = leerer Wert, siehe agent_settings.py::
-               timezone(). #}
+               timezone().
+
+               Bewusst KEIN x-model/x-for fuer die Optionen selbst: Alpine
+               versucht bei x-model auf einem <select> den Wert schon beim
+               ersten Rendern zu setzen, BEVOR ein per x-for erzeugtes
+               <option> ueberhaupt existiert -- das schlaegt lautlos fehl
+               (live beobachtet: Auswahl ging nach dem Speichern/Neuladen
+               immer wieder verloren). Die Start-Auswahl wird deshalb direkt
+               von Jinja mit "selected" gerendert (kein Timing-Risiko),
+               JS/Alpine uebernimmt nur noch das Nachladen der Staedte-Liste
+               bei einem Regionswechsel danach. #}
             {% set cur_region = fval.split('/', 1)[0] if fval else '' %}
-            <div x-data='{ groups: {{ timezone_groups | tojson }},
-                           region: {{ cur_region | tojson }},
-                           zone: {{ fval | tojson }} }'
-                 style="display:flex; gap:8px;">
-              <select class="form-select" style="flex:1;" x-model="region" @change="zone = ''">
-                <option value="">Nicht verwalten</option>
-                <template x-for="r in Object.keys(groups)" :key="r">
-                  <option :value="r" x-text="r"></option>
-                </template>
+            <div x-data='{ groups: {{ timezone_groups | tojson }} }' style="display:flex; gap:8px;">
+              <select class="form-select" style="flex:1;" x-ref="tzRegion_{{ fkey }}"
+                      @change="
+                        var city = $refs['tzCity_{{ fkey }}'];
+                        city.innerHTML = '<option value=&quot;&quot;>– bitte wählen –</option>';
+                        (groups[$event.target.value] || []).forEach(function (z) {
+                          var opt = document.createElement('option');
+                          opt.value = z;
+                          opt.textContent = z.includes('/') ? z.split('/').slice(1).join('/') : z;
+                          city.appendChild(opt);
+                        });
+                      ">
+                <option value="" {% if not cur_region %}selected{% endif %}>Nicht verwalten</option>
+                {% for region in timezone_groups.keys() %}
+                <option value="{{ region }}" {% if region == cur_region %}selected{% endif %}>{{ region }}</option>
+                {% endfor %}
               </select>
-              <select name="{{ fkey }}" class="form-select" style="flex:1;" x-model="zone">
+              <select name="{{ fkey }}" class="form-select" style="flex:1;" x-ref="tzCity_{{ fkey }}">
                 <option value="">– bitte wählen –</option>
-                <template x-for="z in (groups[region] || [])" :key="z">
-                  <option :value="z" x-text="z.includes('/') ? z.split('/').slice(1).join('/') : z"></option>
-                </template>
+                {% for zone in timezone_groups.get(cur_region, []) %}
+                <option value="{{ zone }}" {% if zone == fval %}selected{% endif %}>{{ zone.split('/', 1)[1] if '/' in zone else zone }}</option>
+                {% endfor %}
               </select>
             </div>
 
