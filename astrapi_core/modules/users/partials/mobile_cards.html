@@ -1,0 +1,38 @@
+{#
+  users/partials/mobile_cards.html
+  Modul-spezifischer Override für list_wrapper_inner.html
+  (mobile_cards_generic.html kennt kein extra_actions_template/admin-Gating,
+  siehe dessen eigener Konventions-Hinweis).
+#}
+{% import 'partials/components/ui_macros.html' as ui %}
+{% import 'partials/components/mobile_card_macros.html' as mc %}
+
+{% if cfg %}
+{% for item_name, u in cfg.items() %}
+{% set _footer %}
+  {% if current_user.is_admin %}
+  <button type="button" class="btn-icon" title="Einladen (Link/QR-Code)"
+          hx-get="/ui/users/{{ item_name }}/invite" hx-target="body" hx-swap="beforeend">
+    {{ ui.icon("send") }}
+  </button>
+  <button type="button" class="btn-icon" title="Passkey zurücksetzen" onclick="usersResetPasskey({{ item_name }}, '{{ u.description | e }}')">
+    {{ ui.icon("refresh") }}
+  </button>
+  {% if item_name != (current_user.id | string) and can_delete %}
+  <button type="button" class="btn-icon" title="Nutzer löschen" onclick="usersDelete({{ item_name }}, '{{ u.description | e }}')">
+    {{ ui.icon("trash") }}
+  </button>
+  {% endif %}
+  {% endif %}
+{% endset %}
+{% call mc.m_card(u.description, footer=_footer) %}
+  {{ mc.m_card_row('Benutzername', u.username) }}
+  {{ mc.m_card_row('Passkey', u.credential_display) }}
+{% endcall %}
+{% endfor %}
+{% else %}
+<div class="empty-state">
+  <svg width="40" height="40" viewBox="0 0 24 24" fill="currentColor" stroke="none"><use href="#icon-users"></use></svg>
+  <div class="empty-state-title">Keine Nutzer</div>
+</div>
+{% endif %}

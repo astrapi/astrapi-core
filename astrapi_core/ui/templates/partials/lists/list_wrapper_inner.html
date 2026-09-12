@@ -139,7 +139,14 @@
                                  + (1 if has_edit | default(True) else 0)
                                  + (1 if has_delete | default(True) else 0)
                                  + (1 if extra_actions_template else 0) -%}
-              {% if _n_actions == 1 %}
+              {# extra_actions_template ist für die Zaehlung immer nur "1 Slot"
+                 wert, kann intern aber beliebig viele Buttons rendern (z.B.
+                 modules/users: 0-3 je nach current_user.is_admin) -- der
+                 Direktanzeige-Zweig kennt dessen Inhalt nicht und darf ihn
+                 deshalb nie fuer sich beanspruchen, sonst fehlt das
+                 Drei-Punkte-Menue immer dann, wenn es die einzige
+                 Aktionsquelle ist. #}
+              {% if _n_actions == 1 and not extra_actions_template %}
                 {% for action in _card_actions %}{{ ui.card_action_button(action, item_name, item_data, container_id, loading_id) }}{% endfor %}
                 {% if has_edit | default(True) %}{{ ui.edit_button(module=module, item=item_name, container_id=container_id, loading_id=loading_id, item_prefix=_item_url_prefix, page=_page) }}{% endif %}
                 {% if has_delete | default(True) %}{{ ui.delete_button(module=module, item=item_name, container_id=container_id, loading_id=loading_id, description=item_data.description or item_data.job or item_data.host or item_name, item_prefix=_item_url_prefix) }}{% endif %}

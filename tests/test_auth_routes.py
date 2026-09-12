@@ -91,3 +91,51 @@ def test_register_password_deaktiviert_gibt_404(client, monkeypatch):
     r = client.post("/auth/register/password", json={"password": "acht-zeichen"})
     assert r.status_code == 404
     assert authmod.has_password() is False
+
+
+# ── Multi-User: Passwort-Login braucht einen Nutzernamen ────────────────────
+
+
+@pytest.fixture()
+def _multi_user():
+    from astrapi_core.ui import settings_registry
+
+    settings_registry.set("AUTH_MULTI_USER", True)
+    yield
+    settings_registry.set("AUTH_MULTI_USER", False)
+
+
+def test_login_password_multi_user_ohne_username_abgelehnt(client, _multi_user):
+    alice = authmod.create_user("alice")
+    authmod.set_user_password(alice, "alice-passwort")
+    r = client.post("/auth/login/password", json={"password": "alice-passwort"})
+    assert r.status_code == 400
+
+
+def test_login_password_multi_user_mit_username_erfolgreich(client, _multi_user):
+    alice = authmod.create_user("alice")
+    authmod.set_user_password(alice, "alice-passwort")
+    r = client.post(
+        "/auth/login/password", json={"username": "alice", "password": "alice-passwort"}
+    )
+    assert r.status_code == 200
+    assert r.json()["ok"] is True
+    assert authmod.SESSION_COOKIE_NAME in r.cookies
+
+
+def test_login_password_multi_user_falsches_passwort(client, _multi_user):
+    alice = authmod.create_user("alice")
+    authmod.set_user_password(alice, "alice-passwort")
+    r = client.post(
+        "/auth/login/password", json={"username": "alice", "password": "falsch"}
+    )
+    assert r.status_code == 401
+
+
+def test_login_password_ohne_multi_user_bleibt_global(client):
+    """Backward-Compat: Single-Owner-Apps (kein multi_user) verhalten sich
+    exakt wie vor dieser Erweiterung -- ein Nutzername wird nie verlangt."""
+    authmod.set_password("richtig-123")
+    r = client.post("/auth/login/password", json={"password": "richtig-123"})
+    assert r.status_code == 200
+    assert r.json()["ok"] is True

@@ -16,8 +16,10 @@ import time
 from pathlib import Path
 from typing import Callable, Optional
 
-from fastapi import Request
+from fastapi import HTTPException, Request
 from fastapi.responses import JSONResponse, RedirectResponse
+
+from astrapi_core.ui.color_palette import color_palette
 from jinja2 import ChoiceLoader, FileSystemLoader
 
 from ..system.manifest import register_manifest
@@ -182,6 +184,10 @@ def create(
     global_defaults.setdefault("AUTH_RP_NAME", auth_cfg["rp_name"] or _display_name)
     global_defaults.setdefault("AUTH_ORIGIN", auth_cfg["origin"])
     global_defaults.setdefault("AUTH_PASSWORD_FALLBACK", auth_cfg["password_fallback"])
+    # Fuer ui/auth_routes.py::login_password() -- ob ein Passwort-Login
+    # einen Nutzernamen braucht (mehrere eigene Passwoerter moeglich) oder
+    # nicht (Single-Owner, ein geteiltes Passwort, bisheriges Verhalten).
+    global_defaults.setdefault("AUTH_MULTI_USER", auth_cfg["multi_user"])
 
     seed_defaults(global_defaults, modules, failed_module_keys)
 
@@ -218,9 +224,22 @@ def create(
     if core_dialogs.exists():
         base_loaders.append(FileSystemLoader(str(core_dialogs)))
 
+    def _admin_only_guard(request: Request) -> None:
+        """Dependency für Module mit admin_only=True (siehe _base.py) --
+        Single-Owner-Apps (auth.multi_user nicht gesetzt) bleiben unberührt,
+        der eine Nutzer ist dort immer is_admin=1 (system/auth.py-Migration)."""
+        if not auth_cfg["multi_user"]:
+            return
+        from astrapi_core.system import auth as authmod
+        from astrapi_core.ui.auth_routes import _session_cookie
+
+        user = authmod.get_current_user(_session_cookie(request))
+        if not user or not user.get("is_admin"):
+            raise HTTPException(403, "nur der Admin darf auf dieses Modul zugreifen")
+
     all_loaders = list(base_loaders)
     # register_ui_modules fügt Modul-Loader vorne ein (höchste Priorität)
-    register_ui_modules(api, modules, all_loaders)
+    register_ui_modules(api, modules, all_loaders, admin_guard=_admin_only_guard)
 
     jinja_env = Environment(
         loader=ChoiceLoader(all_loaders),
@@ -269,7 +288,7 @@ def create(
 
     jinja_env.globals["module_obj"] = _module_obj
 
-    def _global_ctx() -> dict:
+    def _global_ctx(request: Request) -> dict:
         def module_obj(key: str):
             """Gibt das vollständige Module-Objekt zurück (für deklaratives UI)."""
             return _module_obj(key)
@@ -301,6 +320,20 @@ def create(
 
         _light = _srget("LIGHT_MODE", _light_default)
 
+        _nav = _nav_items_ref[0]
+        if auth_cfg["multi_user"]:
+            # Abgespeckte Oberfläche für Nicht-Admins: admin_only-Module
+            # (system/settings/notify/activity_log) aus der Nav filtern --
+            # serverseitig, pro Request, da nav_items sonst nur einmal beim
+            # Start berechnet wird (siehe _admin_only_guard oben für den
+            # dazugehörigen Routen-Schutz, falls die URL trotzdem geraten wird).
+            from astrapi_core.system import auth as authmod
+            from astrapi_core.ui.auth_routes import _session_cookie
+
+            _user = authmod.get_current_user(_session_cookie(request))
+            if not (_user and _user.get("is_admin")):
+                _nav = [it for it in _nav if not it.get("admin_only")]
+
         return {
             "app_name": _display_name,
             "app_version": _app_version,
@@ -313,10 +346,11 @@ def create(
             "module_label": module_label,
             "module_card_actions": module_card_actions,
             "col_widths": col_widths,
+            "color_palette": color_palette,
             "resolve_remote_host": _resolve_remote_host,
             "last_run_status": last_run_status,
             "show_ssh_key": app_cfg.get("SHOW_SSH_KEY", False),
-            "nav_items": _nav_items_ref[0],
+            "nav_items": _nav,
             "auth_enabled": auth_cfg["enabled"],
             "is_debug": is_debug(),
             "is_ui_debug": is_ui_debug(),
@@ -334,7 +368,7 @@ def create(
 
     # ── Seiten-Routen registrieren ────────────────────────────────────────────
     module_keys = {m.key for m in modules if m.ui_router is not None}
-    register_pages(api, nav_items, shell_only_keys=module_keys)
+    register_pages(api, nav_items, shell_only_keys=module_keys, admin_guard=_admin_only_guard)
 
     # ── PWA-Manifest (Installierbarkeit unter Android/Chrome) ────────────────
     register_manifest(api, _display_name, _icon_svg)
@@ -384,16 +418,37 @@ def create(
         warnings.warn(f"Scheduler konnte nicht gestartet werden: {_e}")
 
     # ── Root-Redirect → erstes/default Nav-Item ───────────────────────────────
+    # Bei gesetztem admin_prefix (astrapi-mirror/-packages/-sync) liegt die
+    # blanke Wurzel "/" NICHT beim Dashboard -- die App liefert dort ihre
+    # eigenen Inhalte (z.B. repo.py's Datei-Index) aus. Der Redirect zieht
+    # dann auf f"{admin_prefix}/" um, sonst wuerde er "/" mit der
+    # App-eigenen Route kollidieren (Registrierungsreihenfolge in
+    # Starlette entscheidet sonst zufaellig, wer gewinnt).
     default_item = next(
         (it for it in nav_items if not it.get("separator") and it.get("default")),
         next((it for it in nav_items if not it.get("separator")), None),
     )
     if default_item:
-        _default_key = default_item["key"]
+        from astrapi_core.system.paths import admin_prefix as _admin_prefix
 
-        @api.get("/", response_class=RedirectResponse, include_in_schema=False)
+        _redirect_target = default_item["url"]
+        _root_path = f"{_admin_prefix()}/" if _admin_prefix() else "/"
+
+        @api.get(_root_path, response_class=RedirectResponse, include_in_schema=False)
         def _root():
-            return RedirectResponse(f"/{_default_key}")
+            return RedirectResponse(_redirect_target)
+
+        # Bei gesetztem Praefix zusaetzlich die trailing-slash-lose
+        # Variante (z.B. "/admin" ohne "/") explizit registrieren --
+        # Starlettes eingebauter redirect_slashes greift hier NICHT
+        # automatisch, weil "/admin" sonst schon von einer anderen,
+        # generischen App-Route (z.B. repo.py's "/{os_type}") abgefangen
+        # wuerde, bevor der automatische Fallback je zum Zug kaeme.
+        if _admin_prefix():
+
+            @api.get(_admin_prefix(), response_class=RedirectResponse, include_in_schema=False)
+            def _root_no_slash():
+                return RedirectResponse(_root_path)
 
     # ── Swagger UI-Docs (optional) ─────────────────────────────────────────────
     try:

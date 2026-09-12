@@ -29,6 +29,14 @@
     <p id="passkey-hint" class="auth-status" style="display:none;">
       Passkeys benötigen HTTPS (oder localhost) -- über die aktuelle Verbindung nicht verfügbar.
     </p>
+
+    <div class="auth-divider">oder</div>
+    <form id="password-form" class="auth-form">
+      <input id="invite-password" type="password" placeholder="Passwort (mind. 8 Zeichen)" class="auth-input" autocomplete="new-password" required />
+      <input id="invite-password-confirm" type="password" placeholder="Passwort wiederholen" class="auth-input" autocomplete="new-password" required />
+      <button type="submit" class="btn btn-primary">Passwort setzen</button>
+      <p id="password-status" class="auth-status"></p>
+    </form>
     {% endif %}
   </div>
 </div>
@@ -38,6 +46,8 @@
 .auth-card h1 { margin-bottom:.5rem; }
 .auth-status { color:var(--text-muted, #888); margin:.5rem 0 1rem; min-height:1.2em; }
 .auth-input { width:100%; margin-bottom:1rem; padding:8px 12px; border-radius:8px; border:1px solid var(--border, #444); background:var(--bg-2, transparent); color:inherit; }
+.auth-divider { color:var(--text-muted, #888); margin:1rem 0; font-size:12px; text-transform:uppercase; }
+.auth-form .btn { width:100%; }
 </style>
 {% endblock %}
 {% block extra_js %}
@@ -115,6 +125,45 @@ document.getElementById('passkey-register').addEventListener('click', async () =
       body: JSON.stringify(payload),
     });
     const result = await verifyRes.json();
+    if (result.ok) {
+      window.location.href = result.redirect || '/';
+    } else {
+      status.textContent = result.error || 'Einrichtung fehlgeschlagen.';
+    }
+  } catch (e) {
+    status.textContent = 'Fehler: ' + e.message;
+  }
+});
+
+document.getElementById('password-form').addEventListener('submit', async (ev) => {
+  ev.preventDefault();
+  const status = document.getElementById('password-status');
+  const password = document.getElementById('invite-password').value;
+  const confirm = document.getElementById('invite-password-confirm').value;
+  if (password !== confirm) {
+    status.textContent = 'Passwörter stimmen nicht überein.';
+    return;
+  }
+  const knownUser = {{ 'true' if known_user else 'false' }};
+  const body = { password };
+  if (!knownUser) {
+    const username = document.getElementById('invite-username').value.trim();
+    const displayName = document.getElementById('invite-display-name').value.trim();
+    if (!username) {
+      status.textContent = 'Bitte einen Namen angeben.';
+      return;
+    }
+    body.username = username;
+    body.display_name = displayName;
+  }
+  status.textContent = 'Setze Passwort …';
+  try {
+    const res = await fetch('/auth/invite/{{ token }}/password', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body),
+    });
+    const result = await res.json();
     if (result.ok) {
       window.location.href = result.redirect || '/';
     } else {

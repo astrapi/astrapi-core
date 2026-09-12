@@ -496,6 +496,10 @@
   {%- if _cat %}<span class="dot-indicator dot-indicator--{{ _cat }}"></span>{% endif -%}
   {{- _val or '—' -}}
 </td>
+{%- elif col.type == 'color' -%}
+<td class="{{ col.cls }}">
+  {%- if _val %}<span class="dot-swatch" style="background:{{ _val }};" title="{{ _val }}"></span>{% else %}—{% endif -%}
+</td>
 {%- else -%}
 <td>{{ _val or '—' }}</td>
 {%- endif %}

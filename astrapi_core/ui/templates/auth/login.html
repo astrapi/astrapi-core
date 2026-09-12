@@ -13,6 +13,9 @@
 
     {% if password_fallback %}
     <form id="password-form" class="auth-form">
+      {% if multi_user %}
+      <input id="username-input" type="text" placeholder="Nutzername" class="auth-input" autocomplete="username" required />
+      {% endif %}
       <input id="password-input" type="password" placeholder="Passwort" class="auth-input" autocomplete="current-password" required />
       <button type="submit" class="btn btn-primary">Anmelden</button>
       <p id="password-status" class="auth-status"></p>
@@ -99,12 +102,14 @@ if (passwordForm) {
     ev.preventDefault();
     const status = document.getElementById('password-status');
     const password = document.getElementById('password-input').value;
+    const usernameInput = document.getElementById('username-input');
+    const body = usernameInput ? { username: usernameInput.value, password } : { password };
     status.textContent = 'Prüfe …';
     try {
       const res = await fetch('/auth/login/password', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ password }),
+        body: JSON.stringify(body),
       });
       const result = await res.json();
       if (result.ok) {

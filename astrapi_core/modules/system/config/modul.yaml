@@ -1,2 +1,3 @@
 label:       System
 nav_group:   System
+admin_only:  true

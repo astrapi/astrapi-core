@@ -10,11 +10,15 @@
 
 from typing import Callable
 
-_ctx_fn: Callable[[], dict] | None = None
+_ctx_fn: Callable[..., dict] | None = None
 
 
-def configure(ctx_fn: Callable[[], dict]) -> None:
-    """Registriert die globale Context-Funktion. Wird von app.py aufgerufen."""
+def configure(ctx_fn: Callable[..., dict]) -> None:
+    """Registriert die globale Context-Funktion. Wird von app.py aufgerufen.
+
+    ctx_fn nimmt das aktuelle Request-Objekt entgegen (Callable[[Request], dict])
+    -- braucht z.B. app.py::_global_ctx(), um nav_items pro Nutzer zu filtern
+    (admin_only-Module ausblenden)."""
     global _ctx_fn
     _ctx_fn = ctx_fn
 
@@ -32,7 +36,7 @@ def render(request, template: str, ctx: dict | None = None, *, status_code: int 
     """
     from .fastapi_templates import get_templates
 
-    base: dict = _ctx_fn() if _ctx_fn is not None else {}
+    base: dict = _ctx_fn(request) if _ctx_fn is not None else {}
     if ctx:
         base.update(ctx)
 
@@ -55,7 +59,7 @@ def render_string(request, template: str, ctx: dict | None = None) -> str:
     """
     from .fastapi_templates import get_templates
 
-    base: dict = _ctx_fn() if _ctx_fn is not None else {}
+    base: dict = _ctx_fn(request) if _ctx_fn is not None else {}
     if ctx:
         base.update(ctx)
 

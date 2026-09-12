@@ -1,0 +1,22 @@
+{% extends "dialog_core.html" %}
+{% import 'partials/components/ui_macros.html' as ui %}
+
+{% block dialog_width %}420{% endblock %}
+{% block dialog_title %}Neuer Nutzer{% endblock %}
+
+{% block dialog_body %}
+{% call ui.form_group('Benutzername') %}
+  {{ ui.form_input('username', attrs='id="users-create-username" autofocus autocomplete="off"') }}
+{% endcall %}
+{% call ui.form_group('Anzeigename (optional)') %}
+  {{ ui.form_input('display_name', attrs='id="users-create-display-name" autocomplete="off"') }}
+{% endcall %}
+<p id="users-create-error" style="display:none; color:var(--error,#ff6b6b); font-size:13px; margin-top:8px;"></p>
+{% endblock %}
+
+{% block dialog_footer %}
+<div class="ds-modal-footer ds-modal-footer--end">
+  <button type="button" class="btn btn-sm btn-ghost" onclick="closeModal(this)">Abbrechen</button>
+  <button type="button" class="btn btn-sm btn-primary" onclick="usersCreateSubmit(this)">Erstellen</button>
+</div>
+{% endblock %}

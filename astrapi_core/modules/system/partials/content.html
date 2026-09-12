@@ -173,7 +173,13 @@
        den Versionssprung + Update-Button in ihrer eigenen Zeile. #}
     {% set ns_all = namespace(items=[]) %}
     {% if info.updater %}
-      {% for pkg in info.updater.packages %}
+      {# Mobile zeigt nur App-Paket + astrapi-core, nicht die volle
+         Abhängigkeitsliste, die im Debug-Betrieb zusätzlich in
+         info.updater.packages steckt (engine.py::_packages_to_display()) --
+         die ersten (bis zu) zwei Einträge sind dafür laut
+         _packages_to_update()/_packages_to_display() immer App-Paket
+         gefolgt von astrapi-core, der Rest nur im Debug-Betrieb. #}
+      {% for pkg in info.updater.packages[:2] %}
       {% set ns_all.items = ns_all.items + [pkg] %}
       {% endfor %}
     {% endif %}

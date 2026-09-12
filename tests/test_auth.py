@@ -433,3 +433,107 @@ def test_migration_bestandskredentiale_ohne_user_id_werden_default_user_zugeordn
 
     row = con.execute("SELECT user_id FROM auth_credentials WHERE credential_id=?", (b"alt-cred",)).fetchone()
     assert row["user_id"] == authmod._default_user_id()
+
+
+# ── Admin-Migration + Passwort pro Nutzer ───────────────────────────────────
+
+
+def test_migration_setzt_genau_einen_admin():
+    """_migrate_user_columns() (in _ensure_tables()) markiert den Bootstrap-/
+    Default-User als einzigen Admin, wenn noch keiner gesetzt ist."""
+    authmod._ensure_tables()
+    admins = [u for u in authmod.list_users() if u["is_admin"]]
+    assert len(admins) == 1
+    assert admins[0]["id"] == authmod._default_user_id()
+
+
+def test_migration_uebernimmt_bestehendes_globales_passwort():
+    """Ein vor der Erweiterung gesetztes globales Passwort bleibt für den
+    neuen Admin-Nutzer gültig, ohne dass es neu gesetzt werden muss."""
+    authmod.set_password("mein-altes-passwort")
+    authmod._ensure_tables()
+    from astrapi_core.system.db import _conn
+
+    _conn().execute("DELETE FROM users")
+    _conn().commit()
+
+    authmod._ensure_tables()
+    admin_id = authmod._default_user_id()
+    assert authmod.has_user_password(admin_id) is True
+    assert authmod.verify_user_password("_default", "mein-altes-passwort")["id"] == admin_id
+
+
+def test_set_admin_und_is_admin():
+    bob = authmod.create_user("bob")
+    assert authmod.is_admin(bob) is False
+    authmod.set_admin(bob)
+    assert authmod.is_admin(bob) is True
+    authmod.set_admin(bob, False)
+    assert authmod.is_admin(bob) is False
+
+
+def test_set_user_password_und_verify_user_password_erfolgreich():
+    alice = authmod.create_user("alice")
+    assert authmod.has_user_password(alice) is False
+    authmod.set_user_password(alice, "sicheres-passwort-123")
+    assert authmod.has_user_password(alice) is True
+    user = authmod.verify_user_password("alice", "sicheres-passwort-123")
+    assert user is not None
+    assert user["id"] == alice
+    assert "password_hash" not in user
+
+
+def test_verify_user_password_falsches_passwort_schlaegt_fehl():
+    alice = authmod.create_user("alice")
+    authmod.set_user_password(alice, "richtig-123")
+    assert authmod.verify_user_password("alice", "falsch-456") is None
+
+
+def test_verify_user_password_unbekannter_nutzername():
+    assert authmod.verify_user_password("niemand", "irgendwas") is None
+
+
+def test_verify_user_password_zwei_nutzer_unabhaengige_passwoerter():
+    alice = authmod.create_user("alice")
+    bob = authmod.create_user("bob")
+    authmod.set_user_password(alice, "alice-passwort")
+    authmod.set_user_password(bob, "bob-passwort")
+    assert authmod.verify_user_password("alice", "bob-passwort") is None
+    assert authmod.verify_user_password("bob", "alice-passwort") is None
+    assert authmod.verify_user_password("alice", "alice-passwort")["id"] == alice
+    assert authmod.verify_user_password("bob", "bob-passwort")["id"] == bob
+
+
+def test_verify_user_password_sperre_betrifft_nur_diesen_nutzernamen():
+    """Fehlversuche bei einem Nutzernamen duerfen einen anderen nicht
+    mit aussperren (anders als die globale Sperre von verify_password())."""
+    alice = authmod.create_user("alice")
+    bob = authmod.create_user("bob")
+    authmod.set_user_password(alice, "alice-passwort")
+    authmod.set_user_password(bob, "bob-passwort")
+    for _ in range(5):
+        assert authmod.verify_user_password("alice", "falsch") is None
+    assert authmod.verify_user_password("alice", "alice-passwort") is None  # gesperrt
+    assert authmod.verify_user_password("bob", "bob-passwort")["id"] == bob  # unbetroffen
+
+
+def test_migration_benennt_default_user_bei_multi_user_um():
+    from astrapi_core.ui import settings_registry
+
+    settings_registry.set("AUTH_MULTI_USER", True)
+    try:
+        authmod._ensure_tables()
+        admin_id = authmod._default_user_id()
+        user = authmod.get_user(admin_id)
+        assert user["username"] == "_admin"
+        # Erneuter Aufruf darf keine zweite Zeile anlegen.
+        assert authmod._default_user_id() == admin_id
+    finally:
+        settings_registry.set("AUTH_MULTI_USER", False)
+
+
+def test_migration_laesst_default_user_ohne_multi_user_unveraendert():
+    authmod._ensure_tables()
+    admin_id = authmod._default_user_id()
+    user = authmod.get_user(admin_id)
+    assert user["username"] == "_default"

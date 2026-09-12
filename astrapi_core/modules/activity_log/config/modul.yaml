@@ -2,6 +2,7 @@
 label:       Activity Log
 nav_group:   System
 nav_default: false
+admin_only:  true
 
 card_actions:
   - type: log

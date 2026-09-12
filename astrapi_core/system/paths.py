@@ -128,6 +128,7 @@ def apply_work_dir_argument(args, app_name: str) -> None:
 
 _debug: bool = False
 _ui_debug: bool = False
+_admin_prefix: str = ""
 
 
 def add_debug_argument(parser) -> None:
@@ -159,6 +160,29 @@ def is_ui_debug() -> bool:
     """Gibt True zurück wenn die App mit --ui-debug gestartet wurde."""
     import os
     return _ui_debug or os.environ.get("ASTRAPI_UI_DEBUG") == "1"
+
+
+def set_admin_prefix(prefix: str) -> None:
+    """Setzt den URL-Prefix, unter dem das Dashboard extern erreichbar ist.
+
+    Default "" (Dashboard liegt auf der Wurzel, unveraendertes Verhalten
+    fuer astrapi-backup/astrapi-admin). Apps wie astrapi-mirror/-packages/
+    -sync, die echte Inhalte direkt auf "/" ausliefern und das Dashboard
+    stattdessen z.B. per Caddy unter "/admin" reverse-proxien (Praefix
+    dort abgeschnitten, App-Routen selbst bleiben unveraendert bei "/"),
+    setzen hier "/admin" -- wird nur fuer sichtbare Browser-URLs gebraucht
+    (Nav-Links/hx-push-url, siehe Module.nav_url), NICHT fuer die
+    tatsaechliche Routenregistrierung, die bleibt unpraefixiert, weil
+    Caddy den Praefix vor der Weiterleitung schon entfernt. Muss vor
+    load_modules() gesetzt werden (Module._base.py::__post_init__ liest
+    das beim Modul-Objekt-Bau)."""
+    global _admin_prefix
+    _admin_prefix = prefix.rstrip("/") if prefix else ""
+
+
+def admin_prefix() -> str:
+    """Aktueller Dashboard-URL-Prefix (leerer String = Wurzel, Normalfall)."""
+    return _admin_prefix
 
 
 def run_app(app: str, app_name: str, default_port: int = 5000) -> None:

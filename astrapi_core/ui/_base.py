@@ -47,6 +47,9 @@ class Module:
         card_actions      – Liste modul-eigener Card-Footer-Buttons (aus modul.yaml)
         module_root       – Pfad zum Modul-Verzeichnis (wird automatisch gesetzt)
         hidden            – Modul nicht in der Navigation anzeigen (auch nicht automatisch)
+        admin_only        – Modul nur für is_admin=1 sichtbar/erreichbar (Multi-User-Apps,
+                            siehe app.py::create() admin_only_guard) -- bei Single-Owner-Apps
+                            ohne Wirkung, der eine Nutzer ist dort immer Admin
         settings_embed    – Modul-Content per Lazy-Load in die Einstellungen-Seite einbetten
         settings_order    – Sortier-Gewicht der Modul-Karte auf der Einstellungen-Seite
                             (aufsteigend, Default 0, gleicher Wert → alphabetisch nach key)
@@ -62,6 +65,7 @@ class Module:
     nav_default: bool = False
     nav_group: Optional[str] = None
     hidden: bool = False
+    admin_only: bool = False
     settings_embed: bool = False
     settings_order: int = 0
 
@@ -77,7 +81,9 @@ class Module:
 
     def __post_init__(self) -> None:
         if self.nav_url is None:
-            self.nav_url = f"/{self.key}"
+            from astrapi_core.system.paths import admin_prefix
+
+            self.nav_url = f"{admin_prefix()}/{self.key}"
 
     def to_nav_item(self) -> dict:
         """Gibt den Nav-Item-Dict zurück (kompatibel mit navigation.py)."""
@@ -87,4 +93,5 @@ class Module:
             "url": self.nav_url,
             "default": self.nav_default,
             "separator": False,
+            "admin_only": self.admin_only,
         }

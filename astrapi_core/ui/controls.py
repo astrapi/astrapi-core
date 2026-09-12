@@ -162,6 +162,14 @@ class Col:
         (1 sicherheitsrelevant)" mit Farbe "error")."""
         return cls(type="dot_text", key=key, label=label, cls=css, category_key=category_key)
 
+    @classmethod
+    def color(cls, key: str, label: str, css: str = "col-type") -> "Col":
+        """Reiner Farbpunkt aus einem freien Hex-Wert (Feldtyp 'color' im
+        Formular-Schema) -- anders als dot_text/badge_enum kein Text
+        daneben und keine feste ok/warning/error-Palette, sondern der vom
+        Nutzer frei gewaehlte Wert direkt als background-color."""
+        return cls(type="color", key=key, label=label, cls=css)
+
 
 # ── Card-Body-Felder (meta-grid) ───────────────────────────────────────────────
 

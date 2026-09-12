@@ -242,6 +242,7 @@ def load_modul(
         ui_router=ui_router,
         nav_group=cfg.get("nav_group", "Module"),
         nav_default=bool(cfg.get("nav_default", False)),
+        admin_only=bool(cfg.get("admin_only", False)),
         settings_order=int(cfg.get("settings_order", 0)),
         settings_defaults=merged_defaults,
         settings_schema=settings_schema,

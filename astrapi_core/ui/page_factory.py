@@ -12,7 +12,7 @@ URL-Schema:
 
 from typing import Callable
 
-from fastapi import Request
+from fastapi import Depends, Request
 from fastapi.responses import HTMLResponse
 
 # Registry: key → fn(request) -> str
@@ -41,11 +41,21 @@ def register_pages(
     api,
     nav_items: list[dict],
     shell_only_keys: set[str] | None = None,
+    admin_guard=None,
 ) -> None:
-    """Registriert Shell- und Content-Route für jeden Nav-Eintrag."""
+    """Registriert Shell- und Content-Route für jeden Nav-Eintrag.
+
+    admin_guard: optionale FastAPI-Dependency (siehe ui/app.py::create()) --
+    Shell- (/<key>) UND Content-Route (/ui/<key>/content) laufen hier direkt
+    über api.add_api_route(), NICHT über mod.ui_router -- der admin_only-Schutz
+    aus register_ui_modules() greift hier also NICHT automatisch, sondern muss
+    separat pro Route ergänzt werden, wenn nav_items[i]["admin_only"] gesetzt ist.
+    """
+    from astrapi_core.system.paths import admin_prefix
     from astrapi_core.ui.render import render
 
     shell_only = shell_only_keys or set()
+    _prefix = admin_prefix()
 
     for item in nav_items:
         if item.get("separator"):
@@ -53,6 +63,7 @@ def register_pages(
 
         key   = item["key"]
         title = _label(key, nav_items)
+        _dependencies = [Depends(admin_guard)] if item.get("admin_only") and admin_guard else None
 
         # Closure-safe Werte binden
         _key   = key
@@ -83,11 +94,18 @@ def register_pages(
             content.__name__ = f"content_{k}"
             return content
 
+        # Nur die Seiten-Route bekommt den Praefix, nicht /ui/.../content
+        # (bleibt bewusst unpraefixiert, siehe admin_prefix()-Docstring --
+        # kollidiert nirgends, wird per Caddy 1:1 durchgereicht). Die
+        # Seiten-Route dagegen MUSS bei gesetztem Praefix umziehen: sonst
+        # kollidiert z.B. bei astrapi-mirror der bloße Modul-Key
+        # "archlinux" mit der gleichnamigen Datei-Route auf der Wurzel.
         api.add_api_route(
-            f"/{_key}",
+            f"{_prefix}/{_key}",
             _make_shell(_key, _title),
             methods=["GET"],
             response_class=HTMLResponse,
+            dependencies=_dependencies,
         )
 
         if _key not in shell_only:
@@ -96,4 +114,5 @@ def register_pages(
                 _make_content(_key),
                 methods=["GET"],
                 response_class=HTMLResponse,
+                dependencies=_dependencies,
             )

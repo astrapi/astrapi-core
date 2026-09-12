@@ -89,6 +89,13 @@ document.body.addEventListener('htmx:sendError', () => {
     showErrorToast('Server nicht erreichbar');
 });
 
+// ── color_palette-Formularfeld (field_renderer.html) ──────────────────────────
+function colorPaletteSelect(btn, inputId, hex) {
+    document.getElementById(inputId).value = hex;
+    btn.parentElement.querySelectorAll('.color-palette-swatch').forEach(el => el.classList.remove('selected'));
+    btn.classList.add('selected');
+}
+
 // ── Spalteneinstellungen zurücksetzen ─────────────────────────────────────────
 function resetColSettings(module) {
     fetch(`/ui/preferences/col-widths/${module}`, {

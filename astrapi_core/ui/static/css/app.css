@@ -328,6 +328,44 @@ input,select,textarea { font-family:var(--font); }
 .dot-indicator--warning { background:#f59e0b; }
 .dot-indicator--error   { background:var(--err); }
 
+/* Col.color -- reiner Farbpunkt aus einem freien Hex-Wert (kein Text daneben,
+   anders als .dot-indicator/dot_text mit fester ok/warning/error-Palette). */
+.dot-swatch {
+  display:inline-block;
+  width:12px;
+  height:12px;
+  border-radius:50%;
+  border:1px solid rgba(255,255,255,0.15);
+  vertical-align:middle;
+}
+
+/* type: color_palette -- Formularfeld, kuratierte Auswahl statt freiem
+   Farbrad (astrapi_core.ui.color_palette). */
+.color-palette-grid {
+  display:flex;
+  flex-wrap:wrap;
+  gap:8px;
+}
+.color-palette-swatch {
+  width:24px;
+  height:24px;
+  border-radius:50%;
+  border:2px solid transparent;
+  padding:0;
+  cursor:pointer;
+  box-shadow:inset 0 0 0 1px rgba(255,255,255,0.15);
+  transition:transform var(--t), border-color var(--t);
+}
+.color-palette-swatch:hover  { transform:scale(1.12); }
+.color-palette-swatch.selected {
+  border-color:var(--text);
+}
+.color-palette-swatch--none {
+  background:
+    linear-gradient(45deg, transparent 46%, var(--err) 48%, var(--err) 52%, transparent 54%),
+    var(--card-2, var(--card));
+}
+
 .status-indicator.is-active {
   color:#4ade80;
   font-weight:600;

@@ -1,0 +1,26 @@
+{#
+  users/partials/row_actions.html
+  extra_actions_template für list_wrapper_inner.html -- rendert innerhalb
+  des generischen Drei-Punkte-Menüs (oder direkt, siehe Fix in
+  list_wrapper_inner.html für den Ein-Aktion-Fall). has_edit/has_delete
+  sind für dieses Modul aus (siehe modules/users/__init__.py), alle drei
+  echten Aktionen kommen von hier -- admin-gated, da sie andere Nutzer
+  verändern (siehe ui/__init__.py::_require_admin()).
+#}
+{% import 'partials/components/ui_macros.html' as ui %}
+{% if current_user.is_admin %}
+<button type="button" class="btn-icon" title="Einladen (Link/QR-Code)"
+        hx-get="/ui/users/{{ item_name }}/invite" hx-target="body" hx-swap="beforeend">
+  {{ ui.icon("send") }}
+</button>
+<button type="button" class="btn-icon" title="Passkey zurücksetzen (erzeugt neuen Einladungslink)"
+        onclick="usersResetPasskey({{ item_name }}, '{{ (item_data.description) | e }}')">
+  {{ ui.icon("refresh") }}
+</button>
+{% if item_name != (current_user.id | string) and can_delete %}
+<button type="button" class="btn-icon" title="Nutzer löschen"
+        onclick="usersDelete({{ item_name }}, '{{ (item_data.description) | e }}')">
+  {{ ui.icon("trash") }}
+</button>
+{% endif %}
+{% endif %}

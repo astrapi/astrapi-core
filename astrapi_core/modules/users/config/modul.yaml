@@ -1,2 +1,3 @@
-label:     Nutzer
-nav_group: System
+label:       Nutzer
+nav_group:   System
+admin_only:  true

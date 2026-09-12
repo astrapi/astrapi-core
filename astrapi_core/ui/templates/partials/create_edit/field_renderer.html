@@ -39,6 +39,28 @@
                   type='color', required=field.required) }}
   {% endcall %}
 
+{% elif field.type == "color_palette" %}
+  {# Kuratierte Farbauswahl (astrapi_core.ui.color_palette) statt des
+     nativen Farbrads von type: color -- Klick setzt ein verstecktes
+     Input-Feld, das wie jedes andere Formularfeld mitgeschickt wird. #}
+  {% set _current = (values[field.name] if values else '') or field.default | default('') %}
+  {% call form_group(field.label, required=field.required) %}
+    <input type="hidden" name="{{ field.name }}" id="field-{{ field.name }}-value" value="{{ _current }}">
+    <div class="color-palette-grid">
+      <button type="button"
+              class="color-palette-swatch color-palette-swatch--none{{ ' selected' if not _current else '' }}"
+              title="Keine Farbe"
+              onclick="colorPaletteSelect(this, 'field-{{ field.name }}-value', '')"></button>
+      {% for hex in color_palette() %}
+      <button type="button"
+              class="color-palette-swatch{{ ' selected' if hex | lower == _current | lower else '' }}"
+              style="background:{{ hex }};"
+              title="{{ hex }}"
+              onclick="colorPaletteSelect(this, 'field-{{ field.name }}-value', '{{ hex }}')"></button>
+      {% endfor %}
+    </div>
+  {% endcall %}
+
 {% elif field.type == "select" %}
   {% call form_group(field.label, required=field.required) %}
     {{ form_select(field.name, field.options,

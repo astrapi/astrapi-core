@@ -17,6 +17,8 @@ import sys
 import warnings
 from pathlib import Path
 
+from astrapi_core.system.paths import admin_prefix
+
 CORE_ROOT = Path(__file__).resolve().parent  # core/ui/  (templates, static)
 CORE_MOD_DIR = Path(__file__).resolve().parents[1] / "modules"  # core/modules/
 CORE_NAV_YAML = Path(__file__).resolve().parents[1] / "navigation.yaml"  # core/navigation.yaml
@@ -201,8 +203,16 @@ def load_modules(app_root: Path) -> list:
 # ── Registrieren ──────────────────────────────────────────────────────────────
 
 
-def register_ui_modules(fastapi_app, modules: list, jinja_loaders: list) -> None:
-    """Registriert Modul-Template-Loader und UI-Router an der FastAPI-App."""
+def register_ui_modules(
+    fastapi_app, modules: list, jinja_loaders: list, admin_guard=None
+) -> None:
+    """Registriert Modul-Template-Loader und UI-Router an der FastAPI-App.
+
+    admin_guard: optionale FastAPI-Dependency (siehe ui/app.py::create()) --
+    wird Modulen mit admin_only=True vorgeschaltet, damit deren /ui/<key>/...
+    Routen (Seite UND Content-Partial) für Nicht-Admins nicht nur aus der
+    Navigation verschwinden, sondern auch bei direktem Aufruf 403 liefern.
+    """
     from jinja2 import FileSystemLoader, PrefixLoader
 
     for mod in modules:
@@ -219,7 +229,12 @@ def register_ui_modules(fastapi_app, modules: list, jinja_loaders: list) -> None
 
         if mod.ui_router is not None:
             try:
-                fastapi_app.include_router(mod.ui_router)
+                if mod.admin_only and admin_guard is not None:
+                    from fastapi import Depends
+
+                    fastapi_app.include_router(mod.ui_router, dependencies=[Depends(admin_guard)])
+                else:
+                    fastapi_app.include_router(mod.ui_router)
             except Exception as e:
                 warnings.warn(f"Router '{mod.key}' konnte nicht registriert werden: {e}")
 
@@ -277,9 +292,10 @@ def _yaml_to_nav_items(yaml_path: "Path | None", modules: dict, raw: list = None
                 "key": key,
                 "label": entry.get("label")
                 or (mod.label if mod else key.replace("_", " ").title()),
-                "url": entry.get("url") or (mod.nav_url if mod else f"/{key}"),
+                "url": entry.get("url") or (mod.nav_url if mod else f"{admin_prefix()}/{key}"),
                 "default": bool(entry.get("default", False)),
                 "separator": False,
+                "admin_only": bool(mod.admin_only) if mod else False,
             }
         )
 

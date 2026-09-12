@@ -54,6 +54,10 @@ def _password_fallback_enabled() -> bool:
     return bool(settings_get("AUTH_PASSWORD_FALLBACK", True))
 
 
+def _multi_user_enabled() -> bool:
+    return bool(settings_get("AUTH_MULTI_USER", False))
+
+
 def _may_register(request: Request) -> bool:
     """Bootstrap (noch keine Anmeldemethode) ODER bereits eingeloggt
     (weiteres Gerät/Passwort ändern)."""
@@ -69,7 +73,11 @@ def login_page(request: Request):
     return render(
         request,
         "auth/login.html",
-        {"has_passkey": authmod.has_credentials(), "password_fallback": _password_fallback_enabled()},
+        {
+            "has_passkey": authmod.has_credentials(),
+            "password_fallback": _password_fallback_enabled(),
+            "multi_user": _multi_user_enabled(),
+        },
     )
 
 
@@ -103,6 +111,21 @@ async def login_password(request: Request):
         return JSONResponse({"error": "Passwort-Login deaktiviert"}, status_code=404)
     body = await request.json()
     password = body.get("password", "")
+
+    if _multi_user_enabled():
+        # Mehrere Nutzer koennen je ein eigenes Passwort haben -- anders
+        # als der globale Single-Owner-Fall unten muss das Login wissen,
+        # WESSEN Passwort gemeint ist.
+        username = (body.get("username") or "").strip()
+        if not username:
+            return JSONResponse({"error": "Nutzername fehlt"}, status_code=400)
+        user = authmod.verify_user_password(username, password)
+        if user is None:
+            return JSONResponse({"ok": False}, status_code=401)
+        resp = JSONResponse({"ok": True, "redirect": "/"})
+        _set_session_cookie(request, resp, user_id=user["id"])
+        return resp
+
     if not authmod.verify_password(password):
         return JSONResponse({"ok": False}, status_code=401)
 

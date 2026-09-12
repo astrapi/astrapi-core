@@ -1,0 +1,55 @@
+{#
+  users/partials/header_actions.html
+  Wird von core/ui/templates/content.html via extra_page_actions_template
+  in den echten Seiten-Header eingebunden (nur im "kein Header([...])"-Zweig,
+  siehe modules/users/__init__.py) -- deshalb hier, statt im deklarativen
+  Header, prüfbar: nur der Admin darf Nutzer anlegen.
+#}
+{% import 'partials/components/ui_macros.html' as ui %}
+{% if current_user.is_admin %}
+{{ ui.add_button(module=module, container_id=container_id, loading_id=loading_id | default('')) }}
+{% endif %}
+
+{#
+  Modulweites JS für users -- lebt hier, weil extra_page_actions_template
+  (anders als extra_actions_template/row_actions.html) genau EINMAL pro
+  Seite eingebunden wird, nicht einmal pro Zeile.
+#}
+<script>
+async function usersCreateSubmit(btn) {
+  const modal = btn.closest('.ds-modal-backdrop');
+  const username = modal.querySelector('#users-create-username').value.trim();
+  const displayName = modal.querySelector('#users-create-display-name').value.trim();
+  const errorEl = modal.querySelector('#users-create-error');
+  errorEl.style.display = 'none';
+  if (!username) { errorEl.textContent = 'Benutzername fehlt.'; errorEl.style.display = ''; return; }
+  const res = await fetch('/ui/users', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ username, display_name: displayName }),
+  });
+  if (!res.ok) {
+    const data = await res.json().catch(() => ({}));
+    errorEl.textContent = data.detail || 'Nutzer konnte nicht angelegt werden.';
+    errorEl.style.display = '';
+    return;
+  }
+  document.getElementById('mod-users').outerHTML = await res.text();
+  modal.remove();
+}
+
+function usersResetPasskey(userId, label) {
+  if (!confirm('Passkey(s) von "' + label + '" löschen und neuen Einladungslink erzeugen?\n\nDie Person kann sich bis zur Neuregistrierung nicht mehr anmelden.')) return;
+  // Ergebnis ist dasselbe Einladungs-Modal wie beim "Einladen"-Button --
+  // htmx.ajax() statt fetch(), damit es wie bei hx-get="…/invite" direkt
+  // ans body-Ende eingehängt wird.
+  htmx.ajax('POST', '/ui/users/' + userId + '/reset-passkey', { target: 'body', swap: 'beforeend' });
+}
+
+async function usersDelete(userId, label) {
+  if (!confirm('Nutzer "' + label + '" wirklich löschen? Alle zugehörigen Ordner/Geräte bleiben bestehen, sind danach aber niemandem mehr zugeordnet.')) return;
+  const res = await fetch('/ui/users/' + userId + '/delete', { method: 'POST' });
+  if (!res.ok) { alert((await res.json().catch(() => ({}))).detail || 'Fehlgeschlagen.'); return; }
+  document.getElementById('mod-users').outerHTML = await res.text();
+}
+</script>

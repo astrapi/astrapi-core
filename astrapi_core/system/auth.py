@@ -107,6 +107,7 @@ def _ensure_tables() -> None:
     con.execute(_DDL_SESSIONS)
     con.commit()
     _migrate_user_id_columns(con)
+    _migrate_user_columns(con)
 
 
 def _migrate_user_id_columns(con) -> None:
@@ -134,6 +135,64 @@ def _migrate_user_id_columns(con) -> None:
     con.commit()
 
 
+def _migrate_user_columns(con) -> None:
+    """users kannte urspruenglich weder is_admin noch password_hash --
+    gleiches ALTER-TABLE-Muster wie _migrate_user_id_columns() oben.
+
+    Genau EIN Admin: ist noch keiner gesetzt, wird der Bootstrap-/
+    Default-User (_default_user_id()) dazu -- der Account, der die App
+    urspruenglich eingerichtet hat. Idempotent, laeuft bei jedem
+    _ensure_tables()-Aufruf.
+
+    Bestehendes GLOBALES Passwort (kv "_auth"/"password_hash", einziger
+    Passwort-Weg vor dieser Erweiterung) wird unveraendert als String in
+    die password_hash-Spalte des neuen Admin-Nutzers uebernommen, falls
+    dort noch leer -- das Hash-Format (_hash_password()) ist
+    selbstbeschreibend (Algorithmus+Iterationen+Salt eingebettet), kein
+    Rehashing noetig, ein bestehendes Passwort bleibt gueltig."""
+    cols = [r[1] for r in con.execute("PRAGMA table_info(users)").fetchall()]
+    if "is_admin" not in cols:
+        con.execute("ALTER TABLE users ADD COLUMN is_admin INTEGER NOT NULL DEFAULT 0")
+        con.commit()
+    if "password_hash" not in cols:
+        con.execute("ALTER TABLE users ADD COLUMN password_hash TEXT NOT NULL DEFAULT ''")
+        con.commit()
+
+    has_admin = con.execute("SELECT 1 FROM users WHERE is_admin=1 LIMIT 1").fetchone()
+    if not has_admin:
+        admin_id = _get_or_create_default_user(con)
+        con.execute("UPDATE users SET is_admin=1 WHERE id=?", (admin_id,))
+
+        from astrapi_core.system.db import kv_get
+
+        global_hash = kv_get("_auth", "password_hash")
+        if global_hash:
+            row = con.execute("SELECT password_hash FROM users WHERE id=?", (admin_id,)).fetchone()
+            if row and not row["password_hash"]:
+                con.execute(
+                    "UPDATE users SET password_hash=? WHERE id=?", (global_hash, admin_id)
+                )
+        con.commit()
+
+    # "_default" ist nur fuer den Single-Owner-Fall ein sinnvoller Name
+    # (es gibt dort nie einen zweiten Nutzer). Sobald eine App echte
+    # Multi-User-Identitaeten kennt (auth.multi_user: true), ist der
+    # Admin-Account keine anonyme Default-Zeile mehr, sondern eine echte
+    # Person mit eigenem Login-Namen -- "_default" waere dann als
+    # Nutzername (jetzt Teil des Passwort-Logins, siehe
+    # ui/auth_routes.py::login_password()) verwirrend. Einmalige,
+    # idempotente Umbenennung -- greift nur solange der Name noch nicht
+    # geaendert wurde, kein Einfluss auf Single-Owner-Apps.
+    try:
+        from astrapi_core.ui.settings_registry import get as _settings_get
+
+        if _settings_get("AUTH_MULTI_USER", False):
+            con.execute("UPDATE users SET username='_admin' WHERE username='_default'")
+            con.commit()
+    except Exception:
+        pass
+
+
 def _now_iso() -> str:
     return datetime.now(timezone.utc).isoformat()
 
@@ -149,8 +208,19 @@ def _get_or_create_default_user(con) -> int:
     """Kernlogik ohne _ensure_tables()-Aufruf -- wird sowohl aus der
     Migration (Tabellen existieren dort schon per Definition) als auch aus
     der oeffentlichen _default_user_id() (siehe unten) genutzt, ohne dass
-    beide sich gegenseitig in eine Rekursion mit _ensure_tables() treiben."""
-    row = con.execute("SELECT id FROM users WHERE username=?", ("_default",)).fetchone()
+    beide sich gegenseitig in eine Rekursion mit _ensure_tables() treiben.
+
+    Sucht sowohl "_default" als auch "_admin" -- Multi-User-Apps benennen
+    den Bootstrap-/Default-User bei der Admin-Migration einmalig auf
+    "_admin" um (siehe _migrate_user_columns()). Ohne diesen zweiten
+    Namen wuerde ein Aufruf NACH der Umbenennung die Zeile nicht mehr
+    finden und faelschlich eine zweite "_default"-Zeile anlegen. Bewusst
+    kein is_admin=1-Check hier: diese Funktion laeuft in _ensure_tables()
+    VOR der is_admin-Spaltenmigration (aus _migrate_user_id_columns()
+    heraus), die Spalte existiert an dieser Stelle teils noch nicht."""
+    row = con.execute(
+        "SELECT id FROM users WHERE username IN ('_default', '_admin')"
+    ).fetchone()
     if row:
         return row["id"]
 
@@ -210,7 +280,7 @@ def get_user(user_id: int) -> dict | None:
     from astrapi_core.system.db import _conn
 
     row = _conn().execute(
-        "SELECT id, username, display_name, created_at FROM users WHERE id=?", (user_id,)
+        "SELECT id, username, display_name, created_at, is_admin FROM users WHERE id=?", (user_id,)
     ).fetchone()
     return dict(row) if row else None
 
@@ -220,9 +290,31 @@ def list_users() -> list[dict]:
     from astrapi_core.system.db import _conn
 
     rows = _conn().execute(
-        "SELECT id, username, display_name, created_at FROM users ORDER BY id"
+        "SELECT id, username, display_name, created_at, is_admin FROM users ORDER BY id"
     ).fetchall()
     return [dict(r) for r in rows]
+
+
+def is_admin(user_id: int) -> bool:
+    _ensure_tables()
+    from astrapi_core.system.db import _conn
+
+    row = _conn().execute("SELECT is_admin FROM users WHERE id=?", (user_id,)).fetchone()
+    return bool(row and row["is_admin"])
+
+
+def set_admin(user_id: int, value: bool = True) -> None:
+    """Markiert/entfernt einen Nutzer als Admin -- z.B. für einen bewussten
+    Rollenwechsel durch den bisherigen Admin. Erzwingt NICHT, dass mindestens
+    einer übrig bleibt (anders als delete_user() beim letzten Nutzer) --
+    das wäre eine Server-seitige Entscheidung, die die UI treffen sollte,
+    bevor sie hier aufruft."""
+    _ensure_tables()
+    from astrapi_core.system.db import _conn
+
+    con = _conn()
+    con.execute("UPDATE users SET is_admin=? WHERE id=?", (1 if value else 0, user_id))
+    con.commit()
 
 
 def delete_user(user_id: int) -> None:
@@ -580,6 +672,88 @@ def verify_password(password: str) -> bool:
 
     _clear_failed_attempts()
     return True
+
+
+# ── Passwort pro Nutzer (Multi-User) ────────────────────────────────────────
+# Getrennt von set_password()/verify_password()/has_password() oben, die
+# GLOBAL bleiben (ein Passwort, kein user_id-Bezug) -- weiterhin die
+# Grundlage fuer Single-Owner-Apps (astrapi-backup/-mirror/-packages/
+# -admin). Hier: ein eigenes Passwort je users-Zeile, fuer Apps mit
+# auth.multi_user: true (aktuell nur astrapi-sync), siehe
+# ui/auth_routes.py::login_password().
+
+
+def has_user_password(user_id: int) -> bool:
+    _ensure_tables()
+    from astrapi_core.system.db import _conn
+
+    row = _conn().execute("SELECT password_hash FROM users WHERE id=?", (user_id,)).fetchone()
+    return bool(row and row["password_hash"])
+
+
+def set_user_password(user_id: int, password: str) -> None:
+    _ensure_tables()
+    from astrapi_core.system.db import _conn
+
+    con = _conn()
+    con.execute(
+        "UPDATE users SET password_hash=? WHERE id=?", (_hash_password(password), user_id)
+    )
+    con.commit()
+
+
+def _user_failed_attempts(username: str) -> tuple[int, float]:
+    from astrapi_core.system.db import kv_get
+
+    raw = kv_get("_auth", f"password_fail:{username}")
+    if not raw:
+        return 0, 0.0
+    try:
+        data = json.loads(raw)
+        return int(data.get("n", 0)), float(data.get("at", 0))
+    except (ValueError, TypeError):
+        return 0, 0.0
+
+
+def _record_user_failed_attempt(username: str, n: int) -> None:
+    from astrapi_core.system.db import kv_set
+
+    kv_set("_auth", f"password_fail:{username}", json.dumps({"n": n + 1, "at": time.time()}))
+
+
+def _clear_user_failed_attempts(username: str) -> None:
+    from astrapi_core.system.db import kv_delete
+
+    kv_delete("_auth", f"password_fail:{username}")
+
+
+def verify_user_password(username: str, password: str) -> dict | None:
+    """Wie verify_password(), aber pro Nutzername -- eigene Brute-Force-
+    Bremse PRO Nutzername (nicht global), sonst koennte ein Nutzer mit
+    Tippfehlern versehentlich alle anderen Nutzer mit aussperren. Gibt
+    bei Erfolg das Nutzerdict zurueck (fuer create_session(user_id))."""
+    _ensure_tables()
+    from astrapi_core.system.db import _conn
+
+    n, at = _user_failed_attempts(username)
+    if n >= _PASSWORD_LOCKOUT_THRESHOLD and (time.time() - at) < _PASSWORD_LOCKOUT_SECONDS:
+        return None
+
+    row = _conn().execute(
+        "SELECT id, username, display_name, created_at, is_admin, password_hash "
+        "FROM users WHERE username=?",
+        (username,),
+    ).fetchone()
+    if row is None or not row["password_hash"] or not _verify_password_hash(
+        password, row["password_hash"]
+    ):
+        _record_user_failed_attempt(username, n)
+        return None
+
+    _clear_user_failed_attempts(username)
+    user = dict(row)
+    del user["password_hash"]
+    return user
 
 
 # ── Sessions ──────────────────────────────────────────────────────────────

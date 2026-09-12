@@ -65,8 +65,10 @@ def test_users_page_mit_login_zeigt_liste(client):
     """render() braucht globalen Template-Kontext (app_name etc.), den die
     volle App-Factory (ui/app.py::create()) setzt -- hier isoliert getestet,
     deshalb render() gemockt (gleiches Muster wie
-    test_policies_export_import.py in astrapi-admin)."""
+    test_policies_export_import.py in astrapi-admin). Nur der Admin darf
+    /auth/users sehen (T-Admin-gesteuerte-Nutzerverwaltung)."""
     alice = authmod.create_user("alice", "Alice")
+    authmod.set_admin(alice)
     _login_as(client, alice)
     with patch("astrapi_core.ui.multi_user_routes.render") as mock_render:
         mock_render.return_value = "ok"
@@ -76,6 +78,14 @@ def test_users_page_mit_login_zeigt_liste(client):
     assert ctx["current_user"]["id"] == alice
 
 
+def test_users_page_als_nicht_admin_umgeleitet(client):
+    bob = authmod.create_user("bob", "Bob")
+    _login_as(client, bob)
+    r = client.get("/auth/users", follow_redirects=False)
+    assert r.status_code in (302, 307)
+    assert r.headers["location"] == "/"
+
+
 def test_invite_ohne_login_verboten(client):
     r = client.post("/auth/users/invite")
     assert r.status_code == 403
@@ -83,11 +93,19 @@ def test_invite_ohne_login_verboten(client):
 
 def test_invite_mit_login_liefert_link(client):
     alice = authmod.create_user("alice")
+    authmod.set_admin(alice)
     _login_as(client, alice)
     r = client.post("/auth/users/invite")
     assert r.status_code == 200
     body = r.json()
     assert body["url"].startswith("/auth/invite/")
+
+
+def test_invite_als_nicht_admin_verboten(client):
+    bob = authmod.create_user("bob")
+    _login_as(client, bob)
+    r = client.post("/auth/users/invite")
+    assert r.status_code == 403
 
 
 # ── /auth/invite/{token} ─────────────────────────────────────────────────
@@ -181,3 +199,64 @@ def test_einladungs_token_ist_nach_verify_verbraucht(client):
     # Zweiter Versuch mit demselben Token -- muss fehlschlagen (Einmalnutzung).
     r = client.post(f"/auth/invite/{token}/verify", json={"id": "x"})
     assert r.status_code == 410
+
+
+# ── /auth/invite/{token}/password (Alternative zu Passkey) ──────────────────
+
+
+def test_invite_password_unbekannter_token(client):
+    r = client.post("/auth/invite/nie-erzeugt/password", json={"username": "bob", "password": "acht-zeichen"})
+    assert r.status_code == 410
+
+
+def test_invite_password_zu_kurz_wird_abgelehnt(client):
+    alice = authmod.create_user("alice")
+    token = auth_invites.create_invite_token(alice)
+    r = client.post(f"/auth/invite/{token}/password", json={"username": "bob", "password": "kurz"})
+    assert r.status_code == 400
+
+
+def test_invite_password_ohne_username_fuer_neuen_nutzer(client):
+    alice = authmod.create_user("alice")
+    token = auth_invites.create_invite_token(alice)
+    r = client.post(f"/auth/invite/{token}/password", json={"password": "acht-zeichen"})
+    assert r.status_code == 400
+
+
+def test_invite_password_legt_neuen_nutzer_mit_passwort_an(client):
+    """End-to-End: Alice laedt ein, Bob setzt statt einer Passkey ein
+    eigenes Passwort -- landet eingeloggt, kann sich danach per
+    Nutzername+Passwort wieder anmelden."""
+    alice = authmod.create_user("alice", "Alice")
+    token = auth_invites.create_invite_token(alice)
+
+    r = client.post(
+        f"/auth/invite/{token}/password",
+        json={"username": "bob", "display_name": "Bob", "password": "bob-passwort"},
+    )
+    assert r.status_code == 200
+    assert r.json()["ok"] is True
+    assert authmod.SESSION_COOKIE_NAME in r.cookies
+
+    bob = next(u for u in authmod.list_users() if u["username"] == "bob")
+    assert authmod.has_user_password(bob["id"]) is True
+    assert authmod.verify_user_password("bob", "bob-passwort")["id"] == bob["id"]
+
+    # Token darf danach nicht nochmal einlösbar sein (Einmalnutzung).
+    r2 = client.post(
+        f"/auth/invite/{token}/password",
+        json={"username": "eve", "password": "irgendwas8"},
+    )
+    assert r2.status_code == 410
+
+
+def test_invite_password_fuer_bestehenden_nutzer_passkey_reset(client):
+    """"user_id" schon im Token (astrapi_core/modules/users-Reset-Flow) --
+    kein neuer Nutzer, nur ein Passwort fuer den bestehenden gesetzt."""
+    alice = authmod.create_user("alice", "Alice")
+    bob = authmod.create_user("bob", "Bob")
+    token = auth_invites.create_invite_token(alice, existing_user_id=bob)
+
+    r = client.post(f"/auth/invite/{token}/password", json={"password": "neues-passwort"})
+    assert r.status_code == 200
+    assert authmod.verify_user_password("bob", "neues-passwort")["id"] == bob

@@ -34,6 +34,8 @@ def users_page(request: Request):
     current = authmod.get_current_user(_session_cookie(request))
     if current is None:
         return RedirectResponse("/auth/login?next=/auth/users")
+    if not current.get("is_admin"):
+        return RedirectResponse("/")
     return render(request, "auth/users.html", {"users": authmod.list_users(), "current_user": current})
 
 
@@ -42,6 +44,8 @@ def create_invite(request: Request):
     current = authmod.get_current_user(_session_cookie(request))
     if current is None:
         return JSONResponse({"error": "nicht angemeldet"}, status_code=403)
+    if not current.get("is_admin"):
+        return JSONResponse({"error": "nur der Admin darf Nutzer einladen"}, status_code=403)
     token = auth_invites.create_invite_token(current["id"])
     return JSONResponse({"url": f"/auth/invite/{token}", "ttl_seconds": auth_invites.ttl_seconds()})
 
@@ -100,6 +104,52 @@ async def invite_options(token: str, request: Request):
     )
     resp = JSONResponse(json.loads(options_json))
     resp.set_cookie(authmod.CHALLENGE_COOKIE_NAME, cookie_value, max_age=300, **_cookie_kw(request))
+    return resp
+
+
+@router.post("/invite/{token}/password")
+async def invite_password(token: str, request: Request):
+    """Alternative zu /invite/{token}/options+/verify (Passkey) -- die
+    eingeladene Person setzt statt einer Passkey ein eigenes Passwort.
+    Gleiche Token-Semantik wie invite_options()/invite_verify(): neuer
+    Nutzer (kein user_id im Token) wird hier per username angelegt,
+    bestehender Nutzer (Passkey-Reset aus astrapi_core/modules/users)
+    bekommt einfach ein Passwort gesetzt. Token wird erst bei Erfolg
+    eingelöst (redeem_invite_token), analog zum Passkey-Zweig."""
+    info = auth_invites.peek_invite_token(token)
+    if info is None:
+        return JSONResponse({"error": "Einladung abgelaufen oder ungültig"}, status_code=410)
+
+    body = await request.json()
+    password = body.get("password", "")
+    if len(password) < 8:
+        return JSONResponse({"ok": False, "error": "Passwort zu kurz (mind. 8 Zeichen)"}, status_code=400)
+
+    if "user_id" in info:
+        user_id = info["user_id"]
+        if authmod.get_user(user_id) is None:
+            return JSONResponse({"error": "Nutzer wurde inzwischen gelöscht"}, status_code=410)
+    else:
+        username = (body.get("username") or "").strip()
+        if not username:
+            return JSONResponse({"error": "Name fehlt"}, status_code=400)
+        display_name = (body.get("display_name") or username).strip()
+        user_id = authmod.create_user(username, display_name)
+        auth_invites.attach_user(token, user_id)
+
+    redeemed = auth_invites.redeem_invite_token(token)
+    if redeemed is None:
+        return JSONResponse({"ok": False, "error": "Einladung abgelaufen oder ungültig"}, status_code=410)
+
+    authmod.set_user_password(user_id, password)
+    resp = JSONResponse({"ok": True, "redirect": "/"})
+    session_token = authmod.create_session(user_id)
+    resp.set_cookie(
+        authmod.SESSION_COOKIE_NAME,
+        session_token,
+        max_age=authmod.SESSION_TTL_DAYS * 86400,
+        **_cookie_kw(request),
+    )
     return resp
 
 
