@@ -90,12 +90,26 @@ def _ctx(flash: str = "") -> dict:
     mod_settings.pop("system", None)
     from astrapi_core.system.paths import extra_disk as _extra_disk
 
+    # T-321-ADMIN: Region/Stadt-Gruppierung nur berechnen, wenn ein Modul
+    # tatsaechlich ein timezone_select-Feld hat -- reine ~600-Zonen-Liste
+    # aufzubauen waere sonst unnoetiger Aufwand bei jedem Settings-Aufruf.
+    timezone_groups: dict[str, list[str]] = {}
+    if any(
+        f.get("type") == "timezone_select"
+        for m in mod_settings.values()
+        for f in m["schema"]
+    ):
+        from astrapi_core.system.timezones import grouped_timezones
+
+        timezone_groups = grouped_timezones()
+
     return {
         "settings": all_settings(),
         "modules": modules,
         "flash_message": flash,
         "mod_settings": mod_settings,
         "extra_disk": _extra_disk(),
+        "timezone_groups": timezone_groups,
     }
 
 

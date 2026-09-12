@@ -154,6 +154,31 @@
                              placeholder=field.get('placeholder', ''),
                              attrs=_ta_attrs) }}
 
+            {% elif ftype == 'timezone_select' %}
+            {# T-321-ADMIN: zwei gekoppelte Dropdowns (Region -> Stadt)
+               statt Freitext, deckt alle IANA-Zeitzonen ab, ohne eine
+               ~600-Eintraege-Liste in einem einzigen <select> anzuzeigen.
+               "Nicht verwalten" = leerer Wert, siehe agent_settings.py::
+               timezone(). #}
+            {% set cur_region = fval.split('/', 1)[0] if fval else '' %}
+            <div x-data='{ groups: {{ timezone_groups | tojson }},
+                           region: {{ cur_region | tojson }},
+                           zone: {{ fval | tojson }} }'
+                 style="display:flex; gap:8px;">
+              <select class="form-select" style="flex:1;" x-model="region" @change="zone = ''">
+                <option value="">Nicht verwalten</option>
+                <template x-for="r in Object.keys(groups)" :key="r">
+                  <option :value="r" x-text="r"></option>
+                </template>
+              </select>
+              <select name="{{ fkey }}" class="form-select" style="flex:1;" x-model="zone">
+                <option value="">– bitte wählen –</option>
+                <template x-for="z in (groups[region] || [])" :key="z">
+                  <option :value="z" x-text="z.includes('/') ? z.split('/').slice(1).join('/') : z"></option>
+                </template>
+              </select>
+            </div>
+
             {% elif ftype == 'password' %}
             {{ form_input(fkey, type='password',
                           placeholder=field.get('placeholder', '••••••••'),
