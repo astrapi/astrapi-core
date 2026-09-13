@@ -18,9 +18,6 @@
        {'value': 'admin', 'label': 'Administrator'},
      ], 'admin' if user.is_admin else 'user', placeholder='', attrs='id="users-edit-role"' ~ (' disabled' if locked else '')) }}
 {% endcall %}
-<div{% if locked or is_self %} style="pointer-events:none; opacity:.5;"{% endif %}>
-  {{ ui.toggle_field('enabled', checked=user.enabled | default(True), label='Aktiviert', field_id='users-edit-enabled') }}
-</div>
 {% if locked %}
 <span class="form-help">Es muss mindestens ein aktiver Administrator bestehen bleiben -- Rolle und Aktiviert-Status lassen sich hier deshalb nicht ändern.</span>
 {% elif is_self %}
@@ -52,8 +49,20 @@
 {% endblock %}
 
 {% block dialog_footer %}
-<div class="ds-modal-footer ds-modal-footer--end">
-  <button type="button" class="btn btn-sm btn-ghost" onclick="closeModal(this)">Abbrechen</button>
-  <button type="button" class="btn btn-sm btn-primary" onclick="usersEditSubmit(this)">Speichern</button>
+{% set _enabled_val = user.enabled | default(True) %}
+<div class="ds-modal-footer">
+  <label class="toggle-field"{% if locked or is_self %} style="pointer-events:none; opacity:.5;"{% endif %}>
+    <input type="hidden" id="users-edit-enabled" value="{{ '1' if _enabled_val else '0' }}">
+    <button type="button"
+            class="toggle-switch {{ 'toggle-on' if _enabled_val else 'toggle-off' }}"
+            onclick="var i=document.getElementById('users-edit-enabled');var on=i.value!=='1';i.value=on?'1':'0';this.classList.toggle('toggle-on',on);this.classList.toggle('toggle-off',!on);this.nextElementSibling.textContent=on?'Aktiviert':'Deaktiviert';">
+      <span class="toggle-knob"></span>
+    </button>
+    <span class="toggle-field-label">{{ 'Aktiviert' if _enabled_val else 'Deaktiviert' }}</span>
+  </label>
+  <div class="modal-actions">
+    <button type="button" class="btn btn-sm btn-ghost" onclick="closeModal(this)">Abbrechen</button>
+    <button type="button" class="btn btn-sm btn-primary" onclick="usersEditSubmit(this)">Speichern</button>
+  </div>
 </div>
 {% endblock %}
