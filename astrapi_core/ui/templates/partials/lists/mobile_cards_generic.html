@@ -34,16 +34,21 @@
     {%- set is_running = (module ~ ":" ~ item_name) in (running or {}) -%}
     {%- set _status = 'running' if is_running else (last_run_status(module, item_name) if last_run_status is defined else none) or item_data.get('last_status') -%}
     {%- set _title = item_data.get('description') or item_data.get('job') or item_data.get('host') or item_name -%}
-    <div class="m-card {{ 'on' if item_data.get('enabled', True) else 'off' }}">
+    {#- Kategorie-Farbe wandert als Akzentstreifen an den Kartenrand -- die
+       eigene Meta-Zeile dafuer faellt weiter unten deshalb weg (waere
+       redundant zur Farbe, die jetzt schon links am Rand sichtbar ist). -#}
+    {%- set _cat_col = (_ui_cols | selectattr('type', 'equalto', 'category') | first | default(none)) -%}
+    {%- set _accent = item_data.get(_cat_col.color_key) if _cat_col and _cat_col.color_key else none -%}
+    <div class="m-card {{ 'on' if item_data.get('enabled', True) else 'off' }}"{% if _accent %} style="border-left:3px solid {{ _accent }};"{% endif %}>
 
       <div class="m-card-header">
         <span class="m-card-title">{{ _title }}</span>
         {% if has_status | default(True) %}{{ ui.status_inline(_status) }}{% endif %}
       </div>
 
-      {% if _ui_cols or (has_run_buttons | default(True) and item_data.get('last_run')) %}
+      {% if _ui_cols or has_run_buttons | default(True) %}
       <div class="m-card-meta">
-        {% if has_run_buttons | default(True) and item_data.get('last_run') %}
+        {% if has_run_buttons | default(True) %}
         <div class="m-card-meta-row">
           <span class="m-card-meta-label">{{ (_ui_content.last_run_label if _ui_content else none) or 'Letzter Lauf' }}</span>
           <span class="m-card-meta-value">{{ ui.last_run_cell(item_data.get('last_run')) }}</span>
@@ -51,7 +56,7 @@
         {% endif %}
         {% for col in _ui_cols %}
           {%- set _val = item_data.get(col.key) -%}
-          {% if _val %}
+          {% if _val and col.type != 'category' and col.key != 'id' %}
           <div class="m-card-meta-row">
             <span class="m-card-meta-label">{{ col.label }}</span>
             <span class="m-card-meta-value">
@@ -64,9 +69,6 @@
               {%- elif col.type == 'join' -%}
                 {%- set _list = _val if (_val is iterable and _val is not string) else [] -%}
                 {{ _list | join(col.sep) }}
-              {%- elif col.type == 'category' -%}
-                {%- set _ccolor = item_data.get(col.color_key) if col.color_key else '' -%}
-                <span class="dot-swatch" style="background:{{ _ccolor or 'transparent' }};"></span>{{ _val }}
               {%- elif col.type == 'color' -%}
                 <span class="dot-swatch" style="background:{{ _val }};" title="{{ _val }}"></span>
               {%- else -%}{{ _val }}{%- endif -%}
