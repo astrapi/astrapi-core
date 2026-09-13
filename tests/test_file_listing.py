@@ -29,6 +29,14 @@ def test_render_page_laedt_app_css_und_enthaelt_titel():
     assert "<table>" in html
 
 
+def test_render_page_hat_viewport_meta_tag():
+    """Ohne das schaltet ein Mobilbrowser auf Desktop-Breite (~980px) und
+    app.css' @media(max-width:768px) fuer .mobile-view/.m-card greift nie --
+    dieselbe Seite bliebe auf dem Handy als schmale Desktop-Tabelle stehen."""
+    html = render_page("T", "", [])
+    assert '<meta name="viewport" content="width=device-width, initial-scale=1.0">' in html
+
+
 def test_render_page_ohne_back_zeigt_keinen_zurueck_link():
     html = render_page("T", "", [])
     assert 'class="btn-icon" href' not in html
