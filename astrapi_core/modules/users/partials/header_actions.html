@@ -60,13 +60,14 @@ async function usersEditSubmit(btn) {
   const username = modal.querySelector('#users-edit-username').value.trim();
   const displayName = modal.querySelector('#users-edit-display-name').value.trim();
   const role = modal.querySelector('#users-edit-role').value;
+  const enabled = modal.querySelector('#users-edit-enabled').checked;
   const errorEl = modal.querySelector('#users-edit-error');
   errorEl.style.display = 'none';
   if (!username) { errorEl.textContent = 'Benutzername fehlt.'; errorEl.style.display = ''; return; }
   const res = await fetch('/ui/users/' + userId + '/update', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ username, display_name: displayName, is_admin: role === 'admin' }),
+    body: JSON.stringify({ username, display_name: displayName, is_admin: role === 'admin', enabled }),
   });
   if (!res.ok) {
     const data = await res.json().catch(() => ({}));

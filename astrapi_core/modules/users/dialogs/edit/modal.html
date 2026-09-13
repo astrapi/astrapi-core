@@ -16,10 +16,15 @@
   {{ ui.form_select('role', [
        {'value': 'user', 'label': 'Nutzer'},
        {'value': 'admin', 'label': 'Administrator'},
-     ], 'admin' if user.is_admin else 'user', placeholder='', attrs='id="users-edit-role"' ~ (' disabled' if not can_demote else '')) }}
+     ], 'admin' if user.is_admin else 'user', placeholder='', attrs='id="users-edit-role"' ~ (' disabled' if locked else '')) }}
 {% endcall %}
-{% if not can_demote %}
-<span class="form-help">Es muss mindestens ein Administrator bestehen bleiben -- die Rolle lässt sich hier deshalb nicht ändern.</span>
+<div{% if locked or is_self %} style="pointer-events:none; opacity:.5;"{% endif %}>
+  {{ ui.toggle_field('enabled', checked=user.enabled | default(True), label='Aktiviert', field_id='users-edit-enabled') }}
+</div>
+{% if locked %}
+<span class="form-help">Es muss mindestens ein aktiver Administrator bestehen bleiben -- Rolle und Aktiviert-Status lassen sich hier deshalb nicht ändern.</span>
+{% elif is_self %}
+<span class="form-help">Der eigene Account lässt sich hier nicht deaktivieren.</span>
 {% endif %}
 <p id="users-edit-error" style="display:none; color:var(--error,#ff6b6b); font-size:13px; margin-top:8px;"></p>
 {% endblock %}

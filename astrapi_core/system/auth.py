@@ -157,6 +157,9 @@ def _migrate_user_columns(con) -> None:
     if "password_hash" not in cols:
         con.execute("ALTER TABLE users ADD COLUMN password_hash TEXT NOT NULL DEFAULT ''")
         con.commit()
+    if "enabled" not in cols:
+        con.execute("ALTER TABLE users ADD COLUMN enabled INTEGER NOT NULL DEFAULT 1")
+        con.commit()
 
     has_admin = con.execute("SELECT 1 FROM users WHERE is_admin=1 LIMIT 1").fetchone()
     if not has_admin:
@@ -269,7 +272,8 @@ def get_user(user_id: int) -> dict | None:
     from astrapi_core.system.db import _conn
 
     row = _conn().execute(
-        "SELECT id, username, display_name, created_at, is_admin FROM users WHERE id=?", (user_id,)
+        "SELECT id, username, display_name, created_at, is_admin, enabled FROM users WHERE id=?",
+        (user_id,),
     ).fetchone()
     return dict(row) if row else None
 
@@ -279,7 +283,7 @@ def list_users() -> list[dict]:
     from astrapi_core.system.db import _conn
 
     rows = _conn().execute(
-        "SELECT id, username, display_name, created_at, is_admin FROM users ORDER BY id"
+        "SELECT id, username, display_name, created_at, is_admin, enabled FROM users ORDER BY id"
     ).fetchall()
     return [dict(r) for r in rows]
 
@@ -323,6 +327,21 @@ def set_admin(user_id: int, value: bool = True) -> None:
 
     con = _conn()
     con.execute("UPDATE users SET is_admin=? WHERE id=?", (1 if value else 0, user_id))
+    con.commit()
+
+
+def set_enabled(user_id: int, value: bool = True) -> None:
+    """Deaktiviert/aktiviert einen Nutzer, ohne ihn zu löschen -- Passkeys/
+    Passwort bleiben erhalten, greifen aber nicht mehr (siehe
+    get_current_user()/verify_user_password()/verify_authentication_full(),
+    die alle einen deaktivierten Nutzer wie 'nicht angemeldet' behandeln).
+    Erzwingt wie set_admin() NICHT, dass mindestens ein aktiver Admin übrig
+    bleibt -- das ist Aufgabe der aufrufenden UI."""
+    _ensure_tables()
+    from astrapi_core.system.db import _conn
+
+    con = _conn()
+    con.execute("UPDATE users SET enabled=? WHERE id=?", (1 if value else 0, user_id))
     con.commit()
 
 
@@ -582,7 +601,10 @@ def verify_authentication_full(
         (verified.new_sign_count, 1 if verified.credential_backed_up else 0, _now_iso(), row["id"]),
     )
     _conn().commit()
-    return get_user(row["user_id"])
+    user = get_user(row["user_id"])
+    if user is None or not user.get("enabled", True):
+        return None
+    return user
 
 
 def verify_authentication(
@@ -749,12 +771,15 @@ def verify_user_password(username: str, password: str) -> dict | None:
         return None
 
     row = _conn().execute(
-        "SELECT id, username, display_name, created_at, is_admin, password_hash "
+        "SELECT id, username, display_name, created_at, is_admin, enabled, password_hash "
         "FROM users WHERE username=?",
         (username,),
     ).fetchone()
-    if row is None or not row["password_hash"] or not _verify_password_hash(
-        password, row["password_hash"]
+    if (
+        row is None
+        or not row["enabled"]
+        or not row["password_hash"]
+        or not _verify_password_hash(password, row["password_hash"])
     ):
         _record_user_failed_attempt(username, n)
         return None
@@ -805,7 +830,10 @@ def get_current_user(session_token: str | None) -> dict | None:
     """Wie is_logged_in(), liefert aber das Nutzerobjekt statt nur bool --
     für Code, der die Identität braucht (z.B. astrapi-sync's Owner-Scoping).
     None sowohl bei fehlender/abgelaufener Session als auch bei fehlendem
-    Token."""
+    Token -- ebenso, wenn der Nutzer inzwischen deaktiviert wurde (set_enabled()):
+    eine bestehende Session bleibt in der DB gueltig, zaehlt hier aber wie
+    "nicht angemeldet", einziger zentrale Durchsetzungspunkt fuer alle
+    bereits eingeloggten Zugriffe."""
     if not session_token:
         return None
     _ensure_tables()
@@ -817,7 +845,10 @@ def get_current_user(session_token: str | None) -> dict | None:
     ).fetchone()
     if row is None or row["expires_at"] <= _now_iso():
         return None
-    return get_user(row["user_id"])
+    user = get_user(row["user_id"])
+    if user is None or not user.get("enabled", True):
+        return None
+    return user
 
 
 def destroy_session(session_token: str | None) -> None:

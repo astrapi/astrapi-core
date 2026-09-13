@@ -116,29 +116,44 @@ async def create_new_user(request: Request):
     return render(request, "content.html", _ctx(request))
 
 
-def _can_demote(user: dict) -> bool:
-    """False nur, wenn user selbst Admin ist UND es der einzige waere --
-    Rolle darf dann nicht mehr geaendert werden (mindestens ein Admin muss
-    bestehen bleiben)."""
-    if not user.get("is_admin"):
-        return True
-    return sum(1 for u in authmod.list_users() if u.get("is_admin")) > 1
+def _active_admin_count(exclude_id: int | None = None) -> int:
+    return sum(
+        1
+        for u in authmod.list_users()
+        if u.get("is_admin") and u.get("enabled", True) and u["id"] != exclude_id
+    )
+
+
+def _is_last_active_admin(user: dict) -> bool:
+    """True, wenn user selbst aktiver Admin ist UND kein anderer aktiver
+    Admin existiert -- weder Rolle noch Aktiviert-Status duerfen dann
+    geaendert werden (sonst waere niemand mehr uebrig, der administrieren
+    kann)."""
+    if not (user.get("is_admin") and user.get("enabled", True)):
+        return False
+    return _active_admin_count(exclude_id=user["id"]) == 0
 
 
 @router.get(f"/ui/{KEY}/{{user_id}}/edit", response_class=HTMLResponse)
 def edit_dialog(user_id: int, request: Request):
-    _require_admin(request)
+    current = _require_admin(request)
     user = authmod.get_user(user_id)
     if user is None:
         raise HTTPException(404, "Nutzer nicht gefunden")
     return render(
-        request, f"{KEY}/dialogs/edit/modal.html", {"user": user, "can_demote": _can_demote(user)}
+        request,
+        f"{KEY}/dialogs/edit/modal.html",
+        {
+            "user": user,
+            "locked": _is_last_active_admin(user),
+            "is_self": user_id == current["id"],
+        },
     )
 
 
 @router.post(f"/ui/{KEY}/{{user_id}}/update", response_class=HTMLResponse)
 async def update_user(user_id: int, request: Request):
-    _require_admin(request)
+    current = _require_admin(request)
     user = authmod.get_user(user_id)
     if user is None:
         raise HTTPException(404, "Nutzer nicht gefunden")
@@ -150,14 +165,25 @@ async def update_user(user_id: int, request: Request):
         u["username"] == username for u in authmod.list_users()
     ):
         raise HTTPException(409, "Benutzername bereits vergeben")
+    want_admin = bool(body.get("is_admin"))
+    want_enabled = bool(body.get("enabled", True))
+    if user_id == current["id"] and not want_enabled:
+        # Sonst deaktiviert sich die eigene Session mitten im Request --
+        # render(_ctx()) am Ende braucht current_user() noch fuer die
+        # Antwort, waere dann faelschlich "nicht angemeldet". Gleiche
+        # Absicherung wie schon bei remove_user() (kein Selbst-Loeschen).
+        raise HTTPException(400, "Der eigene Account kann hier nicht deaktiviert werden.")
+    if _is_last_active_admin(user) and not (want_admin and want_enabled):
+        raise HTTPException(
+            409, "Es muss mindestens ein aktiver Administrator bestehen bleiben."
+        )
     authmod.set_username(user_id, username)
     display_name = (body.get("display_name") or "").strip() or username
     authmod.set_display_name(user_id, display_name)
-    want_admin = bool(body.get("is_admin"))
     if want_admin != bool(user.get("is_admin")):
-        if not want_admin and not _can_demote(user):
-            raise HTTPException(409, "Es muss mindestens ein Administrator bestehen bleiben.")
         authmod.set_admin(user_id, want_admin)
+    if want_enabled != bool(user.get("enabled", True)):
+        authmod.set_enabled(user_id, want_enabled)
     return render(request, "content.html", _ctx(request))
 
 
