@@ -2,7 +2,7 @@
 import qrcode
 import qrcode.image.svg
 from fastapi import APIRouter, HTTPException, Request
-from fastapi.responses import HTMLResponse
+from fastapi.responses import HTMLResponse, Response
 
 from astrapi_core.system import auth as authmod
 from astrapi_core.system import auth_invites
@@ -147,8 +147,19 @@ def edit_dialog(user_id: int, request: Request):
             "user": user,
             "locked": _is_last_active_admin(user),
             "is_self": user_id == current["id"],
+            "credentials": authmod.list_credentials(user_id),
         },
     )
+
+
+@router.post(f"/ui/{KEY}/{{user_id}}/credentials/{{credential_id}}/delete")
+def delete_credential(user_id: int, credential_id: int, request: Request):
+    _require_admin(request)
+    if authmod.get_user(user_id) is None:
+        raise HTTPException(404, "Nutzer nicht gefunden")
+    if not authmod.delete_credential(credential_id, user_id):
+        raise HTTPException(404, "Passkey nicht gefunden")
+    return Response(status_code=204)
 
 
 @router.post(f"/ui/{KEY}/{{user_id}}/update", response_class=HTMLResponse)

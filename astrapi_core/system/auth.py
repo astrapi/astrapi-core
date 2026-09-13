@@ -380,6 +380,25 @@ def reset_credentials(user_id: int) -> None:
     _conn().commit()
 
 
+def delete_credential(credential_id: int, user_id: int) -> bool:
+    """Entfernt genau EINEN Passkey (statt aller wie reset_credentials()) --
+    z.B. ein verlorenes/altes Geraet, waehrend andere Passkeys desselben
+    Nutzers gueltig bleiben. user_id zusaetzlich zur credential_id in der
+    WHERE-Klausel, nicht nur zur Anzeige: verhindert, dass ueber eine
+    erratene/fremde credential_id ein Passkey eines ANDEREN Nutzers
+    geloescht wird. False, wenn nichts gemacht wurde (falsche ID oder
+    falscher Besitzer)."""
+    _ensure_tables()
+    from astrapi_core.system.db import _conn
+
+    con = _conn()
+    cur = con.execute(
+        "DELETE FROM auth_credentials WHERE id=? AND user_id=?", (credential_id, user_id)
+    )
+    con.commit()
+    return cur.rowcount > 0
+
+
 # ── Bootstrap-Zustand ────────────────────────────────────────────────────
 
 

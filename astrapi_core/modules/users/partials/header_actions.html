@@ -78,4 +78,12 @@ async function usersEditSubmit(btn) {
   document.getElementById('mod-users').outerHTML = await res.text();
   modal.remove();
 }
+
+async function usersDeleteCredential(userId, credentialId, label) {
+  if (!confirm('Passkey "' + label + '" wirklich entfernen?')) return;
+  const res = await fetch('/ui/users/' + userId + '/credentials/' + credentialId + '/delete', { method: 'POST' });
+  if (!res.ok) { alert((await res.json().catch(() => ({}))).detail || 'Fehlgeschlagen.'); return; }
+  const row = document.getElementById('users-cred-' + credentialId);
+  if (row) row.remove();
+}
 </script>

@@ -26,6 +26,28 @@
 {% elif is_self %}
 <span class="form-help">Der eigene Account lässt sich hier nicht deaktivieren.</span>
 {% endif %}
+
+<div class="form-group" style="margin-top:14px;">
+  <label class="form-label">Passkeys</label>
+  <div id="users-edit-credentials">
+    {% if credentials %}
+      {% for cred in credentials %}
+      <div class="users-cred-row" id="users-cred-{{ cred.id }}" style="display:flex; align-items:center; justify-content:space-between; padding:5px 0; border-bottom:1px solid var(--border-s);">
+        <span style="font-size:13px;">{{ cred.label or 'Passkey' }}
+          <span style="color:var(--text-3); font-size:11px;">— eingerichtet {{ cred.created_at[:10] }}{% if cred.last_used_at %}, zuletzt genutzt {{ cred.last_used_at[:10] }}{% endif %}</span>
+        </span>
+        <button type="button" class="btn-icon btn-icon-danger" title="Passkey entfernen"
+                onclick="usersDeleteCredential({{ user.id }}, {{ cred.id }}, '{{ (cred.label or 'Passkey') | e }}')">
+          {{ ui.icon("trash") }}
+        </button>
+      </div>
+      {% endfor %}
+    {% else %}
+    <span class="form-help">Kein Passkey eingerichtet.</span>
+    {% endif %}
+  </div>
+</div>
+
 <p id="users-edit-error" style="display:none; color:var(--error,#ff6b6b); font-size:13px; margin-top:8px;"></p>
 {% endblock %}
 
