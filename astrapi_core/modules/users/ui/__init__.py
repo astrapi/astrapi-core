@@ -54,7 +54,7 @@ def _ctx(request: Request) -> dict:
         cfg[str(u["id"])] = {
             **u,
             "description": name + (" (du)" if u["id"] == current["id"] else ""),
-            "credential_display": f"{cred_count} Passkey{'de' if cred_count == 1 else 's'}"
+            "credential_display": f"{cred_count} Passkey{'' if cred_count == 1 else 's'}"
             if cred_count
             else "kein Passkey",
             "credential_category": "ok" if cred_count else "error",

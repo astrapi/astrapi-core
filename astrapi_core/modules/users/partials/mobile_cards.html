@@ -31,7 +31,10 @@
 {% endset %}
 {% call mc.m_card(u.description, footer=_footer) %}
   {{ mc.m_card_row('Benutzername', u.username) }}
-  {{ mc.m_card_row('Rolle', 'Administrator' if u.role == 'admin' else 'Nutzer') }}
+  <div class="m-card-meta-row">
+    <span class="m-card-meta-label">Rolle</span>
+    <span class="m-card-meta-value"><span class="badge-pill {{ 'badge-red' if u.role == 'admin' else 'badge-grey' }}">{{ 'Administrator' if u.role == 'admin' else 'Nutzer' }}</span></span>
+  </div>
   {{ mc.m_card_row('Passkey', u.credential_display) }}
 {% endcall %}
 {% endfor %}

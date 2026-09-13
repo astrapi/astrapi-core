@@ -55,7 +55,7 @@ module = load_modul(
                 "role",
                 "Rolle",
                 {
-                    "admin": {"label": "Administrator", "cls": "badge-blue"},
+                    "admin": {"label": "Administrator", "cls": "badge-red"},
                     "user": {"label": "Nutzer", "cls": "badge-grey"},
                 },
                 css="col-type",

@@ -514,6 +514,16 @@ input,select,textarea { font-family:var(--font); }
   color:var(--text-3);
 }
 
+/* Administrator-Rolle (modules/users) -- bewusst rot statt der frueheren
+   badge-blue: Admin-Rechte sind sicherheitsrelevant, sollen auffallen statt
+   neutral zu wirken. Gleiche Farbwerte wie .badge-status-err, aber ohne
+   dessen feste Breite (die ist auf kurze Status-Woerter wie "Fehler"
+   zugeschnitten, "Administrator" waere darin abgeschnitten). */
+.badge-red {
+  background:rgba(220,38,38,0.15);
+  color:#f87171;
+}
+
 /* Multiselect: geerbte, nicht abwaehlbare Option (siehe field_renderer.html) */
 .badge-locked {
   background:rgba(255,255,255,0.03);
