@@ -97,6 +97,38 @@ def test_max_items_zaehlt_nur_eigenen_scope(inner):
         store_a.create(None, {"name": "a2"})
 
 
+def test_scope_none_kein_filter_alle_sichtbar(inner):
+    """scope_fn() == None -- 'shared'-Modus (app.yaml: categories.scope):
+    keine Trennung mehr, jeder sieht/aendert/loescht jede Zeile,
+    unabhaengig vom gespeicherten owner_user_id-Wert."""
+    store_a = OwnerScopedStore(inner, scope_fn=lambda: 1)
+    item_id = store_a.create(None, {"name": "a"})  # owner_user_id=1 gestempelt
+
+    shared_store = OwnerScopedStore(inner, scope_fn=lambda: None)
+    assert [v["name"] for v in shared_store.list().values()] == ["a"]
+    assert shared_store.get(item_id)["name"] == "a"
+
+    shared_store.update(item_id, {"name": "b"})
+    assert inner.get(item_id)["name"] == "b"
+    assert shared_store.delete(item_id) is True
+    assert inner.get(item_id) is None
+
+
+def test_scope_none_create_stempelt_keinen_owner(inner):
+    shared_store = OwnerScopedStore(inner, scope_fn=lambda: None)
+    item_id = shared_store.create(None, {"name": "x"})
+    assert "owner_user_id" not in inner.get(item_id)
+
+
+def test_scope_none_max_items_global(inner):
+    """Das Limit gilt im 'shared'-Modus global -- anders als
+    test_max_items_zaehlt_nur_eigenen_scope oben (dort pro Scope)."""
+    shared_store = OwnerScopedStore(inner, scope_fn=lambda: None, max_items=1)
+    shared_store.create(None, {"name": "a"})
+    with pytest.raises(ValueError):
+        shared_store.create(None, {"name": "b"})
+
+
 def test_current_user_id_fallback_ohne_middleware():
     """Ohne aktive CurrentUserMiddleware (z.B. auth.enabled=false) liefert
     current_user_id() den impliziten Default-User -- dieselbe Semantik wie

@@ -2,7 +2,7 @@
 das per Default True bleibt (Rueckwaertskompatibilitaet fuer Apps ohne
 HTTPS) und von einer App gezielt auf false gestellt werden kann. Ausserdem
 get_app_icon_svg() (Favicon/PWA-Manifest-Icon aus app.yaml)."""
-from astrapi_core.system.version import get_app_icon_svg, get_auth_config
+from astrapi_core.system.version import get_app_icon_svg, get_auth_config, get_categories_scope
 
 
 def _write_app_yaml(tmp_path, auth_block: str) -> None:
@@ -43,6 +43,22 @@ def test_multi_user_explizit_aktiviert(tmp_path):
     _write_app_yaml(tmp_path, "auth:\n  enabled: true\n  multi_user: true\n")
     cfg = get_auth_config(tmp_path)
     assert cfg["multi_user"] is True
+
+
+def test_categories_scope_default_owner_ohne_app_yaml(tmp_path):
+    """Rueckwaertskompatibilitaet: astrapi-sync (private Kategorien pro
+    Nutzer) setzt diesen Schluessel nicht -- muss 'owner' bleiben."""
+    assert get_categories_scope(tmp_path) == "owner"
+
+
+def test_categories_scope_shared_explizit(tmp_path):
+    _write_app_yaml(tmp_path, "categories:\n  scope: shared\n")
+    assert get_categories_scope(tmp_path) == "shared"
+
+
+def test_categories_scope_ungueltiger_wert_faellt_auf_owner_zurueck(tmp_path):
+    _write_app_yaml(tmp_path, "categories:\n  scope: irgendwas\n")
+    assert get_categories_scope(tmp_path) == "owner"
 
 
 def test_app_icon_svg_ohne_app_yaml_ist_none(tmp_path):

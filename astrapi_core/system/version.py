@@ -94,6 +94,16 @@ def get_auth_config(app_root: Path) -> dict:
     }
 
 
+def get_categories_scope(app_root: Path) -> str:
+    """Scope der Kategorien-Verwaltung (app.yaml: categories.scope) --
+    'owner' (Default): private Kategorien pro Nutzer, wie urspruenglich fuer
+    astrapi-sync gebaut. 'shared': eine gemeinsame Liste fuer alle Nutzer,
+    siehe system/categories_scope.py."""
+    raw = _read_yaml(app_root / "app.yaml").get("categories", {}) or {}
+    scope = str(raw.get("scope", "owner"))
+    return scope if scope in ("owner", "shared") else "owner"
+
+
 def _clean_version(v: str) -> str:
     """Bereinigt Dev-Versionen:
     - Entfernt lokalen Hash-Teil (+g...)

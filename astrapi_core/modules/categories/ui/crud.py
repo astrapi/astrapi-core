@@ -11,13 +11,18 @@ from pathlib import Path
 
 from fastapi import APIRouter
 
+from astrapi_core.system.categories_scope import categories_scope_id
 from astrapi_core.ui.crud_blueprint import make_crud_router
 from astrapi_core.ui.scoped_store import OwnerScopedStore
 from astrapi_core.ui.store import SqliteTableStore
 
 KEY = "categories"
 _DIR = Path(__file__).parent.parent
-store = OwnerScopedStore(SqliteTableStore(KEY), max_items=16)
+# scope_fn=categories_scope_id statt des OwnerScopedStore-Defaults
+# (current_user_id direkt) -- liefert bei app.yaml: categories.scope=shared
+# None zurueck, wodurch der Store ungefiltert alle Zeilen zeigt (siehe
+# scoped_store.py) statt jedem Nutzer nur seine eigenen Kategorien.
+store = OwnerScopedStore(SqliteTableStore(KEY), scope_fn=categories_scope_id, max_items=16)
 
 
 def categories_for_select() -> list[dict]:

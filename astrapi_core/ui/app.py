@@ -22,6 +22,7 @@ from fastapi.responses import JSONResponse, RedirectResponse
 from astrapi_core.ui.color_palette import color_palette
 from jinja2 import ChoiceLoader, FileSystemLoader
 
+from ..system.categories_scope import set_categories_scope_mode
 from ..system.manifest import register_manifest
 from ..system.paths import is_debug, is_ui_debug
 from ..system.version import (
@@ -30,6 +31,7 @@ from ..system.version import (
     get_app_name,
     get_app_version,
     get_auth_config,
+    get_categories_scope,
     get_core_version,
     get_display_name,
 )
@@ -180,6 +182,12 @@ def create(
     # Startwerte für rp_id/rp_name/origin, später über die Settings-UI
     # änderbar ohne app.yaml erneut anzufassen (siehe [[E-003]]).
     auth_cfg = get_auth_config(app_root)
+    # Kategorien (modules/categories) -- 'owner' (Default) oder 'shared'
+    # (app.yaml: categories.scope), siehe system/categories_scope.py.
+    # Einmal pro Prozess gesetzt, kein Settings-Wert wie AUTH_* oben --
+    # unabhaengig davon spaeter aenderbar zu machen waere eine Migration
+    # bestehender Kategorien-Zeilen wert, kein reiner Konfig-Wert.
+    set_categories_scope_mode(get_categories_scope(app_root))
     global_defaults.setdefault("AUTH_RP_ID", auth_cfg["rp_id"])
     global_defaults.setdefault("AUTH_RP_NAME", auth_cfg["rp_name"] or _display_name)
     global_defaults.setdefault("AUTH_ORIGIN", auth_cfg["origin"])

@@ -26,7 +26,12 @@ class OwnerScopedStore:
     """Args:
     inner:       zu umhuellender Store (z.B. SqliteTableStore)
     scope_field: Feldname, unter dem der Scope-Wert im Item liegt
-    scope_fn:    () -> aktueller Scope-Wert (Default: current_user_id())
+    scope_fn:    () -> aktueller Scope-Wert (Default: current_user_id()).
+                 Liefert scope_fn() None, wird NICHT gefiltert (alle
+                 Zeilen sichtbar, unabhaengig von ihrem gespeicherten
+                 Scope-Wert) -- fuer Apps mit geteilten Daten, wo eine
+                 Liste (z.B. Kategorien) allen Nutzern gemeinsam gehoeren
+                 soll statt jedem einzeln.
     max_items:   optionales Limit -- create() wirft ValueError, sobald
                  list() (bereits scope-gefiltert) dieses Limit erreicht
                  hat, statt den inneren Store aufzurufen.
@@ -46,20 +51,28 @@ class OwnerScopedStore:
 
     def list(self) -> dict[str, dict]:
         scope = self._scope_fn()
+        if scope is None:
+            return dict(self._inner.list())
         return {
             k: v for k, v in self._inner.list().items() if v.get(self._scope_field) == scope
         }
 
     def get(self, item_id: str) -> dict | None:
         item = self._inner.get(item_id)
-        if item is None or item.get(self._scope_field) != self._scope_fn():
+        if item is None:
+            return None
+        scope = self._scope_fn()
+        if scope is not None and item.get(self._scope_field) != scope:
             return None
         return item
 
     def create(self, item_id: str | None, data: dict) -> str:
         if self._max_items is not None and len(self.list()) >= self._max_items:
             raise ValueError(f"Maximal {self._max_items} Einträge erreicht")
-        return self._inner.create(item_id, {**data, self._scope_field: self._scope_fn()})
+        scope = self._scope_fn()
+        if scope is None:
+            return self._inner.create(item_id, data)
+        return self._inner.create(item_id, {**data, self._scope_field: scope})
 
     def update(self, item_id: str, data: dict) -> None:
         if self.get(item_id) is None:
