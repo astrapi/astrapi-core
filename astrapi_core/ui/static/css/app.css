@@ -221,9 +221,8 @@ input,select,textarea { font-family:var(--font); }
 .nav-item:hover .nav-icon { opacity:0.9; }
 .nav-divider { border:none; border-top:1px solid var(--border-s); margin:4px 8px; flex-shrink:0; }
 
-.sb-user { padding:6px 12px 2px; flex-shrink:0; }
-.sb-user-name { font-size:12px; color:var(--text-2); font-weight:600; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; display:block; }
 .sb-actions { padding:4px 8px; flex-shrink:0; display:flex; align-items:center; justify-content:flex-end; gap:6px; }
+.sb-user-name { flex:1; min-width:0; font-size:12px; color:var(--text-2); font-weight:600; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; padding-left:4px; }
 .sb-footer { padding:6px 8px 10px; flex-shrink:0; }
 .sb-divider { border:none; border-top:1px solid var(--border-s); margin:0 8px 0; }
 .sb-versions { display:flex; flex-direction:column; align-items:flex-end; gap:1px; }

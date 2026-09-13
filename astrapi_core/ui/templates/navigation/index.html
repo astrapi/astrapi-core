@@ -35,16 +35,11 @@
     {% endfor %}
   </nav>
 
-  {% if current_user %}
-  <!-- Angemeldeter Nutzer -->
-  <hr class="sb-divider">
-  <div class="sb-user" title="{{ current_user.username }}">
-    <span class="sb-user-name">{{ current_user.display_name or current_user.username }}</span>
-  </div>
-  {% endif %}
-
   <!-- Aktionen -->
   <div class="sb-actions">
+    {% if current_user %}
+    <span class="sb-user-name" title="{{ current_user.username }}">{{ current_user.display_name or current_user.username }}</span>
+    {% endif %}
     {% if auth_enabled %}
     <form method="post" action="/auth/logout" style="display:contents;">
       <button type="submit" class="btn-theme" title="Abmelden">
