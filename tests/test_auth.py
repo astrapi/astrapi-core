@@ -517,7 +517,12 @@ def test_verify_user_password_sperre_betrifft_nur_diesen_nutzernamen():
     assert authmod.verify_user_password("bob", "bob-passwort")["id"] == bob  # unbetroffen
 
 
-def test_migration_benennt_default_user_bei_multi_user_um():
+def test_migration_benennt_default_user_bei_multi_user_nicht_um():
+    """Frueher: automatische Umbenennung zu "_admin" bei auth.multi_user:
+    true. Auf Nutzerwunsch (2026-09-13) entfernt -- "_default" bleibt
+    einheitlich, unabhaengig von Single-Owner/Multi-User. Ein Nutzername-
+    Wechsel laeuft jetzt ausschliesslich ueber set_username() (UI:
+    modules/users-Eigenschaften-Dialog)."""
     from astrapi_core.ui import settings_registry
 
     settings_registry.set("AUTH_MULTI_USER", True)
@@ -525,11 +530,17 @@ def test_migration_benennt_default_user_bei_multi_user_um():
         authmod._ensure_tables()
         admin_id = authmod._default_user_id()
         user = authmod.get_user(admin_id)
-        assert user["username"] == "_admin"
+        assert user["username"] == "_default"
         # Erneuter Aufruf darf keine zweite Zeile anlegen.
         assert authmod._default_user_id() == admin_id
     finally:
         settings_registry.set("AUTH_MULTI_USER", False)
+
+
+def test_set_username_aendert_namen():
+    admin_id = authmod._default_user_id()
+    authmod.set_username(admin_id, "renamed")
+    assert authmod.get_user(admin_id)["username"] == "renamed"
 
 
 def test_migration_laesst_default_user_ohne_multi_user_unveraendert():

@@ -58,6 +58,7 @@ def _ctx(request: Request) -> dict:
             if cred_count
             else "kein Passkey",
             "credential_category": "ok" if cred_count else "error",
+            "role": "admin" if u.get("is_admin") else "user",
         }
     return {
         "module": KEY,
@@ -109,7 +110,54 @@ async def create_new_user(request: Request):
     if any(u["username"] == username for u in authmod.list_users()):
         raise HTTPException(409, "Benutzername bereits vergeben")
     display_name = (body.get("display_name") or "").strip() or username
-    authmod.create_user(username, display_name)
+    new_id = authmod.create_user(username, display_name)
+    if body.get("is_admin"):
+        authmod.set_admin(new_id, True)
+    return render(request, "content.html", _ctx(request))
+
+
+def _can_demote(user: dict) -> bool:
+    """False nur, wenn user selbst Admin ist UND es der einzige waere --
+    Rolle darf dann nicht mehr geaendert werden (mindestens ein Admin muss
+    bestehen bleiben)."""
+    if not user.get("is_admin"):
+        return True
+    return sum(1 for u in authmod.list_users() if u.get("is_admin")) > 1
+
+
+@router.get(f"/ui/{KEY}/{{user_id}}/edit", response_class=HTMLResponse)
+def edit_dialog(user_id: int, request: Request):
+    _require_admin(request)
+    user = authmod.get_user(user_id)
+    if user is None:
+        raise HTTPException(404, "Nutzer nicht gefunden")
+    return render(
+        request, f"{KEY}/dialogs/edit/modal.html", {"user": user, "can_demote": _can_demote(user)}
+    )
+
+
+@router.post(f"/ui/{KEY}/{{user_id}}/update", response_class=HTMLResponse)
+async def update_user(user_id: int, request: Request):
+    _require_admin(request)
+    user = authmod.get_user(user_id)
+    if user is None:
+        raise HTTPException(404, "Nutzer nicht gefunden")
+    body = await request.json()
+    username = (body.get("username") or "").strip()
+    if not username:
+        raise HTTPException(400, "Benutzername fehlt")
+    if username != user["username"] and any(
+        u["username"] == username for u in authmod.list_users()
+    ):
+        raise HTTPException(409, "Benutzername bereits vergeben")
+    authmod.set_username(user_id, username)
+    display_name = (body.get("display_name") or "").strip() or username
+    authmod.set_display_name(user_id, display_name)
+    want_admin = bool(body.get("is_admin"))
+    if want_admin != bool(user.get("is_admin")):
+        if not want_admin and not _can_demote(user):
+            raise HTTPException(409, "Es muss mindestens ein Administrator bestehen bleiben.")
+        authmod.set_admin(user_id, want_admin)
     return render(request, "content.html", _ctx(request))
 
 

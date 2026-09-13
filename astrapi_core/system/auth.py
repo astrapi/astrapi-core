@@ -174,23 +174,12 @@ def _migrate_user_columns(con) -> None:
                 )
         con.commit()
 
-    # "_default" ist nur fuer den Single-Owner-Fall ein sinnvoller Name
-    # (es gibt dort nie einen zweiten Nutzer). Sobald eine App echte
-    # Multi-User-Identitaeten kennt (auth.multi_user: true), ist der
-    # Admin-Account keine anonyme Default-Zeile mehr, sondern eine echte
-    # Person mit eigenem Login-Namen -- "_default" waere dann als
-    # Nutzername (jetzt Teil des Passwort-Logins, siehe
-    # ui/auth_routes.py::login_password()) verwirrend. Einmalige,
-    # idempotente Umbenennung -- greift nur solange der Name noch nicht
-    # geaendert wurde, kein Einfluss auf Single-Owner-Apps.
-    try:
-        from astrapi_core.ui.settings_registry import get as _settings_get
-
-        if _settings_get("AUTH_MULTI_USER", False):
-            con.execute("UPDATE users SET username='_admin' WHERE username='_default'")
-            con.commit()
-    except Exception:
-        pass
+    # Frueher: automatische, einmalige Umbenennung des Bootstrap-Nutzers
+    # von "_default" zu "_admin" sobald auth.multi_user: true war. Auf
+    # Nutzerwunsch (2026-09-13) entfernt -- "_default" bleibt ueberall
+    # einheitlich, unabhaengig von Single-Owner/Multi-User. Der Nutzername
+    # laesst sich bei Bedarf jetzt ohnehin ueber die Nutzer-Eigenschaften
+    # im modules/users-Modul manuell aendern (set_username()).
 
 
 def _now_iso() -> str:
@@ -301,6 +290,26 @@ def is_admin(user_id: int) -> bool:
 
     row = _conn().execute("SELECT is_admin FROM users WHERE id=?", (user_id,)).fetchone()
     return bool(row and row["is_admin"])
+
+
+def set_username(user_id: int, username: str) -> None:
+    """Eindeutigkeit ist Aufgabe der aufrufenden UI (wie schon bei
+    create_user()) -- diese Funktion prueft sie nicht selbst."""
+    _ensure_tables()
+    from astrapi_core.system.db import _conn
+
+    con = _conn()
+    con.execute("UPDATE users SET username=? WHERE id=?", (username, user_id))
+    con.commit()
+
+
+def set_display_name(user_id: int, display_name: str) -> None:
+    _ensure_tables()
+    from astrapi_core.system.db import _conn
+
+    con = _conn()
+    con.execute("UPDATE users SET display_name=? WHERE id=?", (display_name, user_id))
+    con.commit()
 
 
 def set_admin(user_id: int, value: bool = True) -> None:

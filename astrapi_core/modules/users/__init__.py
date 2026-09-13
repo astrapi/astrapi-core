@@ -51,6 +51,15 @@ module = load_modul(
         has_toggle=False,
         columns=[
             Col.mono("username", "Benutzername"),
+            Col.badge_enum(
+                "role",
+                "Rolle",
+                {
+                    "admin": {"label": "Administrator", "cls": "badge-blue"},
+                    "user": {"label": "Nutzer", "cls": "badge-grey"},
+                },
+                css="col-type",
+            ),
             Col.dot_text("credential_display", "Passkey", category_key="credential_category", css="col-info"),
         ],
     ),

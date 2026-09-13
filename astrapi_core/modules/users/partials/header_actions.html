@@ -20,13 +20,14 @@ async function usersCreateSubmit(btn) {
   const modal = btn.closest('.ds-modal-backdrop');
   const username = modal.querySelector('#users-create-username').value.trim();
   const displayName = modal.querySelector('#users-create-display-name').value.trim();
+  const role = modal.querySelector('#users-create-role').value;
   const errorEl = modal.querySelector('#users-create-error');
   errorEl.style.display = 'none';
   if (!username) { errorEl.textContent = 'Benutzername fehlt.'; errorEl.style.display = ''; return; }
   const res = await fetch('/ui/users', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ username, display_name: displayName }),
+    body: JSON.stringify({ username, display_name: displayName, is_admin: role === 'admin' }),
   });
   if (!res.ok) {
     const data = await res.json().catch(() => ({}));
@@ -51,5 +52,29 @@ async function usersDelete(userId, label) {
   const res = await fetch('/ui/users/' + userId + '/delete', { method: 'POST' });
   if (!res.ok) { alert((await res.json().catch(() => ({}))).detail || 'Fehlgeschlagen.'); return; }
   document.getElementById('mod-users').outerHTML = await res.text();
+}
+
+async function usersEditSubmit(btn) {
+  const modal = btn.closest('.ds-modal-backdrop');
+  const userId = modal.querySelector('#users-edit-id').value;
+  const username = modal.querySelector('#users-edit-username').value.trim();
+  const displayName = modal.querySelector('#users-edit-display-name').value.trim();
+  const role = modal.querySelector('#users-edit-role').value;
+  const errorEl = modal.querySelector('#users-edit-error');
+  errorEl.style.display = 'none';
+  if (!username) { errorEl.textContent = 'Benutzername fehlt.'; errorEl.style.display = ''; return; }
+  const res = await fetch('/ui/users/' + userId + '/update', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ username, display_name: displayName, is_admin: role === 'admin' }),
+  });
+  if (!res.ok) {
+    const data = await res.json().catch(() => ({}));
+    errorEl.textContent = data.detail || 'Speichern fehlgeschlagen.';
+    errorEl.style.display = '';
+    return;
+  }
+  document.getElementById('mod-users').outerHTML = await res.text();
+  modal.remove();
 }
 </script>

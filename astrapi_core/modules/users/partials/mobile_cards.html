@@ -11,6 +11,10 @@
 {% for item_name, u in cfg.items() %}
 {% set _footer %}
   {% if current_user.is_admin %}
+  <button type="button" class="btn-icon" title="Eigenschaften bearbeiten"
+          hx-get="/ui/users/{{ item_name }}/edit" hx-target="body" hx-swap="beforeend">
+    {{ ui.icon("edit") }}
+  </button>
   <button type="button" class="btn-icon" title="Einladen (Link/QR-Code)"
           hx-get="/ui/users/{{ item_name }}/invite" hx-target="body" hx-swap="beforeend">
     {{ ui.icon("send") }}
@@ -27,6 +31,7 @@
 {% endset %}
 {% call mc.m_card(u.description, footer=_footer) %}
   {{ mc.m_card_row('Benutzername', u.username) }}
+  {{ mc.m_card_row('Rolle', 'Administrator' if u.role == 'admin' else 'Nutzer') }}
   {{ mc.m_card_row('Passkey', u.credential_display) }}
 {% endcall %}
 {% endfor %}

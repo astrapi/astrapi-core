@@ -11,6 +11,12 @@
 {% call ui.form_group('Anzeigename (optional)') %}
   {{ ui.form_input('display_name', attrs='id="users-create-display-name" autocomplete="off"') }}
 {% endcall %}
+{% call ui.form_group('Rolle') %}
+  {{ ui.form_select('role', [
+       {'value': 'user', 'label': 'Nutzer'},
+       {'value': 'admin', 'label': 'Administrator'},
+     ], 'user', placeholder='', attrs='id="users-create-role"') }}
+{% endcall %}
 <p id="users-create-error" style="display:none; color:var(--error,#ff6b6b); font-size:13px; margin-top:8px;"></p>
 {% endblock %}
 

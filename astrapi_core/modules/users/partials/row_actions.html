@@ -9,6 +9,10 @@
 #}
 {% import 'partials/components/ui_macros.html' as ui %}
 {% if current_user.is_admin %}
+<button type="button" class="btn-icon" title="Eigenschaften bearbeiten"
+        hx-get="/ui/users/{{ item_name }}/edit" hx-target="body" hx-swap="beforeend">
+  {{ ui.icon("edit") }}
+</button>
 <button type="button" class="btn-icon" title="Einladen (Link/QR-Code)"
         hx-get="/ui/users/{{ item_name }}/invite" hx-target="body" hx-swap="beforeend">
   {{ ui.icon("send") }}
