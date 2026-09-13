@@ -338,17 +338,22 @@ def create(
         _light = _srget("LIGHT_MODE", _light_default)
 
         _nav = _nav_items_ref[0]
+        _current_user = None
+        if auth_cfg["enabled"]:
+            # current_user fuer die Seitenleiste (angemeldeter Nutzername,
+            # siehe navigation/index.html) -- bei Multi-User-Apps zusaetzlich
+            # fuer die Nav-Filterung unten wiederverwendet.
+            from astrapi_core.system import auth as authmod
+            from astrapi_core.ui.auth_routes import _session_cookie
+
+            _current_user = authmod.get_current_user(_session_cookie(request))
         if auth_cfg["multi_user"]:
             # Abgespeckte Oberfläche für Nicht-Admins: admin_only-Module
             # (system/settings/notify/activity_log) aus der Nav filtern --
             # serverseitig, pro Request, da nav_items sonst nur einmal beim
             # Start berechnet wird (siehe _admin_only_guard oben für den
             # dazugehörigen Routen-Schutz, falls die URL trotzdem geraten wird).
-            from astrapi_core.system import auth as authmod
-            from astrapi_core.ui.auth_routes import _session_cookie
-
-            _user = authmod.get_current_user(_session_cookie(request))
-            if not (_user and _user.get("is_admin")):
+            if not (_current_user and _current_user.get("is_admin")):
                 _nav = [it for it in _nav if not it.get("admin_only")]
 
         return {
@@ -369,6 +374,7 @@ def create(
             "show_ssh_key": app_cfg.get("SHOW_SSH_KEY", False),
             "nav_items": _nav,
             "auth_enabled": auth_cfg["enabled"],
+            "current_user": _current_user,
             "is_debug": is_debug(),
             "is_ui_debug": is_ui_debug(),
             "static_v": _static_v,
