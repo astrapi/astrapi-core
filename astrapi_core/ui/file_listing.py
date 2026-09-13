@@ -8,18 +8,24 @@
 # Paketmanager wie pacman/apt, kein UI-Modul mit Navigation/Layout).
 #
 # Optisch an die Admin-Oberfläche angelehnt: lädt deren echtes
-# /static/css/app.css (gleiche CSS-Variablen/Fonts wie im Dashboard),
-# ergänzt nur noch die seitenspezifische Karten-/Tabellen-Optik lokal --
-# kein Duplizieren der Farbwerte, die bleiben damit automatisch in Sync
-# mit dem Dashboard. Icons sind bewusst als einzelne <svg>-Konstanten
-# inline gehalten statt über den Jinja-Sprite-Mechanismus
-# (astrapi_core/ui/icons.py::build_sprite()), der außerhalb des
-# Template-Systems nicht zur Verfügung steht.
+# /static/css/app.css (gleiche CSS-Variablen/Fonts/Komponenten wie im
+# Dashboard) und nutzt dessen Klassen direkt (content-header, btn-icon,
+# m-card/m-card-meta-row, desktop-view/mobile-view) statt sie hier zu
+# duplizieren -- Optik bleibt damit automatisch in Sync mit dem Dashboard,
+# inklusive dessen Mobile-Karten-Darstellung. Icons sind bewusst als
+# einzelne <svg>-Konstanten inline gehalten statt über den Jinja-
+# Sprite-Mechanismus (astrapi_core/ui/icons.py::build_sprite()), der
+# außerhalb des Template-Systems nicht zur Verfügung steht.
 #
 # Vorher unabhängig in astrapi-mirror und astrapi-packages dupliziert
 # (mit leicht abweichenden Details) -- siehe astrapi-hub-Vault,
 # T-259-MIRROR/T-260-MIRROR: "generische Features gehören in Core,
 # nicht pro App dupliziert."
+#
+# Zeilen tragen seit [[T-Files-Mobile]] IMMER Desktop- und Mobile-Form aus
+# derselben Zellen-Quelle (Cell/render_row_pair) -- vorher gab es nur die
+# <tr>-Fassung, auf schmalen Bildschirmen also eine feste, oft
+# ueberbreite Tabelle statt echter Karten wie im restlichen Dashboard.
 
 from __future__ import annotations
 
@@ -56,15 +62,13 @@ _COPY_SVG = _icon(
 )
 _CHECK_SVG = _icon("M21,7L9,19L3.5,13.5L4.91,12.09L9,16.17L19.59,5.59L21,7Z", "#3fb950")
 
+# Nur noch seitenspezifische Ergaenzungen -- Header (content-header),
+# Icon-Buttons (btn-icon), Karten (m-card*) und die Desktop-/Mobile-
+# Umschaltung (desktop-view/mobile-view) kommen direkt aus app.css, siehe
+# Modul-Docstring.
 _CSS = """
-    body { font-family:var(--font); background:var(--bg); color:var(--text); margin:0; padding:28px; }
+    body { font-family:var(--font); background:var(--bg); color:var(--text); margin:0; padding:20px; }
     a { text-decoration:none; }
-    .fb-topbar { display:flex; align-items:center; gap:10px; margin-bottom:14px; }
-    .fb-back { display:inline-flex; align-items:center; gap:4px; padding:6px 10px;
-               border-radius:6px; background:var(--card); color:var(--text-2);
-               font-size:12px; flex-shrink:0; }
-    .fb-back:hover { color:var(--text); }
-    h1 { font-size:18px; font-weight:600; margin:0; color:var(--text); }
     .fb-hint { color:var(--text-3); font-size:13px; margin-bottom:16px; }
     .fb-card { background:var(--card); border:1px solid var(--border-s);
                border-radius:var(--rad-lg); overflow:hidden; margin-bottom:20px; }
@@ -110,6 +114,14 @@ _CSS = """
     .setup pre { background:var(--card-hi); border:1px solid var(--border-s); border-radius:6px;
                  padding:10px 16px; margin:4px 0 0; font-size:12px; font-family:var(--mono);
                  overflow-x:auto; line-height:1.5; white-space:pre; color:var(--text-2); }
+    /* Mobile-Karten (.m-card u.a.) sind schon in app.css definiert, aber nur
+       unter der dortigen @media(max-width:768px) sichtbar gemacht -- diese
+       Seite hat kein extra Stylesheet dafuer, deshalb hier per Klasse statt
+       Media-Query direkt an .mobile-view gebunden (kommt eh nur zustande,
+       wenn app.css' eigene Media-Query .mobile-view schon auf block stellt). */
+    .fb-cmd-row { display:flex; align-items:center; gap:8px; overflow:hidden; }
+    .fb-cmd-row code { color:var(--text-3); font-size:11px; overflow:hidden;
+                        text-overflow:ellipsis; white-space:nowrap; flex:1; min-width:0; }
 """
 
 
@@ -138,22 +150,99 @@ def file_link(label: str, href: str) -> str:
     return f'<a href="{href}">{_ICON_FILE_ROW}<span>{_html.escape(label)}</span></a>'
 
 
+@dataclass
+class Cell:
+    """Eine Zelle einer Tabellenzeile -- gemeinsame Datenbasis für die
+    Desktop-<tr> UND die mobile .m-card-Darstellung (render_row_pair()),
+    damit beide garantiert denselben Inhalt zeigen statt zweier getrennt
+    gepflegter HTML-Strings.
+
+    html:  bereits fertiges (ggf. escaptes) Zell-HTML.
+    label: Spaltenname für die mobile Meta-Zeile ("Größe", "Installation",
+           ...) -- leer markiert die ERSTE Zelle einer Zeile als Titel,
+           die landet auf Mobile im Karten-Header statt als Meta-Zeile.
+    css:   CSS-Klasse für die Desktop-<td> (z.B. "size"/"num").
+    """
+
+    html: str
+    label: str = ""
+    css: str = ""
+
+
+def render_row_pair(cells: list[Cell]) -> tuple[str, str]:
+    """Baut (Desktop-<tr>, Mobile-.m-card) aus denselben Zellen -- cells[0]
+    wird auf Mobile zum Karten-Titel (m-card-title), alle Zellen mit einem
+    label zu je einer m-card-meta-row. Zellen ohne label (ausser der
+    ersten) werden auf Mobile ausgelassen statt eine leere Zeile zu zeigen."""
+    tds = "".join(f'<td class="{c.css}">{c.html}</td>' for c in cells)
+    tr_html = f"<tr>{tds}</tr>"
+
+    if not cells:
+        return tr_html, ""
+
+    meta_rows = "".join(
+        f'<div class="m-card-meta-row"><span class="m-card-meta-label">{_html.escape(c.label)}</span>'
+        f'<span class="m-card-meta-value">{c.html}</span></div>'
+        for c in cells[1:]
+        if c.label
+    )
+    meta_block = f'<div class="m-card-meta">{meta_rows}</div>' if meta_rows else ""
+    card_html = (
+        f'<div class="m-card on"><div class="m-card-header">'
+        f'<span class="m-card-title">{cells[0].html}</span></div>{meta_block}</div>'
+    )
+    return tr_html, card_html
+
+
+def render_link_row(label: str, href: str, is_dir: bool = True) -> tuple[str, str]:
+    """(Desktop-<tr>, Mobile-.m-card) für eine reine Verzeichnis-/Datei-Zeile
+    ohne weitere Spalten (Distro-/Repo-/Ordner-Übersichten)."""
+    html = dir_link(label, href) if is_dir else file_link(label, href)
+    return render_row_pair([Cell(html)])
+
+
 def render_page(
     title: str,
     hint: str,
-    rows_html: str,
+    rows: list[tuple[str, str]],
     back: str | None = None,
     col_headers: tuple[str, ...] = ("Name", "Größe"),
     colgroup: str = "",
+    empty_message: str = "",
 ) -> str:
-    """Seiten-Gerüst: Titel, Hinweistext, Tabelle, Zurück-Link, Copy-Script.
+    """Seiten-Gerüst: Header, Hinweistext, Tabelle (Desktop) + Karten
+    (Mobile), Zurück-Button, Copy-Script.
+
+    rows: Liste von (tr_html, card_html)-Paaren, siehe render_row_pair() --
+    beide Ansichten stammen damit garantiert aus denselben Daten.
+    empty_message: ersetzt eine leere rows-Liste durch eine Hinweiszeile
+    bzw. -karte (z.B. "Noch nicht synchronisiert"), statt einer leeren
+    Tabelle ohne jede Erklärung.
 
     Lädt /static/css/app.css (in mirror/packages/sync identisch unter
-    diesem Pfad gemountet, siehe _app.py) für Fonts + Farbvariablen --
-    dieselbe Optik wie das Admin-Dashboard, ohne sie hier zu duplizieren."""
-    back_html = f'<a class="fb-back" href="{back}">{_ICON_BACK}<span>Zurück</span></a>' if back else ""
-    headers_html = "".join(f"<th>{h}</th>" for h in col_headers)
+    diesem Pfad gemountet, siehe _app.py) für Fonts + Farbvariablen +
+    Komponenten (content-header, btn-icon, m-card, desktop-view/
+    mobile-view) -- dieselbe Optik wie das Admin-Dashboard, ohne sie hier
+    zu duplizieren."""
+    back_html = (
+        f'<a class="btn-icon" href="{back}" title="Zurück" aria-label="Zurück">{_ICON_BACK}</a>'
+        if back
+        else ""
+    )
     hint_html = f'<div class="fb-hint">{hint}</div>' if hint else ""
+
+    if not rows and not empty_message:
+        body_html = ""
+    elif not rows:
+        colspan = len(col_headers)
+        tr_html = f'<tr><td colspan="{colspan}">{_html.escape(empty_message)}</td></tr>'
+        card_html = f'<div class="empty-state"><div class="empty-state-title">{_html.escape(empty_message)}</div></div>'
+        body_html = _render_views(tr_html, card_html, col_headers, colgroup)
+    else:
+        tr_html = "\n".join(tr for tr, _ in rows)
+        card_html = "\n".join(card for _, card in rows if card)
+        body_html = _render_views(tr_html, card_html, col_headers, colgroup)
+
     return f"""<!DOCTYPE html>
 <html lang="de">
 <head>
@@ -162,18 +251,12 @@ def render_page(
 <style>{_CSS}</style>
 </head>
 <body>
-  <div class="fb-topbar">
-    {back_html}
-    <h1>{title}</h1>
+  <div class="content-header">
+    <div class="content-header-title">{title}</div>
+    <div class="content-header-actions">{back_html}</div>
   </div>
   {hint_html}
-  <div class="fb-card">
-    <table>
-      {colgroup}
-      <thead><tr>{headers_html}</tr></thead>
-      <tbody>{rows_html}</tbody>
-    </table>
-  </div>
+  {body_html}
 <script>
 function copySnippet(id, btn) {{
   var txt = document.getElementById(id).value;
@@ -197,6 +280,18 @@ function copySnippet(id, btn) {{
 </html>"""
 
 
+def _render_views(tr_html: str, card_html: str, col_headers: tuple[str, ...], colgroup: str) -> str:
+    headers_html = "".join(f"<th>{h}</th>" for h in col_headers)
+    return f"""<div class="fb-card desktop-view">
+    <table>
+      {colgroup}
+      <thead><tr>{headers_html}</tr></thead>
+      <tbody>{tr_html}</tbody>
+    </table>
+  </div>
+  <div class="mobile-view">{card_html}</div>"""
+
+
 @dataclass
 class ListingEntry:
     """Eine Zeile einer Verzeichnisliste."""
@@ -208,15 +303,20 @@ class ListingEntry:
     mtime: float | None = None
 
 
-def render_row(entry: ListingEntry) -> str:
-    """Rendert eine ListingEntry als <tr> mit Name/Geändert/Größe-Spalten."""
+def render_row(entry: ListingEntry) -> tuple[str, str]:
+    """Rendert eine ListingEntry als (Desktop-<tr>, Mobile-.m-card) mit
+    Name/Geändert/Größe-Spalten."""
     display = entry.name + ("/" if entry.is_dir else "")
     size = "—" if entry.size_bytes is None else fmt_bytes(entry.size_bytes)
     mtime = "—" if entry.mtime is None else fmt_timestamp(entry.mtime)
     icon = _ICON_FOLDER_ROW if entry.is_dir else _ICON_FILE_ROW
-    return (
-        f'<tr><td><a href="{entry.href}">{icon}<span>{_html.escape(display)}</span></a></td>'
-        f'<td>{mtime}</td><td class="size">{size}</td></tr>'
+    name_html = f'<a href="{entry.href}">{icon}<span>{_html.escape(display)}</span></a>'
+    return render_row_pair(
+        [
+            Cell(name_html),
+            Cell(mtime, label="Geändert"),
+            Cell(size, label="Größe", css="size"),
+        ]
     )
 
 
