@@ -1,0 +1,30 @@
+{#
+  categories/partials/mobile_cards.html
+  Mobile-Karten fuer die Kategorien-Verwaltung selbst -- anders als bei
+  Modulen, die NUR eine Kategorie referenzieren (dort ersetzt der
+  Akzentstreifen die Farb-Zeile komplett, siehe mobile_cards_generic.html),
+  ist die Farbe hier die eigentliche Nutzlast: groesseres Vorschau-Feld mit
+  Hex-Wert statt des generischen kleinen Punkts, zusaetzlich zum
+  Akzentstreifen am Kartenrand (Vorschau, wie die Farbe dort aussieht).
+#}
+{% import 'partials/components/mobile_card_macros.html' as mc %}
+
+{% if cfg %}
+  {% for item_id, item in cfg.items() %}
+    {% set _footer %}{{ mc.m_card_actions_default(module, item_id, item, container_id, loading_id, page=_page) }}{% endset %}
+    {% call mc.m_card(item.get('name') or 'Unbenannt', footer=_footer, accent=item.get('color')) %}
+      <div class="m-card-meta-row">
+        <span class="m-card-meta-label">Farbe</span>
+        <span class="m-card-meta-value">
+          <span class="dot-swatch" style="background:{{ item.get('color') or 'transparent' }}; width:18px; height:18px;"></span>{{ (item.get('color') or '—') | upper }}
+        </span>
+      </div>
+    {% endcall %}
+  {% endfor %}
+{% else %}
+  <div class="empty-state">
+    <svg width="40" height="40" viewBox="0 0 24 24" fill="currentColor" stroke="none"><use href="#icon-file-text"></use></svg>
+    <div class="empty-state-title">Keine Einträge vorhanden</div>
+    <div class="empty-state-sub">Erstelle den ersten Eintrag mit „Neu"</div>
+  </div>
+{% endif %}

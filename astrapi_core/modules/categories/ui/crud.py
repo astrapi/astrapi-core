@@ -26,7 +26,7 @@ store = OwnerScopedStore(SqliteTableStore(KEY), scope_fn=categories_scope_id, ma
 
 
 def categories_for_select() -> list[dict]:
-    return [{"value": cid, "label": c.get("name") or cid} for cid, c in store.list().items()]
+    return [{"value": cid, "label": c.get("name") or "Unbenannt"} for cid, c in store.list().items()]
 
 
 def _resolve_labels(item_id: str, item: dict) -> dict:
@@ -34,8 +34,10 @@ def _resolve_labels(item_id: str, item: dict) -> dict:
     item_data.description (oder .job/.host/item_name), nie aus einem
     modul-eigenen Feld -- categories hat aber ein eigenes 'name'-Feld,
     kein 'description' (gleiche Fehlerklasse wie host_groups/policies,
-    siehe [[T-285-ADMIN]]/[[T-288-ADMIN]])."""
-    return {**item, "description": item.get("name") or item_id}
+    siehe [[T-285-ADMIN]]/[[T-288-ADMIN]]). Fallback 'Unbenannt' statt der
+    rohen item_id -- die ID hat fuer Endnutzer keine Bedeutung und sollte
+    nirgends als Anzeigename durchsickern."""
+    return {**item, "description": item.get("name") or "Unbenannt"}
 
 
 api_router = APIRouter()
