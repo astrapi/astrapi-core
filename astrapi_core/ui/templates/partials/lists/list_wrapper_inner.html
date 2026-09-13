@@ -76,7 +76,7 @@
       <tr>
         <th class="col-name sortable">Name</th>
         {% if _ui_cols %}
-          {% for col in _ui_cols %}{{ ui.col_header(col) }}{% endfor %}
+          {% for col in _ui_cols %}{{ ui.col_header(col, request, container_id) }}{% endfor %}
         {% else %}
           {% include module + '/partials/list_header.html' ignore missing %}
         {% endif %}

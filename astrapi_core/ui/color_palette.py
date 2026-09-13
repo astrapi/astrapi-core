@@ -2,18 +2,31 @@
 """Feste Farbpalette fuer das 'color_palette'-Formularfeld
 (field_renderer.html) -- ersetzt den nativen `<input type="color">`-
 Farbwaehler dort, wo eine begrenzte, optisch unterscheidbare Auswahl
-gewuenscht ist (z.B. Ordner-Kategorien) statt beliebiger Hex-Werte.
+gewuenscht ist (z.B. Ordner-/Item-Kategorien) statt beliebiger Hex-Werte.
 
-32 Farben, erzeugt aus 16 gleichmaessig verteilten Farbtoenen (Hue) mit
-zwei abwechselnden Helligkeiten (L=0.55/0.62, S=0.62) -- Nachbartoene
-bleiben dadurch auf einen Blick unterscheidbar statt in einem reinen
-Regenbogen zu verschwimmen."""
+12 Farben, von Hand gewaehlt statt gleichmaessig um den Farbkreis rotiert
+-- eine rein formelhafte Hue-Rotation (frueher: 32, dann 16 Toene bei
+gleicher Saettigung/Helligkeit) haeufte mehrere kaum unterscheidbare
+Gruen-/Blautoene nebeneinander an, weil das menschliche Auge Farbtoene
+dort schlechter unterscheidet als bei Rot/Orange/Violett (auf
+Nutzerfeedback am echten Bildschirm reduziert). Braun/Grau ergaenzen die
+reinen Spektralfarben, weil sie kategorial anders wahrgenommen werden
+als jede Hue-Rotation -- zusaetzlicher Kontrast ohne weitere,
+schwer unterscheidbare Zwischentoene."""
 
 DEFAULT_COLOR_PALETTE = [
-    "#d34545", "#da7962", "#d37a45", "#daa662", "#d3b045", "#dad362", "#c2d345", "#b5da62",
-    "#8cd345", "#88da62", "#57d345", "#62da6a", "#45d369", "#62da97", "#45d39e", "#62dac4",
-    "#45d3d3", "#62c4da", "#459ed3", "#6297da", "#4569d3", "#626ada", "#5745d3", "#8862da",
-    "#8c45d3", "#b562da", "#c245d3", "#da62d3", "#d345b0", "#da62a6", "#d3457a", "#da6279",
+    "#e53e3e",  # Rot
+    "#ed8936",  # Orange
+    "#d69e2e",  # Gold/Amber
+    "#38a169",  # Grün
+    "#319795",  # Türkis
+    "#00b5d8",  # Cyan
+    "#3182ce",  # Blau
+    "#5a67d8",  # Indigo
+    "#805ad5",  # Violett
+    "#d53f8c",  # Magenta/Pink
+    "#975a16",  # Braun
+    "#718096",  # Grau
 ]
 
 

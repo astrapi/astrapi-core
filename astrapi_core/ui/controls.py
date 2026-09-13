@@ -69,6 +69,7 @@ class Col:
     template: str = ""  # für composed: "ctl/{item_name}:{key}"
     values: dict = field(default_factory=dict)  # für badge_enum / badge_list: {val: {label, cls}}
     category_key: str = ""  # für dot_text: Feld mit 'ok'/'warning'/'error'/''
+    color_key: str = ""  # für category: Feld mit freiem Hex-Farbwert
 
     # ── Factory-Methoden ──────────────────────────────────────────────────────
 
@@ -169,6 +170,19 @@ class Col:
         daneben und keine feste ok/warning/error-Palette, sondern der vom
         Nutzer frei gewaehlte Wert direkt als background-color."""
         return cls(type="color", key=key, label=label, cls=css)
+
+    @classmethod
+    def category(
+        cls, key: str, label: str, color_key: str, css: str = "col-info", sortable: bool = False
+    ) -> "Col":
+        """Farbpunkt (aus color_key, freier Hex-Wert) + Name (aus key) --
+        fuer Module, die einer eigenen Kategorie-Zuweisung (T-325-CORE)
+        mehr als nur den Farbpunkt von Col.color zeigen wollen. Die
+        Auflösung von key/color_key aus der Fremdschlüssel-ID passiert im
+        konsumierenden Modul selbst (list_item_transform), nicht hier."""
+        return cls(
+            type="category", key=key, label=label, cls=css, color_key=color_key, sortable=sortable
+        )
 
 
 # ── Card-Body-Felder (meta-grid) ───────────────────────────────────────────────

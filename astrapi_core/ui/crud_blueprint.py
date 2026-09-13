@@ -70,6 +70,43 @@ def resolve_filters_for_request(module: str, request: Request, items: dict) -> t
     return items, {"filter_defs": resolved}
 
 
+def _sort_value(item: dict, sort_key: str):
+    v = item.get(sort_key)
+    return v.lower() if isinstance(v, str) else v
+
+
+def apply_sort(request: Request, items: dict) -> dict:
+    """Serverseitiges Sortieren per ?sort=<key>&dir=asc|desc (T-323-CORE) --
+    ersetzt fuer Col.sortable-Spalten den bisherigen rein clientseitigen
+    DOM-Sort (app.js::initTableSort), der nur die jeweils sichtbare Seite
+    umsortierte und Paginierung/Filter ignorierte. Kennt keine Col-
+    Deklaration, sortiert nur nach dem rohen Item-Feldwert -- wie
+    resolve_filters_for_request() bereits genauso verfaehrt.
+
+    Leere Werte (None oder "") landen immer am Ende, unabhaengig von der
+    Richtung -- dafuer zwei Sortier-Durchgaenge statt eines gemeinsamen
+    Sortier-Schluessels: ein direkter Schluessel wuerde die "leer"-Markierung
+    beim Umdrehen fuer dir=desc mit umdrehen (leer waere dann zuerst)."""
+    sort_key = request.query_params.get("sort")
+    if not sort_key:
+        return items
+    reverse = request.query_params.get("dir") == "desc"
+    try:
+        ordered = sorted(
+            items.items(), key=lambda kv: _sort_value(kv[1], sort_key), reverse=reverse
+        )
+    except TypeError:
+        # Gemischte Typen im selben Feld (z.B. int und str) -- Fallback auf
+        # String-Vergleich statt eines rohen 500ers.
+        ordered = sorted(
+            items.items(), key=lambda kv: str(kv[1].get(sort_key, "")).lower(), reverse=reverse
+        )
+    # Stabiler Zweitdurchgang: haelt die per Wert hergestellte Reihenfolge
+    # innerhalb der beiden Gruppen, verschiebt nur "leer" konsequent ans Ende.
+    ordered = sorted(ordered, key=lambda kv: kv[1].get(sort_key) in (None, ""))
+    return dict(ordered)
+
+
 def make_crud_router(
     store,
     key: str,
@@ -305,7 +342,12 @@ def make_crud_router(
         items, extra = resolve_filters_for_request(key, request, store.list())
         group_meta = group_meta_fn() if group_by_field and group_meta_fn else {}
         if group_by_field:
+            # Gruppierung bringt ihre eigene, abschliessende Reihenfolge mit
+            # (nach Gruppen-Label) -- ein zusaetzlicher Spalten-Sort wuerde
+            # dem widersprechen, daher bewusst exklusiv.
             items = _sort_by_group(items, group_meta)
+        else:
+            items = apply_sort(request, items)
         paged_items, pagination = _paginate(request, items)
         if list_item_transform is not None:
             # Flache Kopie je Item -- store.list()/store.get() (Bearbeiten-
@@ -446,6 +488,11 @@ def make_crud_router(
             store.create(item_id, data)
         except KeyError:
             return HTMLResponse("Bereits vorhanden", status_code=409)
+        except ValueError as e:
+            # z.B. OwnerScopedStore.max_items (T-325-CORE) -- gleicher
+            # schlichte Fehler-Rendering-Pfad wie beim KeyError-Zweig direkt
+            # darueber, keine neue UX-Konvention noetig.
+            return HTMLResponse(str(e), status_code=409)
         return render(request, "content.html", _content_ctx(request))
 
     @router.post(f"/ui/{key}/{{item_id}}/update", response_class=HTMLResponse)

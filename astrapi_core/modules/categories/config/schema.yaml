@@ -1,0 +1,15 @@
+fields:
+  - name: name
+    type: text
+    label: Name
+    placeholder: "z.B. Wichtig"
+    max: 60
+    required: true
+    column: 1
+    row: 1
+
+  - name: color
+    type: color_palette
+    label: Farbe
+    column: 1
+    row: 2

@@ -288,6 +288,23 @@ def create(
 
     jinja_env.globals["module_obj"] = _module_obj
 
+    # T-323-CORE: HTMX-Ziel-URL fuer einen Sortier-Klick auf eine Col.sortable-
+    # Spaltenueberschrift -- uebernimmt die aktuellen Query-Parameter (Filter),
+    # setzt sort=<key> + togglet dir, Seite zurueck auf 1.
+    def _sort_url(request, sort_key: str) -> str:
+        cur_sort = request.query_params.get("sort")
+        cur_dir = request.query_params.get("dir", "asc")
+        new_dir = "desc" if cur_sort == sort_key and cur_dir == "asc" else "asc"
+        params = {
+            k: v for k, v in request.query_params.items() if k not in ("page", "sort", "dir")
+        }
+        params["sort"] = sort_key
+        params["dir"] = new_dir
+        qs = "&".join(f"{k}={v}" for k, v in params.items())
+        return f"{request.url.path}?{qs}"
+
+    jinja_env.globals["sort_url"] = _sort_url
+
     def _global_ctx(request: Request) -> dict:
         def module_obj(key: str):
             """Gibt das vollständige Module-Objekt zurück (für deklaratives UI)."""
@@ -389,6 +406,14 @@ def create(
 
         api.include_router(_auth_router)
         api.add_middleware(RequireLoginMiddleware, exempt_prefixes=auth_cfg["exempt_prefixes"])
+
+        # T-325-CORE: current_user_id() braucht dafuer aktive Middleware --
+        # generisch fuer jede App mit auth.enabled, nicht nur multi_user
+        # (Single-Owner-Apps bekommen so denselben current_user_id()-
+        # Rueckfall-Pfad wie Multi-User-Apps, siehe current_user.py).
+        from ..system.current_user import CurrentUserMiddleware
+
+        api.add_middleware(CurrentUserMiddleware)
 
         if auth_cfg["multi_user"]:
             from .multi_user_routes import router as _multi_user_router

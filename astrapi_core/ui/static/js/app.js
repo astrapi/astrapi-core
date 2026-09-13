@@ -175,7 +175,9 @@ function initTableSort(table) {
         try { saved = JSON.parse(localStorage.getItem(storageKey) || '{}'); } catch {}
     }
 
-    const headers = Array.from(table.querySelectorAll('thead th.sortable'));
+    // .sortable-server (T-323-CORE): serverseitiger HTMX-Sort via col_header()
+    // -- der alte reine DOM-Sort hier wuerde denselben Klick doppelt behandeln.
+    const headers = Array.from(table.querySelectorAll('thead th.sortable:not(.sortable-server)'));
     if (!headers.length) return;
 
     function applySort(th, dir, save) {

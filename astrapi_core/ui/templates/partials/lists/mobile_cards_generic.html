@@ -64,6 +64,11 @@
               {%- elif col.type == 'join' -%}
                 {%- set _list = _val if (_val is iterable and _val is not string) else [] -%}
                 {{ _list | join(col.sep) }}
+              {%- elif col.type == 'category' -%}
+                {%- set _ccolor = item_data.get(col.color_key) if col.color_key else '' -%}
+                <span class="dot-swatch" style="background:{{ _ccolor or 'transparent' }};"></span>{{ _val }}
+              {%- elif col.type == 'color' -%}
+                <span class="dot-swatch" style="background:{{ _val }};" title="{{ _val }}"></span>
               {%- else -%}{{ _val }}{%- endif -%}
             </span>
           </div>

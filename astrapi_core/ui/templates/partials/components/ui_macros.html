@@ -424,10 +424,23 @@
 {# ═══════════════════════════════════════════════════════════════════════════ #}
 
 {#
-  col_header(col)
+  col_header(col, request, container_id)
   Rendert ein <th>-Element für eine Col-Instanz aus controls.py.
+  request/container_id: nur fuer col.sortable noetig (T-323-CORE,
+  echtes serverseitiges Sortieren per HTMX statt des alten reinen
+  DOM-Sorts) -- ohne "with context" importierte Makros sehen die
+  Template-Variablen der aufrufenden Seite sonst nicht, daher explizit
+  als Parameter statt implizit aus dem Kontext.
 #}
-{% macro col_header(col) %}<th class="{{ col.cls }}{{ ' sortable' if col.sortable else '' }}">{{ col.label }}</th>
+{% macro col_header(col, request=none, container_id='') %}
+{%- if col.sortable and request -%}
+{%- set _active = request.query_params.get('sort') == col.key -%}
+{%- set _dir_cls = ('sort-desc' if request.query_params.get('dir') == 'desc' else 'sort-asc') if _active else '' -%}
+<th class="{{ col.cls }} sortable sortable-server {{ _dir_cls }}"
+    hx-get="{{ sort_url(request, col.key) }}" hx-target="#{{ container_id }}" hx-swap="outerHTML">{{ col.label }}</th>
+{%- else -%}
+<th class="{{ col.cls }}{{ ' sortable' if col.sortable else '' }}">{{ col.label }}</th>
+{%- endif -%}
 {% endmacro %}
 
 {#
@@ -499,6 +512,11 @@
 {%- elif col.type == 'color' -%}
 <td class="{{ col.cls }}">
   {%- if _val %}<span class="dot-swatch" style="background:{{ _val }};" title="{{ _val }}"></span>{% else %}—{% endif -%}
+</td>
+{%- elif col.type == 'category' -%}
+{%- set _ccolor = item_data.get(col.color_key) if col.color_key else '' -%}
+<td class="{{ col.cls }}">
+  {%- if _val %}<span class="dot-swatch" style="background:{{ _ccolor or 'transparent' }};" title="{{ _ccolor }}"></span>{{ _val }}{% else %}—{% endif -%}
 </td>
 {%- else -%}
 <td>{{ _val or '—' }}</td>
