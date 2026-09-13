@@ -35,8 +35,8 @@
    (vorgerenderter, bereits escapeter HTML-String -- z.B. via {% set %}...
    {% endset %} oder m_card_actions_default()) landet als .m-card-footer
    INNERHALB derselben Karte, nicht als separates Sibling-Element. #}
-{% macro m_card(title, status=none, enabled=True, footer=none) %}
-<div class="m-card {{ 'on' if enabled else 'off' }}">
+{% macro m_card(title, status=none, enabled=True, footer=none, accent=none) %}
+<div class="m-card {{ 'on' if enabled else 'off' }}"{% if accent %} style="border-left:3px solid {{ accent }};"{% endif %}>
   <div class="m-card-header">
     <span class="m-card-title">{{ title }}</span>
     {% if status %}{{ ui.status_inline(status) }}{% endif %}

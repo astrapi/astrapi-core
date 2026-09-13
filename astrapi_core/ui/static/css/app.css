@@ -338,6 +338,7 @@ input,select,textarea { font-family:var(--font); }
   border-radius:50%;
   border:1px solid rgba(255,255,255,0.15);
   vertical-align:middle;
+  margin-right:6px;
 }
 
 /* type: color_palette -- Formularfeld, kuratierte Auswahl statt freiem
