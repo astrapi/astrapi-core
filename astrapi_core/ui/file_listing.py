@@ -8,11 +8,14 @@
 # Paketmanager wie pacman/apt, kein UI-Modul mit Navigation/Layout).
 #
 # Optisch an die Admin-Oberfläche angelehnt: lädt deren echtes
-# /static/css/app.css (gleiche CSS-Variablen/Fonts/Komponenten wie im
-# Dashboard) und nutzt dessen Klassen direkt (content-header, btn-icon,
-# m-card/m-card-meta-row, desktop-view/mobile-view) statt sie hier zu
-# duplizieren -- Optik bleibt damit automatisch in Sync mit dem Dashboard,
-# inklusive dessen Mobile-Karten-Darstellung. Icons sind bewusst als
+# /static/css/app.css (gleiche CSS-Variablen/Fonts wie im Dashboard) und
+# nutzt dessen Klassen direkt (content-header, btn-icon, desktop-view/
+# mobile-view) statt sie hier zu duplizieren -- Optik bleibt damit
+# automatisch in Sync mit dem Dashboard. Die Mobile-Zeilen (.fb-row) sind
+# bewusst KEINE .m-card wie in den echten Business-Modulen (Ordner/Nutzer/
+# Kategorien) -- Verzeichnisse hier koennen sehr viele Dateien enthalten,
+# eine Karte pro Datei waere ein Meer aus Leerraum; eine dichte Liste wie
+# in einem nativen Dateibrowser passt besser. Icons sind bewusst als
 # einzelne <svg>-Konstanten inline gehalten statt über den Jinja-
 # Sprite-Mechanismus (astrapi_core/ui/icons.py::build_sprite()), der
 # außerhalb des Template-Systems nicht zur Verfügung steht.
@@ -25,7 +28,7 @@
 # Zeilen tragen seit [[T-Files-Mobile]] IMMER Desktop- und Mobile-Form aus
 # derselben Zellen-Quelle (Cell/render_row_pair) -- vorher gab es nur die
 # <tr>-Fassung, auf schmalen Bildschirmen also eine feste, oft
-# ueberbreite Tabelle statt echter Karten wie im restlichen Dashboard.
+# ueberbreite Tabelle.
 
 from __future__ import annotations
 
@@ -62,10 +65,10 @@ _COPY_SVG = _icon(
 )
 _CHECK_SVG = _icon("M21,7L9,19L3.5,13.5L4.91,12.09L9,16.17L19.59,5.59L21,7Z", "#3fb950")
 
-# Nur noch seitenspezifische Ergaenzungen -- Header (content-header),
-# Icon-Buttons (btn-icon), Karten (m-card*) und die Desktop-/Mobile-
-# Umschaltung (desktop-view/mobile-view) kommen direkt aus app.css, siehe
-# Modul-Docstring.
+# Header (content-header), Icon-Buttons (btn-icon) und die Desktop-/
+# Mobile-Umschaltung (desktop-view/mobile-view) kommen direkt aus
+# app.css, siehe Modul-Docstring -- .fb-row* (Mobile-Listenzeilen) sind
+# seitenspezifisch, dafuer gibt es in app.css keine Entsprechung.
 _CSS = """
     body { font-family:var(--font); background:var(--bg); color:var(--text); margin:0; padding:20px; }
     a { text-decoration:none; }
@@ -114,14 +117,25 @@ _CSS = """
     .setup pre { background:var(--card-hi); border:1px solid var(--border-s); border-radius:6px;
                  padding:10px 16px; margin:4px 0 0; font-size:12px; font-family:var(--mono);
                  overflow-x:auto; line-height:1.5; white-space:pre; color:var(--text-2); }
-    /* Mobile-Karten (.m-card u.a.) sind schon in app.css definiert, aber nur
-       unter der dortigen @media(max-width:768px) sichtbar gemacht -- diese
-       Seite hat kein extra Stylesheet dafuer, deshalb hier per Klasse statt
-       Media-Query direkt an .mobile-view gebunden (kommt eh nur zustande,
-       wenn app.css' eigene Media-Query .mobile-view schon auf block stellt). */
-    .fb-cmd-row { display:flex; align-items:center; gap:8px; overflow:hidden; }
-    .fb-cmd-row code { color:var(--text-3); font-size:11px; overflow:hidden;
-                        text-overflow:ellipsis; white-space:nowrap; flex:1; min-width:0; }
+    /* Mobile: EINE Zeile pro Eintrag in einer gemeinsamen Liste (.fb-card
+       mobile-view), keine eigene .m-card-Karte pro Datei -- Verzeichnisse
+       mit vielen Dateien waeren sonst ein Meer aus Karten mit viel
+       Leerraum dazwischen (Rueckmeldung: "zu viele Karten"). Naeher an
+       einem nativen Dateibrowser: Name+Icon links, Meta (Datum/Groesse/
+       Installationsbefehl) klein und rechtsbuendig, duenne Trennlinie
+       statt Kartenabstand. */
+    .fb-row { display:flex; align-items:flex-start; justify-content:space-between;
+              flex-wrap:wrap; gap:4px 10px; padding:9px 16px;
+              border-bottom:1px solid var(--border-s); }
+    .fb-row:last-child { border-bottom:none; }
+    .fb-row-name { display:flex; align-items:center; gap:8px; color:var(--text);
+                   min-width:0; overflow:hidden; font-size:13px; flex:1 1 auto; }
+    .fb-row-name span { overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+    .fb-row-name svg { flex-shrink:0; }
+    .fb-row-meta { display:flex; flex-direction:column; align-items:flex-end; gap:2px;
+                   flex-shrink:0; max-width:100%; font-size:11px; color:var(--text-3);
+                   text-align:right; }
+    .fb-row-meta .cmd { max-width:220px; }
 """
 
 
@@ -153,14 +167,17 @@ def file_link(label: str, href: str) -> str:
 @dataclass
 class Cell:
     """Eine Zelle einer Tabellenzeile -- gemeinsame Datenbasis für die
-    Desktop-<tr> UND die mobile .m-card-Darstellung (render_row_pair()),
+    Desktop-<tr> UND die kompakte mobile Listenzeile (render_row_pair()),
     damit beide garantiert denselben Inhalt zeigen statt zweier getrennt
     gepflegter HTML-Strings.
 
     html:  bereits fertiges (ggf. escaptes) Zell-HTML.
-    label: Spaltenname für die mobile Meta-Zeile ("Größe", "Installation",
-           ...) -- leer markiert die ERSTE Zelle einer Zeile als Titel,
-           die landet auf Mobile im Karten-Header statt als Meta-Zeile.
+    label: nur intern für render_row_pair() relevant (leer markiert die
+           ERSTE Zelle einer Zeile als Name/Titel, alle anderen mit einem
+           label landen im rechtsbündigen Mobile-Meta-Block) -- der Text
+           selbst wird auf Mobile NICHT angezeigt (Datum/Größe sind ohne
+           Label selbsterklärend), nur für die Desktop-Spaltenüberschrift
+           in col_headers gedacht.
     css:   CSS-Klasse für die Desktop-<td> (z.B. "size"/"num").
     """
 
@@ -170,33 +187,30 @@ class Cell:
 
 
 def render_row_pair(cells: list[Cell]) -> tuple[str, str]:
-    """Baut (Desktop-<tr>, Mobile-.m-card) aus denselben Zellen -- cells[0]
-    wird auf Mobile zum Karten-Titel (m-card-title), alle Zellen mit einem
-    label zu je einer m-card-meta-row. Zellen ohne label (ausser der
-    ersten) werden auf Mobile ausgelassen statt eine leere Zeile zu zeigen."""
+    """Baut (Desktop-<tr>, kompakte Mobile-Listenzeile) aus denselben
+    Zellen -- cells[0] (Name/Link) landet links, alle weiteren Zellen mit
+    einem label rechtsbündig gestapelt in .fb-row-meta, ohne Label-Text
+    (Datum/Größe sind selbsterklärend, wie in jedem Dateibrowser).
+    Bewusst KEINE .m-card pro Zeile: Verzeichnisse mit vielen Dateien
+    wären sonst ein Meer aus Karten mit viel Leerraum dazwischen -- eine
+    dichte Liste (wie die Desktop-Tabelle) passt hier besser als das
+    Karten-Muster der echten Business-Module (Ordner/Nutzer/Kategorien)."""
     tds = "".join(f'<td class="{c.css}">{c.html}</td>' for c in cells)
     tr_html = f"<tr>{tds}</tr>"
 
     if not cells:
         return tr_html, ""
 
-    meta_rows = "".join(
-        f'<div class="m-card-meta-row"><span class="m-card-meta-label">{_html.escape(c.label)}</span>'
-        f'<span class="m-card-meta-value">{c.html}</span></div>'
-        for c in cells[1:]
-        if c.label
-    )
-    meta_block = f'<div class="m-card-meta">{meta_rows}</div>' if meta_rows else ""
-    card_html = (
-        f'<div class="m-card on"><div class="m-card-header">'
-        f'<span class="m-card-title">{cells[0].html}</span></div>{meta_block}</div>'
-    )
-    return tr_html, card_html
+    meta_items = "".join(f"<span>{c.html}</span>" for c in cells[1:] if c.label)
+    meta_block = f'<div class="fb-row-meta">{meta_items}</div>' if meta_items else ""
+    row_html = f'<div class="fb-row"><div class="fb-row-name">{cells[0].html}</div>{meta_block}</div>'
+    return tr_html, row_html
 
 
 def render_link_row(label: str, href: str, is_dir: bool = True) -> tuple[str, str]:
-    """(Desktop-<tr>, Mobile-.m-card) für eine reine Verzeichnis-/Datei-Zeile
-    ohne weitere Spalten (Distro-/Repo-/Ordner-Übersichten)."""
+    """(Desktop-<tr>, kompakte Mobile-Listenzeile) für eine reine
+    Verzeichnis-/Datei-Zeile ohne weitere Spalten (Distro-/Repo-/
+    Ordner-Übersichten)."""
     html = dir_link(label, href) if is_dir else file_link(label, href)
     return render_row_pair([Cell(html)])
 
@@ -221,9 +235,9 @@ def render_page(
 
     Lädt /static/css/app.css (in mirror/packages/sync identisch unter
     diesem Pfad gemountet, siehe _app.py) für Fonts + Farbvariablen +
-    Komponenten (content-header, btn-icon, m-card, desktop-view/
-    mobile-view) -- dieselbe Optik wie das Admin-Dashboard, ohne sie hier
-    zu duplizieren."""
+    Komponenten (content-header, btn-icon, desktop-view/mobile-view) --
+    dieselbe Optik wie das Admin-Dashboard, ohne sie hier zu
+    duplizieren."""
     back_html = (
         f'<a class="btn-icon" href="{back}" title="Zurück" aria-label="Zurück">{_ICON_BACK}</a>'
         if back
@@ -291,7 +305,7 @@ def _render_views(tr_html: str, card_html: str, col_headers: tuple[str, ...], co
       <tbody>{tr_html}</tbody>
     </table>
   </div>
-  <div class="mobile-view">{card_html}</div>"""
+  <div class="fb-card mobile-view">{card_html}</div>"""
 
 
 @dataclass
@@ -306,7 +320,7 @@ class ListingEntry:
 
 
 def render_row(entry: ListingEntry) -> tuple[str, str]:
-    """Rendert eine ListingEntry als (Desktop-<tr>, Mobile-.m-card) mit
+    """Rendert eine ListingEntry als (Desktop-<tr>, kompakte Mobile-Zeile) mit
     Name/Geändert/Größe-Spalten."""
     display = entry.name + ("/" if entry.is_dir else "")
     size = "—" if entry.size_bytes is None else fmt_bytes(entry.size_bytes)

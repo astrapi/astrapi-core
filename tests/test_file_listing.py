@@ -3,9 +3,11 @@
 siehe Modul-Docstring). Reines String-Rendering ohne Jinja2/TestClient
 nötig -- die Funktionen sind pure Funktionen.
 
-Zeilen kommen seit [[T-Files-Mobile]] als (Desktop-<tr>, Mobile-.m-card)-
-Paare aus render_row()/render_row_pair() statt als fertiger HTML-String --
-Tests pruefen entsprechend beide Haelften."""
+Zeilen kommen seit [[T-Files-Mobile]] als (Desktop-<tr>, kompakte
+Mobile-Listenzeile .fb-row)-Paare aus render_row()/render_row_pair() statt
+als fertiger HTML-String -- Tests pruefen entsprechend beide Haelften.
+.fb-row bewusst statt .m-card (siehe Modul-Docstring): Verzeichnisse mit
+vielen Dateien waeren als Kartenmeer sonst unuebersichtlich."""
 from pathlib import Path
 
 from astrapi_core.ui.file_listing import (
@@ -31,7 +33,7 @@ def test_render_page_laedt_app_css_und_enthaelt_titel():
 
 def test_render_page_hat_viewport_meta_tag():
     """Ohne das schaltet ein Mobilbrowser auf Desktop-Breite (~980px) und
-    app.css' @media(max-width:768px) fuer .mobile-view/.m-card greift nie --
+    app.css' @media(max-width:768px) fuer .mobile-view greift nie --
     dieselbe Seite bliebe auf dem Handy als schmale Desktop-Tabelle stehen."""
     html = render_page("T", "", [])
     assert '<meta name="viewport" content="width=device-width, initial-scale=1.0">' in html
@@ -75,8 +77,8 @@ def test_render_page_mit_empty_message_zeigt_sie_in_beiden_ansichten():
 def test_render_page_zeigt_desktop_und_mobile_ansicht():
     html = render_page("T", "", [render_row_pair([Cell("Eintrag 1")])])
     assert 'class="fb-card desktop-view"' in html
-    assert 'class="mobile-view"' in html
-    assert 'class="m-card' in html
+    assert 'class="fb-card mobile-view"' in html
+    assert 'class="fb-row"' in html
 
 
 def test_dir_link_escaped_und_hat_ordner_icon():
@@ -93,44 +95,46 @@ def test_file_link_hat_datei_icon_nicht_ordner_icon():
     assert "var(--text-3)" in html
 
 
-def test_render_row_pair_erste_zelle_wird_mobile_titel():
-    tr_html, card_html = render_row_pair([Cell("Titel-HTML"), Cell("Wert", label="Label")])
+def test_render_row_pair_erste_zelle_wird_mobile_name():
+    tr_html, row_html = render_row_pair([Cell("Titel-HTML"), Cell("Wert", label="Label")])
     assert "Titel-HTML" in tr_html
-    assert '<span class="m-card-title">Titel-HTML</span>' in card_html
-    assert '<span class="m-card-meta-label">Label</span>' in card_html
-    assert '<span class="m-card-meta-value">Wert</span>' in card_html
+    assert '<div class="fb-row-name">Titel-HTML</div>' in row_html
+    assert '<div class="fb-row-meta"><span>Wert</span></div>' in row_html
+    # Label-Text selbst erscheint auf Mobile nicht (siehe Cell-Docstring) --
+    # Datum/Größe sind ohne "Label"-Text selbsterklärend.
+    assert "Label" not in row_html
 
 
 def test_render_row_pair_ohne_label_keine_mobile_meta_zeile():
     """Zellen ohne label (ausser der ersten) tauchen auf Mobile nicht als
     leere Meta-Zeile auf."""
-    _, card_html = render_row_pair([Cell("Titel"), Cell("versteckt")])
-    assert "versteckt" not in card_html
+    _, row_html = render_row_pair([Cell("Titel"), Cell("versteckt")])
+    assert "versteckt" not in row_html
 
 
 def test_render_link_row_baut_ordner_link_in_beiden_ansichten():
-    tr_html, card_html = render_link_row("unterordner/", "/x/")
+    tr_html, row_html = render_link_row("unterordner/", "/x/")
     assert "unterordner/" in tr_html
-    assert "unterordner/" in card_html
-    assert "#f5c211" in card_html
+    assert "unterordner/" in row_html
+    assert "#f5c211" in row_html
 
 
 def test_render_row_ordner_bekommt_ordner_icon_und_trailing_slash():
     entry = ListingEntry(name="unterordner", href="/x/unterordner/", is_dir=True)
-    tr_html, card_html = render_row(entry)
+    tr_html, row_html = render_row(entry)
     assert "unterordner/" in tr_html
     assert "#f5c211" in tr_html
-    assert "unterordner/" in card_html
+    assert "unterordner/" in row_html
 
 
 def test_render_row_datei_bekommt_datei_icon_und_groesse():
     entry = ListingEntry(name="paket.deb", href="/x/paket.deb", is_dir=False, size_bytes=2048)
-    tr_html, card_html = render_row(entry)
+    tr_html, row_html = render_row(entry)
     assert "paket.deb</span>" in tr_html
     assert "#f5c211" not in tr_html
     assert "2" in tr_html  # Groessenformatierung (KB o.ae.)
-    assert "Größe" in card_html
-    assert "Geändert" in card_html
+    assert 'class="fb-row-meta"' in row_html
+    assert "KB" in row_html  # Groesse landet im Mobile-Meta-Block
 
 
 def test_copy_button_enthaelt_textarea_und_check_icon():
