@@ -9,9 +9,9 @@
 #
 # Optisch an die Admin-Oberfläche angelehnt: lädt deren echtes
 # /static/css/app.css (gleiche CSS-Variablen/Fonts wie im Dashboard) und
-# nutzt dessen Klassen direkt (content-header, btn-icon, desktop-view/
-# mobile-view) statt sie hier zu duplizieren -- Optik bleibt damit
-# automatisch in Sync mit dem Dashboard. Die Mobile-Zeilen (.fb-row) sind
+# nutzt dessen Klassen direkt (content-header, btn/btn-danger,
+# desktop-view/mobile-view) statt sie hier zu duplizieren -- Optik bleibt
+# damit automatisch in Sync mit dem Dashboard. Die Mobile-Zeilen (.fb-row) sind
 # bewusst KEINE .m-card wie in den echten Business-Modulen (Ordner/Nutzer/
 # Kategorien) -- Verzeichnisse hier koennen sehr viele Dateien enthalten,
 # eine Karte pro Datei waere ein Meer aus Leerraum; eine dichte Liste wie
@@ -58,15 +58,14 @@ _ICON_FILE_ROW = _icon(
     "M13,9V3.5L18.5,9M6,2C4.89,2 4,2.89 4,4V20A2,2 0 0,0 6,22H18A2,2 0 0,0 20,20V8L14,2H6Z",
     "var(--text-3)",
 )
-_ICON_BACK = _icon("M15.41,16.58L10.83,12L15.41,7.41L14,6L8,12L14,18L15.41,16.58Z")
 _COPY_SVG = _icon(
     "M19,21H8V7H19M19,5H8A2,2 0 0,0 6,7V21A2,2 0 0,0 8,23H19A2,2 0 0,0 21,21V7A2,2 0 0,0 19,5"
     "M16,1H4A2,2 0 0,0 2,3V17H4V3H16V1Z"
 )
 _CHECK_SVG = _icon("M21,7L9,19L3.5,13.5L4.91,12.09L9,16.17L19.59,5.59L21,7Z", "#3fb950")
 
-# Header (content-header), Icon-Buttons (btn-icon) und die Desktop-/
-# Mobile-Umschaltung (desktop-view/mobile-view) kommen direkt aus
+# Header (content-header), Admin-Button (btn/btn-danger) und die
+# Desktop-/Mobile-Umschaltung (desktop-view/mobile-view) kommen direkt aus
 # app.css, siehe Modul-Docstring -- .fb-row* (Mobile-Listenzeilen) sind
 # seitenspezifisch, dafuer gibt es in app.css keine Entsprechung.
 _CSS = """
@@ -225,36 +224,41 @@ def render_page(
     empty_message: str = "",
 ) -> str:
     """Seiten-Gerüst: Header, Hinweistext, Tabelle (Desktop) + Karten
-    (Mobile), Zurück-Button, Copy-Script.
+    (Mobile), Copy-Script.
 
     rows: Liste von (tr_html, card_html)-Paaren, siehe render_row_pair() --
     beide Ansichten stammen damit garantiert aus denselben Daten.
     empty_message: ersetzt eine leere rows-Liste durch eine Hinweiszeile
     bzw. -karte (z.B. "Noch nicht synchronisiert"), statt einer leeren
     Tabelle ohne jede Erklärung.
+    back: statt eines gesonderten Zurück-Buttons (wurde übersehen, siehe
+    Rückmeldung) eine ".."-Zeile ganz oben in der Liste, wie in jedem
+    klassischen Dateibrowser -- IMMER vorhanden wenn back gesetzt ist,
+    auch wenn rows sonst leer ist (sonst gäbe es keinen Weg mehr nach
+    oben).
 
     Lädt /static/css/app.css (in mirror/packages/sync identisch unter
     diesem Pfad gemountet, siehe _app.py) für Fonts + Farbvariablen +
-    Komponenten (content-header, btn-icon, desktop-view/mobile-view) --
+    Komponenten (content-header, btn, desktop-view/mobile-view) --
     dieselbe Optik wie das Admin-Dashboard, ohne sie hier zu
     duplizieren."""
-    back_html = (
-        f'<a class="btn-icon" href="{back}" title="Zurück" aria-label="Zurück">{_ICON_BACK}</a>'
-        if back
-        else ""
-    )
+    admin_html = '<a class="btn btn-sm btn-danger" href="/admin">Admin</a>'
     hint_html = f'<div class="fb-hint">{hint}</div>' if hint else ""
 
-    if not rows and not empty_message:
+    effective_rows = list(rows)
+    if back:
+        effective_rows = [render_row_pair([Cell(dir_link("..", back))])] + effective_rows
+
+    if not effective_rows and not empty_message:
         body_html = ""
-    elif not rows:
+    elif not effective_rows:
         colspan = len(col_headers)
         tr_html = f'<tr><td colspan="{colspan}">{_html.escape(empty_message)}</td></tr>'
         card_html = f'<div class="empty-state"><div class="empty-state-title">{_html.escape(empty_message)}</div></div>'
         body_html = _render_views(tr_html, card_html, col_headers, colgroup)
     else:
-        tr_html = "\n".join(tr for tr, _ in rows)
-        card_html = "\n".join(card for _, card in rows if card)
+        tr_html = "\n".join(tr for tr, _ in effective_rows)
+        card_html = "\n".join(card for _, card in effective_rows if card)
         body_html = _render_views(tr_html, card_html, col_headers, colgroup)
 
     return f"""<!DOCTYPE html>
@@ -269,7 +273,7 @@ def render_page(
 <body>
   <div class="content-header">
     <div class="content-header-title">{title}</div>
-    <div class="content-header-actions">{back_html}</div>
+    <div class="content-header-actions">{admin_html}</div>
   </div>
   {hint_html}
   {body_html}

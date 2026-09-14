@@ -39,15 +39,38 @@ def test_render_page_hat_viewport_meta_tag():
     assert '<meta name="viewport" content="width=device-width, initial-scale=1.0">' in html
 
 
-def test_render_page_ohne_back_zeigt_keinen_zurueck_link():
+def test_render_page_zeigt_immer_roten_admin_button():
+    """Ersetzt seit [[T-Files-Mobile]] sowohl den (leicht übersehenen)
+    Zurück-Button als auch den separaten "Zum Dashboard"-Hinweislink auf
+    den Wurzel-Seiten -- ein einziger, immer sichtbarer Weg zurück ins
+    Dashboard."""
     html = render_page("T", "", [])
-    assert 'class="btn-icon" href' not in html
+    assert '<a class="btn btn-sm btn-danger" href="/admin">Admin</a>' in html
 
 
-def test_render_page_mit_back_zeigt_zurueck_link_mit_icon():
+def test_render_page_ohne_back_hat_keine_punkt_punkt_zeile():
+    html = render_page("T", "", [])
+    assert ">..<" not in html
+
+
+def test_render_page_mit_back_zeigt_punkt_punkt_zeile_ganz_oben():
+    """Ersatz für den früheren separaten Zurück-Button (wurde leicht
+    übersehen) -- ".." wie in jedem klassischen Dateibrowser, als erste
+    Zeile in Desktop- UND Mobile-Ansicht."""
+    html = render_page("T", "", [render_row_pair([Cell("Eintrag 1")])], back="/eltern/")
+    assert 'href="/eltern/"' in html
+    assert ">..<" in html
+    # ".." steht vor dem eigentlichen Eintrag, nicht dahinter
+    assert html.index(">..<") < html.index("Eintrag 1")
+
+
+def test_render_page_back_ohne_sonstige_rows_zeigt_trotzdem_punkt_punkt():
+    """Auch ein leeres Verzeichnis (kein rows, kein empty_message) darf
+    nicht navigationslos enden -- sonst gäbe es gar keinen Weg mehr nach
+    oben, seit der separate Zurück-Button entfallen ist."""
     html = render_page("T", "", [], back="/eltern/")
-    assert 'class="btn-icon" href="/eltern/"' in html
-    assert "<svg" in html.split('href="/eltern/"')[1].split("</a>")[0]
+    assert 'href="/eltern/"' in html
+    assert ">..<" in html
 
 
 def test_render_page_ohne_hint_hat_keinen_leeren_hint_div():
