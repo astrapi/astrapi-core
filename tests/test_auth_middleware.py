@@ -48,6 +48,10 @@ def _make_app(exempt_prefixes=None, exempt_get_paths=None):
     def create_debian():
         return {"created": True}
 
+    @app.get("/")
+    def root():
+        return {"root": True}
+
     @app.get("/api/debian/1/logs")
     def debian_logs():
         return {"ok": True}
@@ -161,6 +165,41 @@ def test_exempt_get_paths_ist_exakter_pfad_kein_praefix():
         "astrapi_core.ui.auth_middleware.authmod.is_logged_in", return_value=False
     ):
         r = client.get("/api/debian/1/logs", follow_redirects=False)
+    assert r.status_code == 307
+
+
+def test_exempt_get_paths_root_laesst_nur_die_wurzel_frei():
+    """T-333-MIRROR: die reine Datei-Uebersicht unter '/' (mirror/packages)
+    zeigt nichts, was unter /archlinux bzw. /debian nicht schon oeffentlich
+    waere -- '/' hier bewusst ueber exempt_get_paths statt exempt_prefixes,
+    siehe die naechste Testfunktion fuer den Grund."""
+    client = _make_app(exempt_get_paths=["/"])
+    with patch("astrapi_core.ui.auth_middleware.authmod.is_configured", return_value=True), patch(
+        "astrapi_core.ui.auth_middleware.authmod.is_logged_in", return_value=False
+    ):
+        assert client.get("/").status_code == 200
+
+
+def test_exempt_prefixes_mit_wurzel_wuerde_faelschlich_alles_freigeben():
+    """Dokumentiert, WARUM '/' nicht in exempt_prefixes gehoert: dessen
+    Praefix-Match haengt "/" ans (leere) rstrip("/")-Ergebnis von '/' an,
+    "".startswith("/") -- jeder Pfad beginnt mit "/", also waere ausnahmslos
+    alles (auch /protected) frei. exempt_get_paths' exakter Vergleich hat
+    dieses Problem nicht (siehe Test oben)."""
+    client = _make_app(exempt_prefixes=["/"])
+    with patch("astrapi_core.ui.auth_middleware.authmod.is_configured", return_value=True), patch(
+        "astrapi_core.ui.auth_middleware.authmod.is_logged_in", return_value=False
+    ):
+        r = client.get("/protected")
+    assert r.status_code == 200  # zeigt genau die Falle, die exempt_get_paths vermeidet
+
+
+def test_exempt_get_paths_root_blockt_andere_pfade_weiterhin():
+    client = _make_app(exempt_get_paths=["/"])
+    with patch("astrapi_core.ui.auth_middleware.authmod.is_configured", return_value=True), patch(
+        "astrapi_core.ui.auth_middleware.authmod.is_logged_in", return_value=False
+    ):
+        r = client.get("/protected", follow_redirects=False)
     assert r.status_code == 307
 
 
