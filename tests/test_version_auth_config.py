@@ -45,6 +45,20 @@ def test_multi_user_explizit_aktiviert(tmp_path):
     assert cfg["multi_user"] is True
 
 
+def test_exempt_get_paths_default_leer_ohne_app_yaml(tmp_path):
+    cfg = get_auth_config(tmp_path)
+    assert cfg["exempt_get_paths"] == []
+
+
+def test_exempt_get_paths_gesetzt(tmp_path):
+    _write_app_yaml(
+        tmp_path,
+        "auth:\n  enabled: true\n  exempt_get_paths:\n    - /api/debian\n    - /api/archlinux\n",
+    )
+    cfg = get_auth_config(tmp_path)
+    assert cfg["exempt_get_paths"] == ["/api/debian", "/api/archlinux"]
+
+
 def test_categories_scope_default_owner_ohne_app_yaml(tmp_path):
     """Rueckwaertskompatibilitaet: astrapi-sync (private Kategorien pro
     Nutzer) setzt diesen Schluessel nicht -- muss 'owner' bleiben."""

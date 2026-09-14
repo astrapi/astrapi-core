@@ -419,7 +419,11 @@ def create(
         from .auth_routes import router as _auth_router
 
         api.include_router(_auth_router)
-        api.add_middleware(RequireLoginMiddleware, exempt_prefixes=auth_cfg["exempt_prefixes"])
+        api.add_middleware(
+            RequireLoginMiddleware,
+            exempt_prefixes=auth_cfg["exempt_prefixes"],
+            exempt_get_paths=auth_cfg["exempt_get_paths"],
+        )
 
         # T-325-CORE: current_user_id() braucht dafuer aktive Middleware --
         # generisch fuer jede App mit auth.enabled, nicht nur multi_user

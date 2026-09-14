@@ -10,9 +10,11 @@ from fastapi.testclient import TestClient
 from astrapi_core.ui.auth_middleware import RequireLoginMiddleware
 
 
-def _make_app(exempt_prefixes=None):
+def _make_app(exempt_prefixes=None, exempt_get_paths=None):
     app = FastAPI()
-    app.add_middleware(RequireLoginMiddleware, exempt_prefixes=exempt_prefixes)
+    app.add_middleware(
+        RequireLoginMiddleware, exempt_prefixes=exempt_prefixes, exempt_get_paths=exempt_get_paths
+    )
 
     @app.get("/protected")
     def protected():
@@ -32,6 +34,22 @@ def _make_app(exempt_prefixes=None):
 
     @app.get("/manifest.json")
     def manifest():
+        return {"ok": True}
+
+    # Trailing-Slash-Routendefinition wie im echten crud_router.py
+    # (@router.get("/") unter dem /api/debian-Prefix) -- FastAPI leitet
+    # ".../api/debian" automatisch auf ".../api/debian/" um, siehe Test
+    # test_exempt_get_paths_trailing_slash_variante_ebenfalls_frei.
+    @app.get("/api/debian/")
+    def list_debian():
+        return {"debian": {}}
+
+    @app.post("/api/debian/")
+    def create_debian():
+        return {"created": True}
+
+    @app.get("/api/debian/1/logs")
+    def debian_logs():
         return {"ok": True}
 
     return TestClient(app)
@@ -91,6 +109,59 @@ def test_manifest_json_ist_immer_ausgenommen():
         "astrapi_core.ui.auth_middleware.authmod.is_logged_in", return_value=False
     ):
         assert client.get("/manifest.json").status_code == 200
+
+
+def test_exempt_get_paths_laesst_get_auf_exaktem_pfad_durch():
+    """Regressionstest T-332-MIRROR: astrapi-admin konnte nach Aktivierung
+    von auth.enabled keine Mirror-Repos mehr lesen, weil /api/debian
+    (GET, listet) nirgends exemptiert war."""
+    client = _make_app(exempt_get_paths=["/api/debian"])
+    with patch("astrapi_core.ui.auth_middleware.authmod.is_configured", return_value=True), patch(
+        "astrapi_core.ui.auth_middleware.authmod.is_logged_in", return_value=False
+    ):
+        r = client.get("/api/debian")
+    assert r.status_code == 200
+
+
+def test_exempt_get_paths_blockt_post_auf_demselben_pfad():
+    """Der Kern des Sicherheitsunterschieds zu exempt_prefixes: GET /api/debian
+    (Liste) und POST /api/debian (neues Repo anlegen) liegen auf demselben
+    Pfad, nur exempt_get_paths darf ausschliesslich GET freigeben -- sonst
+    koennte ein unauthentifizierter LAN-Client ein Mirror-Repo auf eine
+    fremde URL umbiegen, die dann fleetweit an pacman/apt ausgeliefert wird."""
+    client = _make_app(exempt_get_paths=["/api/debian"])
+    with patch("astrapi_core.ui.auth_middleware.authmod.is_configured", return_value=True), patch(
+        "astrapi_core.ui.auth_middleware.authmod.is_logged_in", return_value=False
+    ):
+        r = client.post("/api/debian", follow_redirects=False)
+    assert r.status_code == 307
+
+
+def test_exempt_get_paths_trailing_slash_variante_ebenfalls_frei():
+    """FastAPI haengt an eine mit '/' endende Routendefinition (z.B.
+    crud_router.py's @router.get("/") fuer /api/debian) einen 301 auf die
+    Trailing-Slash-Variante -- ohne Normalisierung waere nur die konfigurierte
+    Schreibweise frei, die tatsaechlich aufgerufene (nach dem Redirect,
+    httpx' follow_redirects=True in mirror_client.py) aber wieder gesperrt."""
+    client = _make_app(exempt_get_paths=["/api/debian"])
+    with patch("astrapi_core.ui.auth_middleware.authmod.is_configured", return_value=True), patch(
+        "astrapi_core.ui.auth_middleware.authmod.is_logged_in", return_value=False
+    ):
+        r = client.get("/api/debian", follow_redirects=True)
+    assert r.status_code == 200
+    assert r.json() == {"debian": {}}
+
+
+def test_exempt_get_paths_ist_exakter_pfad_kein_praefix():
+    """Anders als exempt_prefixes: ein Unterpfad (/api/debian/1/logs) ist
+    NICHT automatisch mitexemptiert -- sonst waeren ploetzlich beliebige
+    GET-Unterrouten offen, nicht nur die eine gemeinte Liste."""
+    client = _make_app(exempt_get_paths=["/api/debian"])
+    with patch("astrapi_core.ui.auth_middleware.authmod.is_configured", return_value=True), patch(
+        "astrapi_core.ui.auth_middleware.authmod.is_logged_in", return_value=False
+    ):
+        r = client.get("/api/debian/1/logs", follow_redirects=False)
+    assert r.status_code == 307
 
 
 def test_ohne_exempt_prefixes_ist_nicht_gelistete_route_trotzdem_gesperrt():
